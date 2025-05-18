@@ -15,45 +15,50 @@
 #include<stdbool.h>
 #include<stdint.h>
 #include<arrayList.h>
-HASHMAP typedef enum {
-    Vector
-} hashTypes;
 
-//sets.c
-HASHMAP typedef struct set
-{
-    size_t sizeOfArray;
-    uint64_t* array;
-    uint64_t theHashOfTheSet;
-    uint64_t (*hashFunction)(void*);
-    uint8_t typeOfHash;
-    bool (*equalityChecker)(struct set*,struct set*);
-}Set;
+#ifdef __cplusplus
+extern "C" {
+#endif // __cplusplus
 
-extern HASHMAP bool setGet(Set* set, uint64_t hash);
-extern HASHMAP bool setAdd(Set* set,uint64_t hash);
-extern HASHMAP bool setRemove(Set* set, uint64_t hash);
-extern HASHMAP bool setIsEmpty(Set* set);
-extern HASHMAP int setAnd(Set* firstSet,Set* secondSet);
-extern HASHMAP bool setCompare(Set* firstSet, Set* secondSet);
+    HASHMAP typedef enum {
+        Vector
+    } hashTypes;
 
-//hashes.c
-extern HASHMAP uint64_t baseXtoBase10Vector(void* vector);
+    //sets.c
+    HASHMAP typedef struct set
+    {
+        size_t sizeOfArray;
+        uint64_t* array;
+        uint64_t theHashOfTheSet;
+        hashTypes typeOfHash;
+        bool (*equalityChecker)(struct set*, struct set*);
+    }Set;
 
+    extern HASHMAP bool setGet(Set* set, uint64_t hash);
+    extern HASHMAP bool setAdd(Set* set, uint64_t hash);
+    extern HASHMAP bool setRemove(Set* set, uint64_t hash);
+    extern HASHMAP bool setIsEmpty(Set* set);
+    extern HASHMAP int setAnd(Set* firstSet, Set* secondSet);
+    extern HASHMAP bool setCompare(Set* firstSet, Set* secondSet);
+    extern HASHMAP void setDestroy(Set* set);
 
-//hashMap.c
+    //hashMap.c
 
-HASHMAP typedef struct hashMap {
-    size_t sizeOfArray;
-    size_t amountOfValues;
-    ArrayList* array;
-    uint64_t theHashOfTheSet;
-    uint64_t (*hashFunction)(void*);
-    void* (*get)(struct hashMap,uint64_t);
-    void (*put)(struct hashMap,uint64_t, void*);
-    void* (*remove)(struct hashMap, uint64_t);
-    Set* (*keySet)(struct hashMap);
-    ArrayList* (*valueList)(struct hashMap);
-    hashTypes typeOfHash;
-} HashMap;
+    HASHMAP typedef struct hashMap {
+        size_t sizeOfArray;
+        size_t amountOfValues;
+        ArrayList* array;
+        uint64_t theHashOfTheSet;
+        uint64_t(*hashFunction)(void*);
+        hashTypes typeOfHash;
+        void* (*get)(struct hashMap, uint64_t);
+        void (*put)(struct hashMap, uint64_t, void*);
+        void* (*remove)(struct hashMap, uint64_t);
+        Set* (*keySet)(struct hashMap);
+        ArrayList* (*valueList)(struct hashMap);
+    } HashMap;
+#ifdef __cplusplus
+}
+#endif // __cplusplus
+
 #endif

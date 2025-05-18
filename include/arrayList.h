@@ -13,41 +13,40 @@
 #include<stddef.h>
 #include<stdarg.h>
 #include<stdint.h>
-ARRAYLIST typedef enum {
-    Integer,
-    Long,
-    LongLong,
-    Unsigned,
-    UnsignedLong,
-    UnsignedLongLong,
-    Short,
-    UnsignedShort,
-    Char,
-    UnsignedChar,
-    Matrix,
-    STRING
-}ArrayListTypes;
+#ifdef __cplusplus
+extern "C" {
+#endif
+    typedef enum {
+        Integer,
+        Long,
+        LongLong,
+        Unsigned,
+        UnsignedLong,
+        UnsignedLongLong,
+        Short,
+        UnsignedShort,
+        Char,
+        UnsignedChar,
+        Matrix,
+        STRING
+    }ArrayListTypes;
 
-ARRAYLIST typedef struct arraylist{
-    size_t amountOfElements;
-    size_t totalAmountOfElements;
-    size_t elementSize;
-    void* (*get)(struct arraylist*,size_t);
-    void (*clear)(struct arraylist*);
-    int (*add)(struct arraylist*,void*);
-    int (*set)(struct arraylist*,size_t,void*);
-    void* (*pop)(struct arraylist*);
-    void (*remove)(struct arraylist*,size_t,size_t);
-    void* list;
-    ArrayListTypes listType;
-} ArrayList;
+    typedef struct arraylist {
+        ArrayListTypes listType;
+        size_t amountOfElements;
+        size_t totalAmountOfElements;
+        size_t elementSize;
+        void* list;
+    } ArrayList;
 
-extern ARRAYLIST int arrayListSizeCheckAdd(ArrayList* arrayList);
-extern ARRAYLIST int arrayListSizeCheckRemove(ArrayList* arraylist);
-extern ARRAYLIST void arrayListGenericClearElements(ArrayList* arrayList);
-extern ARRAYLIST void* arrayListGenericGetElement(ArrayList* arrayList,size_t index);
-extern ARRAYLIST int arrayListGenericAddElement(ArrayList* arrayList, void* element);
-extern ARRAYLIST void* arrayListGenericPopElement(ArrayList* arrayList);
-extern ARRAYLIST void arrayListGenericRemoveElement(ArrayList* arrayList,size_t index, size_t lastIndex);
-extern ARRAYLIST void arrayListDestroy(ArrayList* arraylist);
+    extern ARRAYLIST int arrayListSizeCheckAdd(ArrayList* arrayList);
+    extern ARRAYLIST int arrayListSizeCheckRemove(ArrayList* arraylist);
+    extern ARRAYLIST void arrayListElementsClear(ArrayList* arrayList);
+    extern ARRAYLIST void* arrayListElementGetGeneric(ArrayList* arrayList, size_t index);
+    extern ARRAYLIST void* arrayListElementPopGeneric(ArrayList* arrayList);
+    extern ARRAYLIST void arrayListElementRemove(ArrayList* arrayList, size_t index, size_t lastIndex);
+    extern ARRAYLIST void arrayListDestroy(ArrayList* arraylist);
+#ifdef __cplusplus
+}
+#endif
 #endif

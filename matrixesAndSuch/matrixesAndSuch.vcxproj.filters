@@ -68,5 +68,8 @@
     <ClCompile Include="matrixHashes.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="convert.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

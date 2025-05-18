@@ -12,11 +12,22 @@
 #endif
 #include <stdint.h>
 #include <matrix.h>
-CODES typedef struct ball{
-    uint32_t amountOfElementsInBall;
-    matrix** elements;
-} ball;
+#ifdef __cplusplus
+extern "C" {
+#endif // __cplusplus
 
-extern CODES uint32_t sizeOfBall(matrix* vector, uint32_t radius);
-extern CODES ball findBall(matrix* vector, uint32_t radius, uint64_t* maxMemAlloc);
+    CODES typedef struct ball {
+        uint32_t amountOfElementsInBall;
+        matrix** elements;
+    } ball;
+
+    extern CODES uint32_t sizeOfBall(matrix* vector, uint32_t radius);
+    extern CODES ball findBall(matrix* vector, uint32_t radius, uint64_t* maxMemAlloc);
+
+    extern CODES Set* ballToSet(ball* Ball);
+    extern CODES ArrayList* ballToMatrixArrayList(ball* Ball);
+#ifdef __cplusplus
+}
+#endif // __cplusplus
+
 #endif

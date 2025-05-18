@@ -103,22 +103,22 @@ void* matrixGetPointer(matrix* matrix,uint16_t rows, uint16_t columns) {
             return NULL;
     }
 }
-String** matrixToStringUint8(matrix* matrix) {
+String matrixToStringUint8(matrix* matrix) {
     switch (matrix->matrixVarType)
     {
     case 0:
         char itoaBuff[charsPerUInt8+2];
         int code = 0;
-        String** string = stringCreate("[",1);
+        String string = stringCreate("[",1);
         if (string == NULL) return NULL;
-        for (uint16_t row = 0;row<matrix->columns;row++) {
+        for (uint16_t row = 0;row<matrix->rows;row++) {
             
             code |= stringAdd(string,"[",1);
 
-            for (uint16_t column = 0;column<matrix->rows;column++) {
+            for (uint16_t column = 0;column<matrix->columns;column++) {
                 int amountOfChars = _snprintf_s(itoaBuff,5,5,"%hhu",*(uint8_t*)matrixGetPointer(matrix,row,column));
                 code |= stringAdd(string,itoaBuff,amountOfChars);
-                if(column < matrix->rows-1) code |= stringAdd(string,",",1);
+                if(column < matrix->columns-1) code |= stringAdd(string,",",1);
                 if(code!=0) return NULL;
             }
             if (row < matrix->rows-1) code |= stringAdd(string,"],\n",3);
@@ -169,8 +169,8 @@ matrix* matrixDeepCopy(matrix* copyMatrix,uint64_t* maxMemAlloc) {
     matrix* pasteMatrix = matrixCreate(copyMatrix->rows,copyMatrix->columns,copyMatrix->modulus,maxMemAlloc);
     if(pasteMatrix == NULL) return NULL;
 
-    for (size_t rowIterator = 0; rowIterator < copyMatrix->rows; rowIterator++) {
-        for (size_t columnIterator = 0; columnIterator < copyMatrix->columns; columnIterator++) {
+    for (uint16_t rowIterator = 0; rowIterator < copyMatrix->rows; rowIterator++) {
+        for (uint16_t columnIterator = 0; columnIterator < copyMatrix->columns; columnIterator++) {
             switch (copyMatrix->matrixVarType) {
                 case 0:
                     *(uint8_t*)matrixGetPointer(pasteMatrix,rowIterator,columnIterator) = *(uint8_t*)matrixGetPointer(copyMatrix,rowIterator,columnIterator);
@@ -194,7 +194,7 @@ matrix* matrixDeepCopy(matrix* copyMatrix,uint64_t* maxMemAlloc) {
 }
 
 int matrixVectorCounterIncrement(matrix* counter) {
-    for (size_t iteratorCounter = counter->rows-1; iteratorCounter < counter->rows;iteratorCounter--) {
+    for (uint16_t iteratorCounter = counter->rows-1; iteratorCounter < counter->rows;iteratorCounter--) {
         switch (counter->matrixVarType)
         {
         case 0:
@@ -226,10 +226,11 @@ int matrixVectorCounterIncrement(matrix* counter) {
             return -1;
         }
     }
+    return 0;
 }
 
 int matrixVectorCounterReset(matrix* counter) {
-    for(size_t iterator = 0; iterator < counter->rows;iterator++) {
+    for(uint16_t iterator = 0; iterator < counter->rows;iterator++) {
         switch (counter->matrixVarType)
         {
         case 0:
@@ -247,6 +248,53 @@ int matrixVectorCounterReset(matrix* counter) {
         }
     }
     return 0;
+}
+
+bool matrixCompareEqualityZeroMatrix(matrix* matrix) {
+    for (uint16_t rowIterator = 0; rowIterator < matrix->rows; rowIterator++)
+        for (uint16_t columnIterator = 0; columnIterator < matrix->columns; columnIterator++)
+            switch (matrix->matrixVarType)
+            {
+            case 0:
+                if (*(uint8_t*)matrixGetPointer(matrix, rowIterator, columnIterator) != 0) return false;
+                break;
+            case 1:
+                if (*(uint16_t*)matrixGetPointer(matrix, rowIterator, columnIterator) != 0) return false;
+                break;
+            case 2:
+                if (*(uint32_t*)matrixGetPointer(matrix, rowIterator, columnIterator) != 0) return false;
+                break;
+            case 3:
+                if (*(int32_t*)matrixGetPointer(matrix, rowIterator, columnIterator) != 0) return false;
+                break;
+            default:
+                break;
+            };
+    return true;
+}
+
+bool matrixCompareEqualityUnitMatrix(matrix* matrix) {
+    for (uint16_t rowIterator = 0; rowIterator < matrix->rows; rowIterator++)
+        for (uint16_t columnIterator = 0; columnIterator < matrix->columns; columnIterator++)
+            switch (matrix->matrixVarType)
+            {
+            case 0:
+                if (*(uint8_t*)matrixGetPointer(matrix, rowIterator, columnIterator) != (columnIterator == rowIterator) ? 1u : 0u) return false;
+                break;
+            case 1:
+                if (*(uint16_t*)matrixGetPointer(matrix, rowIterator, columnIterator) != (columnIterator == rowIterator) ? 1u : 0u) return false;
+                break;
+            case 2:
+                if (*(uint32_t*)matrixGetPointer(matrix, rowIterator, columnIterator) != (columnIterator == rowIterator) ? 1u : 0u) return false;
+                break;
+            case 3:
+                if (*(int32_t*)matrixGetPointer(matrix, rowIterator, columnIterator) != (columnIterator == rowIterator) ? 1 : 0) return false;
+                break;
+            default:
+                break;
+            };
+            
+    return true;
 }
 
 bool isWithinModulus(matrix* matrix, uint32_t value) {

@@ -5,10 +5,7 @@
 #include<math.h>
 #include<stdlib.h>
 
-#include<stdio.h>
-
 bool setGet(Set* set, uint64_t hash) {
-    printf("SizeOfArray: %llu, Hash: %llu\n",set->sizeOfArray,hash);
     assert(set->sizeOfArray*64 >= hash);
     uint64_t byte = (uint64_t)floor((double)hash/64);
     return (bool)((uint64_t)0x1&((*(set->array+byte))>>(hash%64)));
@@ -43,4 +40,9 @@ int setAnd(Set* firstSet,Set* secondSet) {
     for(size_t iterator = 0; iterator <firstSet->sizeOfArray;iterator++)
         *(firstSet->array+iterator) &= *(secondSet->array+iterator);
     return 0;
+}
+
+void setDestroy(Set* set) {
+    free(set->array);
+    free(set);
 }

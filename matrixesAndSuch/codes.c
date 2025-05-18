@@ -12,7 +12,7 @@ uint32_t computeHammingDistanceTwoVector(matrix* firstVector, matrix* secondVect
     uint32_t result = 0;
     if (firstVector->rows != secondVector->rows||firstVector->modulus!=secondVector->modulus) raise(MATH_ERROR);
 
-    for (size_t vectorIterator = 0; vectorIterator < firstVector->rows; vectorIterator++) {
+    for (uint16_t vectorIterator = 0; vectorIterator < firstVector->rows; vectorIterator++) {
         matrixOutput(firstVector,stdout);
         matrixOutput(secondVector,stdout);
         switch (firstVector->matrixVarType)
@@ -34,4 +34,8 @@ uint32_t computeHammingDistanceTwoVector(matrix* firstVector, matrix* secondVect
         }
     }
     return result;
+}
+
+uint32_t codeComputeSeparation(matrix* codewords, bool isLinear) {
+    return 0;
 }

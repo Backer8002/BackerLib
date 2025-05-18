@@ -8,202 +8,257 @@
 #include<assert.h>
 #include<stdio.h>
 
-ArrayList* arrayListCreateString(size_t initialSize);
-void stringCleanUpHelper(String* string, size_t* currentIndex,String* destString);
-int setStringElement(ArrayList* arrayList,size_t index, void* value);
-void* getStringElement(ArrayList* arrayList,size_t index);
-void stringDestroyHelper(String* string);
 
-String** stringCreate(char* string, size_t length) {
+String stringCreate(char* string, size_t length) {
     if (length == 0) return NULL;
-    String* allocatedString = malloc(sizeof(String));
-    if (allocatedString == NULL) return NULL;
-    char* rawString = calloc(length,sizeof(char));
-    
-    if (rawString == NULL) {
-        free(allocatedString);
-        return NULL;
-    }
-    memcpy_s(rawString,length,string,length);
-
-    allocatedString->length = length;
-    allocatedString->type = stringRaw;
-    allocatedString->data = rawString;
-    String** stringPtr = malloc(sizeof(String*));
-    if (stringPtr == NULL) {
-        free(allocatedString);
-        free(rawString);
-        return NULL;
-    }
-    *stringPtr = allocatedString;
-    return stringPtr;
-}
-
-String** stringCreateWithCharPointer(char* string, size_t length) {
-    String* allocatedString = malloc(sizeof(String));
+    String allocatedString = arrayListCreateChar(length);
     if (allocatedString == NULL) return NULL;
 
-    allocatedString->length = length;
-    allocatedString->type = stringRaw;
-    allocatedString->data = string;
-    String** stringPtr = malloc(sizeof(String*));
-    if (stringPtr == NULL) {
-        free(allocatedString);
+    memcpy_s(allocatedString->list,length,string,length);
+    allocatedString->amountOfElements = length;
+    return allocatedString;
+}
+
+inline void stringDestroy(String string) {
+    arrayListDestroy(string);
+}
+
+inline char stringGetChar(String string, size_t index) {
+    return *(char*)arrayListElementGetGeneric(string, index);
+}
+
+inline void stringRemoveSlice(String string, size_t firstIndex, size_t lastIndex) {
+    arrayListElementRemove(string, firstIndex, lastIndex);
+}
+
+String stringGetSlice(String string, size_t firstIndex, size_t lastIndex) {
+    if ((string->listType != Char)|(string->amountOfElements<= lastIndex)|(firstIndex>lastIndex)) 
         return NULL;
+    if (firstIndex <= lastIndex) {
+        String returnString = arrayListCreateChar(lastIndex - firstIndex + 1); //of by one error
+        if (returnString == NULL) return NULL;
+        returnString->amountOfElements = lastIndex - firstIndex + 1;
+        for (size_t iterator = 0; iterator < lastIndex-firstIndex+1; iterator++)
+            *((char*)returnString->list + iterator) = stringGetChar(string, iterator+firstIndex);
+        fwrite(returnString->list,1,returnString->amountOfElements,stderr);
+        printf("\n");
+        return returnString;
     }
-    *stringPtr = allocatedString;
-    return stringPtr;
-}
-
-void stringDestroy(String** stringPtr) {
-    stringDestroyHelper(*stringPtr);
-    free(stringPtr);
-}
-
-void stringDestroyHelper(String* string) {
-    if (string->type == stringNode) {
-        for(size_t iterator = 0;iterator<string->node->amountOfElements;iterator++) stringDestroyHelper(string->node->get(string->node,iterator));
-        arrayListDestroy(string->node);
-        free(string);
-    } else {
-        free(string->data);
-        free(string);
-    }
-}
-
-void stringCleanUp(String** stringPtr) {
-    String* string = *stringPtr;
-    if (string->type == stringRaw) return;
-
-    char* rawDestString = calloc(string->length,sizeof(char));
-    if(rawDestString == NULL) return;
-    String** destString = stringCreateWithCharPointer(rawDestString,string->length);
-    if(destString == NULL) {
-        free(rawDestString);
-        return;
-    }
-    size_t cleanerIndex = 0;
-    stringCleanUpHelper(string,&cleanerIndex,*destString);
-    stringDestroyHelper(string);
-    *stringPtr = *destString;
-    free(destString);
-}
-
-void stringCleanUpHelper(String* string, size_t* currentIndex,String* destString) {
-    if(string->type == stringRaw) {
-        for (size_t iterator = 0; iterator<string->length;iterator++) {
-            *stringCharGet(&destString,*currentIndex) = *stringCharGet(&string,iterator);
-            (*currentIndex)++;
+    else
+    {
+        String returnString = arrayListCreateChar(firstIndex - lastIndex + 1); //of by one error
+        if (returnString == NULL) return NULL;
+        returnString->amountOfElements = firstIndex - lastIndex + 1;
+        size_t returnIterator = returnString->amountOfElements-1;
+        for (size_t iterator = lastIndex; iterator <= firstIndex; iterator++) {
+            *((char*)string->list + returnIterator) = stringGetChar(string, iterator);
+            returnIterator--;
         }
-    } else {
-        for(size_t iterator = 0; iterator<string->node->amountOfElements;iterator++) {
-            String* subString = string->node->get(string->node,iterator);
-            if (subString == NULL) return;
-            stringCleanUpHelper(subString,currentIndex,destString);
-        }
+        return returnString;
     }
 }
 
-char* stringCharGet(String** stringPtr,size_t index) {
-    String* string = *stringPtr;
-    if(string->type == stringRaw) {
-        assert(string->length > index);
-        return string->data+index;
-    }
-    assert(string->length > index);
-    size_t indexIterator = 0;
-    size_t iterator;
-    String* subString = NULL;
-    for(iterator = 0; iterator < string->node->amountOfElements; iterator++) {
-        subString = string->node->get(string->node,iterator);
-        indexIterator += subString->length;
-        if(indexIterator > index) break;
-    }
-    if (subString == NULL) return NULL;
-    return stringCharGet(&subString,subString->length-(indexIterator-index));
-}
-
-int stringAdd(String** destString, char* string2,size_t length) {
-    if(string2 == NULL) return -2;
-    String** allocedString2 = stringCreate(string2,length);
-    if(allocedString2 == NULL) {return -1;}
-    if (stringConcat(destString,allocedString2)!=0) {
-        stringDestroy(allocedString2);
+int stringAdd(String destString, char* string2,size_t length) {
+    if((string2 == NULL)|(length==0)|(destString->listType!=Char)) return -2;
+    size_t endOfDestString = destString->amountOfElements;
+    destString->amountOfElements += length;
+    if(arrayListSizeCheckAdd(destString)==-1)
         return -1;
-    }
-    free(allocedString2);
+    for (size_t iterator = 0; iterator < length; iterator++)
+        *((char*)destString->list + endOfDestString + iterator) = *(string2 + iterator);
     return 0;
 }
 
-int stringConcat(String** destStringPtr,String** secondStringPtr) {
-    if((*destStringPtr)->type == stringRaw) {
-        String** destStringRealloced = stringCreateWithCharPointer((*destStringPtr)->data,(*destStringPtr)->length);
-        if(destStringRealloced == NULL) return -1;
-        ArrayList* stringArray = arrayListCreateString(2);
-        if (stringArray == NULL) {
-            stringDestroy(destStringRealloced);
-            return -1;
+int stringConcat(String destString,String secondString) {
+    if ((destString->listType != Char) | (secondString->listType != Char)) return -2;
+    size_t endOfDestString = destString->amountOfElements;
+    destString->amountOfElements += secondString->amountOfElements;
+    if (arrayListSizeCheckAdd(destString) == -1)
+        return -1;
+    for (size_t iterator = 0; iterator < secondString->amountOfElements; iterator++)
+        *((char*)destString->list + endOfDestString + iterator) = *((char*)secondString->list + iterator);
+    return 0;
+}
+
+String stringStrip(String string, char charToStrip,bool enforceStripLimit ,int64_t amountToStrip) {
+    if (string->listType != Char) 
+        return NULL;
+    size_t amountOfCharsThatCanBeStripped = 0;
+    for (size_t iterator = 0; iterator < string->amountOfElements; iterator++)
+        if (stringGetChar(string, iterator) == charToStrip)
+            amountOfCharsThatCanBeStripped++;
+
+    if ((amountOfCharsThatCanBeStripped > (amountToStrip<0) ? amountToStrip*-1 : amountToStrip) & (enforceStripLimit))
+        amountOfCharsThatCanBeStripped = (amountToStrip < 0) ? amountToStrip*-1 : amountToStrip;
+
+    String returnString = arrayListCreateChar(string->amountOfElements-amountOfCharsThatCanBeStripped);
+    if (returnString == NULL)
+        return NULL;
+
+
+    size_t amountStripped = 0;
+    if ((amountToStrip < 0) & enforceStripLimit) {
+        for (size_t iterator = string->amountOfElements; iterator != SIZE_MAX; iterator--)
+        {
+            char currentChar = stringGetChar(string, iterator);
+            if ((currentChar != charToStrip) | ((amountStripped >= amountOfCharsThatCanBeStripped) & !enforceStripLimit))
+                *((char*)returnString->list + iterator - amountOfCharsThatCanBeStripped + amountStripped) = currentChar;
+            else
+                amountStripped++;
         }
-
-        stringArray->set(stringArray,0,*destStringRealloced);
-        stringArray->set(stringArray,1,*secondStringPtr);
-        (*destStringPtr)->node = stringArray;
-        (*destStringPtr)->type = stringNode;
-        (*destStringPtr)->length = (*secondStringPtr)->length + (*destStringRealloced)->length;
-        free(destStringRealloced);
-    } else {
-        int code = (*destStringPtr)->node->add((*destStringPtr)->node,*secondStringPtr);
-        if(code!=0) return code;
-        (*destStringPtr)->length = (*secondStringPtr)->length + (*destStringPtr)->length;
     }
-    *secondStringPtr = *destStringPtr;
-    return 0;
+    else
+    {
+        for (size_t iterator = 0; iterator < string->amountOfElements; iterator++)
+        {
+            char currentChar = stringGetChar(string, iterator);
+            if ((currentChar != charToStrip) | (amountStripped >= amountOfCharsThatCanBeStripped))
+                *((char*)returnString->list + iterator - amountStripped) = currentChar;
+            else
+                amountStripped++;
+        }
+    }
+    return returnString;
 }
 
-char* stringGetArray(String** stringPtr, size_t* arraySize) {
-    stringCleanUp(stringPtr);
-    if (*stringPtr == stringNode) return NULL;
-    *arraySize = (*stringPtr)->length;
-    return (*stringPtr)->data;
-}
+ArrayList* stringSplit(String string, char charToSplitOn,bool enforceSplitLimit, int64_t amountOfCharsToSplitAt) {
+    if (string->listType != Char)
+        return NULL;
+    size_t amountOfStringsThatCanBeSplit = 0;
+    for (size_t iterator = 0; iterator < string->amountOfElements; iterator++)
+        if (stringGetChar(string, iterator) == charToSplitOn)
+            amountOfStringsThatCanBeSplit++;
 
+    if ((amountOfStringsThatCanBeSplit > (amountOfCharsToSplitAt < 0) ? amountOfCharsToSplitAt * -1 : amountOfCharsToSplitAt) & (enforceSplitLimit))
+        amountOfStringsThatCanBeSplit = (amountOfCharsToSplitAt < 0) ? amountOfCharsToSplitAt * -1 : amountOfCharsToSplitAt;
+
+    ArrayList* stringArray = arrayListCreateString(amountOfStringsThatCanBeSplit+1);
+    if (stringArray == NULL)
+        return NULL;
+
+    size_t amountSplit = 0;
+    if (amountOfCharsToSplitAt<0 && enforceSplitLimit)
+    {
+        size_t firstIndexOfSubString = 0;
+        size_t lastIndexOfSubString = string->amountOfElements-1;
+        for (size_t iterator = string->amountOfElements-1; iterator != SIZE_MAX; iterator--)
+        {
+            char currentChar = stringGetChar(string, iterator);
+            if (currentChar != charToSplitOn && iterator != 0)
+                continue;
+
+            if (amountOfStringsThatCanBeSplit <= amountSplit && enforceSplitLimit)
+            {
+                firstIndexOfSubString = 0;
+                String subString = stringGetSlice(string, firstIndexOfSubString, lastIndexOfSubString);
+                if (subString == NULL) goto stringSplitErrorExit;
+                arrayListElementSetString(stringArray, stringArray->amountOfElements, subString);
+                break;
+            }
+
+            if (iterator == 0 && currentChar != charToSplitOn)
+                firstIndexOfSubString = 0;
+            else
+                firstIndexOfSubString = iterator + 1;
+            amountSplit++;
+            if (firstIndexOfSubString <= lastIndexOfSubString) {
+                String subString = stringGetSlice(string, firstIndexOfSubString, lastIndexOfSubString);
+                if (subString == NULL) goto stringSplitErrorExit;
+                arrayListElementSetString(stringArray, stringArray->amountOfElements, subString);
+            }
+            lastIndexOfSubString = iterator - 1;
+        }
+    }
+    else
+    {
+        size_t firstIndexOfSubString = 0;
+        size_t lastIndexOfSubString = 0;
+        for (size_t iterator = 0; iterator < string->amountOfElements; iterator++)
+        {
+            char currentChar = stringGetChar(string, iterator);
+            if (amountOfStringsThatCanBeSplit <= amountSplit && enforceSplitLimit)
+            {
+                lastIndexOfSubString = string->amountOfElements-1;
+                String subString = stringGetSlice(string, firstIndexOfSubString, lastIndexOfSubString);
+                if (subString == NULL) goto stringSplitErrorExit;
+                arrayListElementSetString(stringArray, stringArray->amountOfElements, subString);
+                break;
+            }
+            if (currentChar != charToSplitOn && iterator != string->amountOfElements-1)
+                continue;
+
+
+            if (iterator == string->amountOfElements-1 && currentChar != charToSplitOn)
+                lastIndexOfSubString = iterator;
+            else
+                lastIndexOfSubString = iterator - 1;
+            amountSplit++;
+            if (firstIndexOfSubString <= lastIndexOfSubString) {
+                String subString = stringGetSlice(string, firstIndexOfSubString, lastIndexOfSubString);
+                if (subString == NULL) goto stringSplitErrorExit;
+                arrayListElementSetString(stringArray, stringArray->amountOfElements, subString);
+            }
+            firstIndexOfSubString = iterator + 1;
+        }
+    }
+
+    return stringArray;
+
+stringSplitErrorExit:
+    for (size_t iterator = 0; iterator < stringArray->amountOfElements; iterator++)
+        stringDestroy(arrayListElementGetString(stringArray, iterator));
+    arrayListDestroy(stringArray);
+    return NULL;
+}
 
 //ArrayListStuff
 
-int setStringElement(ArrayList* arrayList,size_t index, void* value) {
+int arrayListElementSetString(ArrayList* arrayList,size_t index, String value) {
     assert(index <= arrayList->amountOfElements);
     if(index == arrayList->amountOfElements) { 
-        if (arrayListSizeCheckAdd(arrayList) == -1) return -1;
+        if (arrayListSizeCheckAdd(arrayList) == -1) 
+            return -1;
     }
-    *((String**)arrayList->list+index) = (String*)value;
+    *((String*)arrayList->list+index) = value;
     if (index == arrayList->amountOfElements) arrayList->amountOfElements++;
     return 0;
 }
 
-void* getStringElement(ArrayList* arrayList,size_t index) {
+String arrayListElementGetString(ArrayList* arrayList,size_t index) {
     assert(index < arrayList->amountOfElements);
-    return *((String**)arrayList->list+index);
+    return *((String*)arrayList->list+index);
 }
 
 ArrayList* arrayListCreateString(size_t initialSize) {
     ArrayList* arrayList = malloc(sizeof(ArrayList));
     if(arrayList == NULL) return NULL;
-    String** stringList = calloc(initialSize,sizeof(String*));
+    String* stringList = calloc(initialSize,sizeof(String));
     if(stringList == NULL) {
         free(arrayList);
         return NULL;
     }
     
     arrayList->listType = STRING;
-    arrayList->add = arrayListGenericAddElement;
-    arrayList->get = getStringElement;
-    arrayList->pop = arrayListGenericPopElement;
-    arrayList->set = setStringElement;
-    arrayList->remove = arrayListGenericRemoveElement;
-    arrayList->clear = arrayListGenericClearElements;
     arrayList->elementSize = sizeof(String);
-    arrayList->amountOfElements = initialSize;
+    arrayList->amountOfElements = 0;
     arrayList->totalAmountOfElements = initialSize;
     arrayList->list = stringList;
+    return arrayList;
+}
+
+ArrayList* arrayListCreateChar(size_t initialSize) {
+    ArrayList* arrayList = malloc(sizeof(ArrayList));
+    if (arrayList == NULL) return NULL;
+    char* string = calloc(initialSize, sizeof(char));
+    if (string == NULL) {
+        free(arrayList);
+        return NULL;
+    }
+
+    arrayList->listType = Char;
+    arrayList->elementSize = sizeof(char);
+    arrayList->amountOfElements = 0;
+    arrayList->totalAmountOfElements = initialSize;
+    arrayList->list = string;
     return arrayList;
 }

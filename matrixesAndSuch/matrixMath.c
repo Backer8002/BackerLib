@@ -8,8 +8,8 @@
 int matrixAdd(matrix* firstMatrix, matrix* secondMatrix) {
     if(firstMatrix->rows != secondMatrix->rows || firstMatrix->columns != secondMatrix->columns || firstMatrix->modulus != secondMatrix->modulus) return -2;
 
-    for (size_t rowIterator = 0;rowIterator < firstMatrix->rows;rowIterator++) {
-        for (size_t columnIterator = 0; columnIterator < firstMatrix->columns; columnIterator++)
+    for (uint16_t rowIterator = 0;rowIterator < firstMatrix->rows;rowIterator++) {
+        for (uint16_t columnIterator = 0; columnIterator < firstMatrix->columns; columnIterator++)
         {
             switch (firstMatrix->matrixVarType)
             {
@@ -41,8 +41,8 @@ int matrixAdd(matrix* firstMatrix, matrix* secondMatrix) {
 int matrixSub(matrix* firstMatrix, matrix* secondMatrix) {
     if(firstMatrix->rows != secondMatrix->rows || firstMatrix->columns != secondMatrix->columns || firstMatrix->modulus != secondMatrix->modulus) return -2;
 
-    for (size_t rowIterator = 0;rowIterator < firstMatrix->rows;rowIterator++) {
-        for (size_t columnIterator = 0; columnIterator < firstMatrix->columns; columnIterator++)
+    for (uint16_t rowIterator = 0;rowIterator < firstMatrix->rows;rowIterator++) {
+        for (uint16_t columnIterator = 0; columnIterator < firstMatrix->columns; columnIterator++)
         {
             switch (firstMatrix->matrixVarType)
             {
@@ -72,8 +72,8 @@ int matrixSub(matrix* firstMatrix, matrix* secondMatrix) {
 }
 
 int matrixScalarMultiply(matrix* matrix, int64_t scalar) {
-    for (size_t rowIterator = 0;rowIterator < matrix->rows;rowIterator++) {
-        for (size_t columnIterator = 0; columnIterator < matrix->columns; columnIterator++)
+    for (uint16_t rowIterator = 0;rowIterator < matrix->rows;rowIterator++) {
+        for (uint16_t columnIterator = 0; columnIterator < matrix->columns; columnIterator++)
         {
             switch (matrix->matrixVarType)
             {
@@ -109,7 +109,7 @@ int matrixInvertRows(matrix* matrix) {
     int32_t tempValueInt32;
     uint16_t maxColumnIterator;
     uint16_t minColumnIterator;
-    for (size_t rowIterator = 0; rowIterator < matrix->rows; rowIterator++) {
+    for (uint16_t rowIterator = 0; rowIterator < matrix->rows; rowIterator++) {
         maxColumnIterator = matrix->columns-1;
         minColumnIterator = 0;
         while (minColumnIterator < maxColumnIterator)
@@ -163,7 +163,7 @@ int matrixInvertColumns(matrix* matrix) {
     int32_t tempValueInt32;
     uint16_t maxRowIterator;
     uint16_t minRowIterator;
-    for (size_t columnIterator = 0; columnIterator < matrix->rows; columnIterator++) {
+    for (uint16_t columnIterator = 0; columnIterator < matrix->rows; columnIterator++) {
         maxRowIterator = matrix->columns-1;
         minRowIterator = 0;
         while (minRowIterator < maxRowIterator)
@@ -217,10 +217,10 @@ matrix* matrixMultiply(matrix* firstMatrix, matrix* secondMatrix, uint64_t* maxM
     if(resultMatrix == NULL) return NULL;
 
     size_t result;
-    for (size_t firstMatrixRowIterator = 0; firstMatrixRowIterator < firstMatrix->rows; firstMatrixRowIterator++) {
-        for (size_t secondMatrixColumnIterator = 0; secondMatrixColumnIterator < secondMatrix->columns; secondMatrixColumnIterator++) {
+    for (uint16_t firstMatrixRowIterator = 0; firstMatrixRowIterator < firstMatrix->rows; firstMatrixRowIterator++) {
+        for (uint16_t secondMatrixColumnIterator = 0; secondMatrixColumnIterator < secondMatrix->columns; secondMatrixColumnIterator++) {
             result = 0;
-            for (size_t secondMatrixRowIterator = 0; secondMatrixRowIterator < secondMatrix->rows; secondMatrixRowIterator++) {
+            for (uint16_t secondMatrixRowIterator = 0; secondMatrixRowIterator < secondMatrix->rows; secondMatrixRowIterator++) {
                 switch (firstMatrix->matrixVarType)
                 {
                 case 0:
@@ -268,8 +268,8 @@ matrix* matrixMultiply(matrix* firstMatrix, matrix* secondMatrix, uint64_t* maxM
 matrix* matrixTranspose(matrix* matrixToTranspose,uint64_t* maxMemAlloc) {
     matrix* transposedMatrix = matrixCreate(matrixToTranspose->columns,matrixToTranspose->rows,matrixToTranspose->modulus,maxMemAlloc);
     if (transposedMatrix == NULL) return NULL;
-    for (size_t rowIterator = 0; rowIterator < matrixToTranspose->rows; rowIterator++) {
-        for (size_t columnIterator = 0; columnIterator < matrixToTranspose->columns; columnIterator++) {
+    for (uint16_t rowIterator = 0; rowIterator < matrixToTranspose->rows; rowIterator++) {
+        for (uint16_t columnIterator = 0; columnIterator < matrixToTranspose->columns; columnIterator++) {
             switch (matrixToTranspose->matrixVarType)
             {
             case 0:
@@ -313,9 +313,9 @@ matrix* matrixFindInverse(matrix* matrixInput,size_t* maxMemAlloc) {
     }
 
 
-    for(size_t iteration = 0;iteration < matrixInput->columns;iteration++) {
+    for(uint16_t iteration = 0;iteration < matrixInput->columns;iteration++) {
         matrixVectorCounterReset(counter);
-        for(size_t iterator = 0; iterator < counter->rows;iterator++) {
+        for(uint16_t iterator = 0; iterator < counter->rows;iterator++) {
             switch (vectorOfUnityMatrix->matrixVarType)
             {
             case 0:
@@ -344,7 +344,7 @@ matrix* matrixFindInverse(matrix* matrixInput,size_t* maxMemAlloc) {
             if(computeHammingDistanceTwoVector(multiplyedMatrix,vectorOfUnityMatrix) == 0) {matrixFree(multiplyedMatrix,maxMemAlloc);break;}
             matrixFree(multiplyedMatrix,maxMemAlloc);
         }
-        for(size_t rowIterator = 0; rowIterator < counter->rows;rowIterator++) {
+        for(uint16_t rowIterator = 0; rowIterator < counter->rows;rowIterator++) {
             switch (counter->matrixVarType)
             {
             case 0:

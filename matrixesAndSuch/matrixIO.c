@@ -33,7 +33,7 @@ void matrixOutput(matrix* matrix,FILE* stream) {
     int amountOfChars = 0;
     fwrite("[",1,1,stream);
     for(uint16_t row = 0; row < matrix->rows;row++) {
-        String** outputString = stringCreate("[",1);
+        String outputString = stringCreate("[",1);
         if (outputString == NULL) goto exit;
 
         switch (matrix->matrixVarType)
@@ -70,9 +70,7 @@ void matrixOutput(matrix* matrix,FILE* stream) {
             stringDestroy(outputString);
             goto exit;
         }
-        size_t outputBuffSize;
-        char* outputBuff = stringGetArray(outputString,&outputBuffSize);
-        if(code == 0) fwrite(outputBuff,sizeof(char),outputBuffSize,stream);
+        if(code == 0) fwrite(outputString->list,sizeof(char),outputString->amountOfElements,stream);
         if (row < matrix->rows-1) fwrite("],\n",sizeof(char),3,stream);
         stringDestroy(outputString);
     }
@@ -129,7 +127,7 @@ matrix* textFileScanMatrix(FILE* stream, uint16_t amountOfRow, uint16_t amountOf
     for (uint16_t rowIterator = 0; rowIterator<amountOfRow;rowIterator++) {
         currentColumn = 0;
         elementIterator = 0;
-        char* fileReadCode = fgets(lineBuffer,maxLineSize,stream);
+        char* fileReadCode = fgets(lineBuffer,(int)maxLineSize,stream);
         if (fileReadCode == NULL) {
             goto errorExit;
         }
@@ -225,9 +223,9 @@ matrix* matrixBasicFileRead(FILE* stream,uint64_t* maxMemAlloc) {
     if (matrix == NULL) {
         return NULL;
     }
-    for (size_t rows = 0; rows < matrix->rows; rows++)
+    for (rows = 0; rows < matrix->rows; rows++)
     {
-        for (size_t columns = 0; columns < matrix->columns; columns++)
+        for (columns = 0; columns < matrix->columns; columns++)
         {
             if(amountRead > fileSize) {
                 matrixFree(matrix,maxMemAlloc);
@@ -273,9 +271,9 @@ int matrixBasicFileWrite(FILE* stream, matrix* matrix) {
     fwrite(&matrix->columns,sizeof(matrix->columns),1,stream);
     writenBytes += sizeof(matrix->columns);
     fflush(stream);
-    for (size_t rows = 0; rows < matrix->rows; rows++)
+    for (uint16_t rows = 0; rows < matrix->rows; rows++)
     {
-        for (size_t columns = 0; columns < matrix->columns; columns++)
+        for (uint16_t columns = 0; columns < matrix->columns; columns++)
         {
             switch (matrix->matrixVarType)
             {

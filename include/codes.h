@@ -12,5 +12,13 @@
 #endif
 #include <matrix.h>
 #include<stdint.h>
-extern CODES uint32_t computeHammingDistanceTwoVector(matrix* firstVector, matrix* secondVector);
+#ifdef __cplusplus
+extern "C" {
+#endif // __cplusplus
+
+	extern CODES uint32_t computeHammingDistanceTwoVector(matrix* firstVector, matrix* secondVector);
+#ifdef __cplusplus
+}
+#endif // __cplusplus
+
 #endif

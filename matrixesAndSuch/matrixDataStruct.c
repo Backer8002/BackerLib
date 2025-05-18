@@ -2,8 +2,9 @@
 #include <arrayList.h>
 #include <matrix.h>
 #include <stdlib.h>
+#include <math.h>
 #include <assert.h>
-int setMatrixElement(ArrayList* arrayList,size_t index, void* value) {
+int arrayListElementSetMatrix(ArrayList* arrayList,size_t index, void* value) {
     assert(index <= arrayList->amountOfElements);
     if(index == arrayList->amountOfElements) { 
         if (arrayListSizeCheckAdd(arrayList) == -1) return -1;
@@ -13,7 +14,7 @@ int setMatrixElement(ArrayList* arrayList,size_t index, void* value) {
     return 0;
 }
 
-void* getMatrixElement(ArrayList* arrayList,size_t index) {
+matrix* arrayListElementGetMatrix(ArrayList* arrayList,size_t index) {
     assert(index < arrayList->amountOfElements);
     return *((matrix**)arrayList->list+index);
 }
@@ -28,12 +29,6 @@ ArrayList* arrayListCreateMatrix(size_t initialSize) {
     }
     
     arrayList->listType = Matrix;
-    arrayList->add = arrayListGenericAddElement;
-    arrayList->get = getMatrixElement;
-    arrayList->pop = arrayListGenericPopElement;
-    arrayList->set = setMatrixElement;
-    arrayList->clear = arrayListGenericClearElements;
-    arrayList->remove = arrayListGenericRemoveElement;
     arrayList->elementSize = sizeof(matrix*);
     arrayList->amountOfElements = initialSize;
     arrayList->totalAmountOfElements = initialSize;
@@ -41,7 +36,7 @@ ArrayList* arrayListCreateMatrix(size_t initialSize) {
     return arrayList;
 }
 
-Set* SetCreateVector(matrix* oneMatrixFromDimension) {
+Set* setCreateVector(matrix* oneMatrixFromDimension) {
     Set* set = malloc(sizeof(Set));
     if (set == NULL) return NULL;
     uint64_t arraySize = ceil(pow(oneMatrixFromDimension->modulus, oneMatrixFromDimension->rows) / 64);
@@ -55,7 +50,6 @@ Set* SetCreateVector(matrix* oneMatrixFromDimension) {
     set->theHashOfTheSet = (uint64_t)pow(oneMatrixFromDimension->modulus, oneMatrixFromDimension->rows);
     set->typeOfHash = Vector;
     set->sizeOfArray = arraySize;
-    set->hashFunction = baseXtoBase10Vector;
     set->equalityChecker = setCompare;
     return set;
 }
