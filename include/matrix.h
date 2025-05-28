@@ -75,7 +75,7 @@ extern "C" {
 #include <hashMap.h>
     //matrixDataStruct.c
     extern MATRIXES ArrayList* arrayListCreateMatrix(size_t initialSize);
-    extern MATRIXES int arrayListElementSetMatrix(ArrayList* arrayList, size_t index, void* value);
+    extern MATRIXES int arrayListElementSetMatrix(ArrayList* arrayList, size_t index, matrix* value);
     extern MATRIXES matrix* arrayListElementGetMatrix(ArrayList* arrayList, size_t index);
 
     extern MATRIXES Set* setCreateVector(matrix* oneMatrixFromDimension);

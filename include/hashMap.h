@@ -1,7 +1,7 @@
 #ifndef hashMap_h_
 #define hashMap_h_
 
-#ifdef _WINDOWS
+#ifdef DLL
 #ifdef BASICFUNCTIONS_EXPORTS 
 #define HASHMAP __declspec(dllexport)
 #else

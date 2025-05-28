@@ -4,15 +4,9 @@
 // However, files listed here are ALL re-compiled if any one of them is updated between builds.
 // Do not add files here that you will be updating frequently as this negates the performance advantage.
 
-#ifdef DLL
 #ifndef PCH_H
 #define PCH_H
 
 // add headers that you want to pre-compile here
-#include"arrayList.h"
-#include"backerStrings.h"
-#include"extMath.h"
-#include"hashMap.h"
-#include "framework.h"
+
 #endif //PCH_H
-#endif
