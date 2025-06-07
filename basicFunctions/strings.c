@@ -18,7 +18,7 @@ String stringCreate(const char* string, size_t length) {
     allocatedString.header.objectType = ListString;
     if (allocatedString.list == NULL)
         return allocatedString;
-    memcpy_s(allocatedString.list,length,string,length);
+    memcpy(allocatedString.list,string,length);
     allocatedString.amountOfElements = length;
     return allocatedString;
 }

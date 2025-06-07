@@ -7,4 +7,4 @@ include_directories(BackerLoggingHandler PUBLIC "${PROJECT_SOURCE_DIR}/../includ
 add_library(BackerLoggingHandler STATIC loggingMain.c)
 
 
-target_link_libraries(BackerLoggingHandler BackerLoggingHandler.lib)
+target_link_libraries(BackerLoggingHandler "BackerLoggingHandler.lib")

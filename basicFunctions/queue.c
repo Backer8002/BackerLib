@@ -88,10 +88,9 @@ Queue* queueListCopyStackToHeap(Queue* queue) {
             mtx_unlock(&queue->mutex);
         return NULL;
     }
-    memcpy_s(queueNew->queue,
-        queueNew->queueSize * queueNew->elementSize,
+    memcpy(queueNew->queue,
         queue->queue,
-        queue->queueSize * queue->elementSize);
+        queueNew->queueSize * queueNew->elementSize);
     queueNew->currentDequeueIndex = queue->currentDequeueIndex;
     queueNew->currentEnqueueIndex = queue->currentEnqueueIndex;
     if (mtx_init(&queueNew->mutex, mtx_plain) == thrd_success)
@@ -113,10 +112,9 @@ Queue queueListCopyStack(Queue* queue) {
         return queueNew;
     }
 
-    memcpy_s(queueNew.queue,
-        queueNew.queueSize * queueNew.elementSize,
+    memcpy(queueNew.queue,
         queue->queue,
-        queue->queueSize * queue->elementSize);
+        queueNew.queueSize * queueNew.elementSize);
     queue->currentDequeueIndex = queue->currentDequeueIndex;
     queue->currentEnqueueIndex = queue->currentEnqueueIndex;
     if (queue->header.flags & ObjectFlagMutexExists)

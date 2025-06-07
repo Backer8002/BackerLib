@@ -164,7 +164,7 @@ HashMapError_t hashMapRemove(HashMap* hashMap, void* key, ListTypes_t keyType, v
 
 inline HashMapError_t setRemove(HashMap* hashMap, void* key, ListTypes_t keyType) { return hashMapRemove(hashMap, key, keyType,NULL); }
 
-HashMapError_t hashMapReplace(HashMap* hashMap, const void* key, ListTypes_t keyType, const void* element, ListTypes_t elementType) {
+HashMapError_t hashMapReplace(HashMap* hashMap, const void* key, ListTypes_t keyType, void* element, ListTypes_t elementType) {
     assert(keyType == hashMap->keyType);
     assert(elementType == hashMap->header.dataArrayVarType);
     assert(hashMap->header.objectType == ListHashMap);
@@ -176,6 +176,6 @@ HashMapError_t hashMapReplace(HashMap* hashMap, const void* key, ListTypes_t key
     if (hashMap->header.flags & ObjectFlagContentsIsPointers)
         hashArrayNode->element = element;
     else
-        memcpy_s(hashArrayNode->element, hashMap->sizeOfElement, element, hashMap->sizeOfElement);
+        memcpy(hashArrayNode->element, element, hashMap->sizeOfElement);
     return HashMapOperationSuccsess;
 }
