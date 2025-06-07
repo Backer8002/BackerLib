@@ -78,10 +78,10 @@ extern "C" {
     extern MATRIXES int arrayListElementSetMatrix(ArrayList* arrayList, size_t index, matrix* value);
     extern MATRIXES matrix* arrayListElementGetMatrix(ArrayList* arrayList, size_t index);
 
-    extern MATRIXES Set* setCreateVector(matrix* oneMatrixFromDimension);
+    extern MATRIXES BitSet* setCreateVector(matrix* oneMatrixFromDimension);
 
     extern MATRIXES uint64_t baseXtoBase10Vector(matrix* vector, uint16_t index);
-    extern MATRIXES bool hashVectorsInMatrix(Set* set, matrix* vectors);
+    extern MATRIXES bool hashVectorsInMatrix(BitSet* set, matrix* vectors);
 
     extern MATRIXES matrix* matrixFromArrayList(ArrayList* arrayListOfMatrix, bool isSameSize, size_t* maxMemAlloc);
 #ifdef __cplusplus

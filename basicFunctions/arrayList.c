@@ -5,6 +5,8 @@
 #include<math.h>
 #include<threads.h>
 #include<assert.h>
+#undef arrayListElementSet
+#undef arrayListElementInsert
 
 int arrayListSizeCheckAdd(ArrayList* arrayList) {
     if(arrayList->amountOfElements >= arrayList->totalAmountOfElements) {
@@ -34,27 +36,25 @@ inline void arrayListElementsClear(ArrayList* arrayList) {
     mtx_unlock(&arrayList->mutex);
 }
 
-void* arrayListElementGetGeneric(ArrayList* arrayList,size_t index) {
+void* arrayListElementGet(ArrayList* arrayList,size_t index) {
     assert(index < arrayList->amountOfElements);
-    unsigned char* returnVal = (arrayList->elementsArePointers) ? *((unsigned char**) arrayList->list + (index * arrayList->elementSize)) : ((unsigned char*) arrayList->list + (index * arrayList->elementSize));
+    unsigned char* returnVal = (arrayList->header.flags & ObjectFlagContentsIsPointers) ? *((unsigned char**) arrayList->list + (index * arrayList->elementSize)) : ((unsigned char*) arrayList->list + (index * arrayList->elementSize));
     return returnVal;
 }
 
-void* arrayListElementPopGeneric(ArrayList* arrayList) {
+void arrayListElementPop(ArrayList* arrayList) {
     if (arrayList->amountOfElements == 0) {
-        return NULL;
+        return;
     }
-    void* element = arrayListElementGetGeneric(arrayList,arrayList->amountOfElements-1);
     arrayList->amountOfElements--;
     arrayListSizeCheckRemove(arrayList);
-    return element;
 }
 
 void arrayListElementRemove(ArrayList* arrayList, size_t index,size_t lastIndex) {
     assert(index <= lastIndex);
     if (lastIndex != arrayList->amountOfElements-1){
-        void*  currentIndex        = arrayListElementGetGeneric(arrayList, index);
-        void*  nextIndex           = arrayListElementGetGeneric(arrayList, lastIndex + 1);
+        void*  currentIndex        = arrayListElementGet(arrayList, index);
+        void*  nextIndex           = arrayListElementGet(arrayList, lastIndex + 1);
         size_t amountOfBytesToMove = (arrayList->amountOfElements - lastIndex - 1) * arrayList->elementSize;   
         memmove_s(currentIndex,amountOfBytesToMove+((lastIndex-index+1)*arrayList->elementSize),nextIndex,amountOfBytesToMove);
     }
@@ -79,7 +79,7 @@ int arrayListElementInsert(ArrayList* arrayList, size_t index, void* element,siz
     return 0;
 }
 
-int arrayListElementSetGeneric(ArrayList* arrayList, size_t index,void* element,size_t elementSize) {
+int arrayListElementSet(ArrayList* arrayList, size_t index,void* element,size_t elementSize) {
     assert(index <= arrayList->amountOfElements);
     assert(elementSize == arrayList->elementSize);
     if (index == arrayList->amountOfElements) {
@@ -98,9 +98,9 @@ ArrayList arrayListCreateStack(size_t intialSize, size_t elementSize, ListTypes_
     ArrayList arrayList;
     arrayList.amountOfElements = 0;
     arrayList.elementSize = elementSize;
-    arrayList.listType = elementType;
-    arrayList.elementsArePointers = elementsArePointers;
-    arrayList.structIsHeapAlloced = false;
+    arrayList.header.dataArrayVarType = elementType;
+    arrayList.header.flags            = (elementsArePointers) ? ObjectFlagContentsIsPointers : 0;
+    arrayList.header.objectType      = ListArrayList;
 
     arrayList.list = malloc(elementSize * intialSize);
     if (arrayList.list == NULL) {
@@ -109,9 +109,7 @@ ArrayList arrayListCreateStack(size_t intialSize, size_t elementSize, ListTypes_
         return arrayList;
     }
     if (mtx_init(&arrayList.mutex, mtx_plain) == thrd_success)
-        arrayList.mutexExists = true;
-    else
-        arrayList.mutexExists = false;
+        arrayList.header.flags |= ObjectFlagMutexExists;
     arrayList.totalAmountOfElements = intialSize;
     return arrayList;
 }
@@ -120,11 +118,11 @@ ArrayList* arrayListCreate(size_t intialSize, size_t elementSize, ListTypes_t el
     ArrayList* arrayList = malloc(sizeof(ArrayList));
     if (arrayList == NULL)
         return NULL;
-    arrayList->amountOfElements = 0;
-    arrayList->elementSize = elementSize;
-    arrayList->listType = elementType;
-    arrayList->elementsArePointers = elementsArePointers;
-    arrayList->structIsHeapAlloced = true;
+    arrayList->amountOfElements        = 0;
+    arrayList->elementSize             = elementSize;
+    arrayList->header.dataArrayVarType = elementType;
+    arrayList->header.flags            = ((elementsArePointers) ? elementsArePointers : 0) | ObjectFlagIsOnHeap;
+    arrayList->header.objectType       = ListArrayList;
 
     arrayList->list = malloc(elementSize * intialSize);
     if (arrayList->list == NULL) {
@@ -132,30 +130,29 @@ ArrayList* arrayListCreate(size_t intialSize, size_t elementSize, ListTypes_t el
         return NULL;
     }
     if (mtx_init(&arrayList->mutex, mtx_plain)== thrd_success)
-        arrayList->mutexExists = true;
-    else
-        arrayList->mutexExists = false;
+        arrayList->header.flags |= ObjectFlagMutexExists;
     arrayList->totalAmountOfElements = intialSize;
     return arrayList;
 }
 
 
-inline void arrayListDestroy(ArrayList* arrayList) {
-    mtx_destroy(&arrayList->mutex);
-    if (arrayList->list != NULL)
-        free(arrayList->list);
-    if (arrayList->structIsHeapAlloced)
-        free(arrayList);
+inline void arrayListDestroy(void* arrayList) {
+    ArrayList* arraylist = arrayList;
+    mtx_destroy(&arraylist->mutex);
+    if (arraylist->list != NULL)
+        free(arraylist->list);
+    if (arraylist->header.flags & ObjectFlagIsOnHeap)
+        free(arraylist);
 }
 
 void arrayListDestroyWithElements(ArrayList* arrayList,void(elementDestructor)(void* element)) {
     for (size_t i = 0; i < arrayList->amountOfElements; i++)
-        elementDestructor((arrayList->elementsArePointers) ? *((unsigned char**)arrayList->list + arrayList->elementSize * i) : ((unsigned char*)arrayList->list) + arrayList->elementSize*i);
+        elementDestructor((arrayList->header.flags & ObjectFlagContentsIsPointers) ? *((unsigned char**)arrayList->list + arrayList->elementSize * i) : ((unsigned char*)arrayList->list) + arrayList->elementSize*i);
     arrayListDestroy(arrayList);
 }
 
 ArrayList* arrayListMoveStackToHeap(ArrayList arrayList,bool destroyInputOnFailiure) {
-    if (arrayList.structIsHeapAlloced||arrayList.list == NULL)
+    if ((arrayList.header.flags & ObjectFlagIsOnHeap) || arrayList.header.dataArrayVarType == ListNone)
         return NULL;
     ArrayList* arrayListNew = malloc(sizeof(ArrayList));
     if (arrayListNew == NULL) {
@@ -164,22 +161,22 @@ ArrayList* arrayListMoveStackToHeap(ArrayList arrayList,bool destroyInputOnFaili
         return NULL;
     }
     *arrayListNew = arrayList;
-    arrayListNew->structIsHeapAlloced = true;
+    arrayListNew->header.flags |= ObjectFlagIsOnHeap;
     return arrayListNew;
 }
 
 ArrayList arrayListMoveStack(ArrayList* arrayList) {
     ArrayList arrayListNew = *arrayList;
-    arrayListNew.structIsHeapAlloced = false;
-    if (arrayList->structIsHeapAlloced)
+    arrayListNew.header.flags &= ~ObjectFlagIsOnHeap;
+    if (arrayList->header.flags & ObjectFlagIsOnHeap)
         free(arrayList);
     return arrayListNew;
 }
 
 ArrayList* arrayListCopyStackToHeap(ArrayList* arrayList) {
-    if (arrayList->structIsHeapAlloced||arrayList->list == NULL)
+    if ((arrayList->header.flags & ObjectFlagIsOnHeap) ||arrayList->list == NULL)
         return NULL;
-    ArrayList* arrayListNew = arrayListCreate(arrayList->totalAmountOfElements,arrayList->elementSize,arrayList->listType,arrayList->elementsArePointers);
+    ArrayList* arrayListNew = arrayListCreate(arrayList->totalAmountOfElements,arrayList->elementSize,arrayList->header.dataArrayVarType,arrayList->header.flags & ObjectFlagContentsIsPointers);
     if (arrayListNew == NULL)
         return NULL;
     memcpy_s(arrayListNew->list,
@@ -191,7 +188,7 @@ ArrayList* arrayListCopyStackToHeap(ArrayList* arrayList) {
 }
 
 ArrayList arrayListCopyStack(ArrayList* arrayList) {
-    ArrayList arrayListNew = arrayListCreateStack(arrayList->totalAmountOfElements, arrayList->elementSize, arrayList->listType, arrayList->elementsArePointers);
+    ArrayList arrayListNew = arrayListCreateStack(arrayList->totalAmountOfElements, arrayList->elementSize, arrayList->header.dataArrayVarType, arrayList->header.flags & ObjectFlagContentsIsPointers);
     if (arrayListNew.list == NULL)
         return arrayListNew;
 

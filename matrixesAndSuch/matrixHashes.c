@@ -26,7 +26,7 @@ uint64_t baseXtoBase10Vector(matrix* vector,uint16_t index) {
     return result;
 }
 
-bool hashVectorsInMatrix(Set* set, matrix* vectors) {
+bool hashVectorsInMatrix(BitSet* set, matrix* vectors) {
     bool alreadyIncludes = false;
     for (size_t iterator = 0; iterator < vectors->columns; iterator++)
         alreadyIncludes |= setAdd(set, baseXtoBase10Vector(vectors, iterator));

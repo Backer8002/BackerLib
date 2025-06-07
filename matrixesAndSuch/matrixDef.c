@@ -104,38 +104,44 @@ void* matrixGetPointer(matrix* matrix,uint16_t rows, uint16_t columns) {
     }
 }
 String matrixToStringUint8(matrix* matrix) {
-    switch (matrix->matrixVarType)
-    {
+    switch (matrix->matrixVarType) {
     case 0:
-        char itoaBuff[charsPerUInt8+2];
+        char itoaBuff[charsPerUInt8 + 2];
         int code = 0;
-        String string = stringCreate("[",1);
-        if (string == NULL) return NULL;
-        for (uint16_t row = 0;row<matrix->rows;row++) {
-            
-            code |= stringAdd(string,"[",1);
+        String stringOnStack = stringCreate("[", 1);
+        if (stringOnStack.list == NULL)
+            return stringOnStack;
+        String* string = &stringOnStack;
+        for (uint16_t row = 0; row < matrix->rows; row++) {
 
-            for (uint16_t column = 0;column<matrix->columns;column++) {
-                int amountOfChars = _snprintf_s(itoaBuff,5,5,"%hhu",*(uint8_t*)matrixGetPointer(matrix,row,column));
-                code |= stringAdd(string,itoaBuff,amountOfChars);
-                if(column < matrix->columns-1) code |= stringAdd(string,",",1);
-                if(code!=0) return NULL;
+            code |= stringAdd(string, "[", 1);
+
+            for (uint16_t column = 0; column < matrix->columns; column++) {
+                int amountOfChars = _snprintf_s(itoaBuff, 5, 5, "%hhu", *(uint8_t*) matrixGetPointer(matrix, row, column));
+                code |= stringAdd(string, itoaBuff, amountOfChars);
+                if (column < matrix->columns - 1)
+                    code |= stringAdd(string, ",", 1);
+                if (code != 0)
+                    return stringOnStack;
             }
-            if (row < matrix->rows-1) code |= stringAdd(string,"],\n",3);
-            else code |= stringAdd(string,"]]\n\0",4);
+            if (row < matrix->rows - 1)
+                code |= stringAdd(string, "],\n", 3);
+            else
+                code |= stringAdd(string, "]]\n\0", 4);
         }
         if (code < 0) {
-            stringDestroy(string);
-            return NULL;
+            arrayListDestroy(string);
+            return stringOnStack;
         }
-        return string;
+        return stringOnStack;
         break;
     default:
-        return NULL;
+        String str = { 0, 0, 0, 0, 0, 0, 0 };
+        return str;
         break;
     }
-    
 }
+
 int matrixCompareEquality(matrix* firstMatrix, matrix* otherMatrix) {
     if(!(firstMatrix->columns == otherMatrix->columns && firstMatrix->rows == otherMatrix->rows)) return -2;
     

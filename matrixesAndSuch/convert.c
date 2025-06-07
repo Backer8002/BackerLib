@@ -66,12 +66,12 @@ ArrayList* ballToMatrixArrayList(ball* Ball) {
 	return matrixList;
 }
 
-Set* ballToSet(ball* Ball) {
-	Set* set = setCreateVector(*(Ball->elements));
+BitSet* ballToSet(ball* Ball) {
+	BitSet* set = setCreateVector(*(Ball->elements));
 	if (set == NULL) return NULL;
 
 	for (size_t iterator = 0; iterator < Ball->amountOfElementsInBall; iterator++) {
-		setAdd(set, baseXtoBase10Vector(*(Ball->elements + iterator),0));
+		bitSetAdd(set, baseXtoBase10Vector(*(Ball->elements + iterator),0));
 	}
 	return set;
 }

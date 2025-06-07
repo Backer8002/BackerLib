@@ -29,8 +29,7 @@ ArrayList* vectorSpann(matrix* vectors, size_t* maxMemAlloc) {
     return arrayList;
 }
 
-int vectorCheckIfLinear(matrix* matrixOfVectors,size_t* maxMemAlloc)
-{   
+int vectorCheckIfLinear(matrix* matrixOfVectors,size_t* maxMemAlloc) {   
     ArrayList* matrixArrayList = vectorSpann(matrixOfVectors, maxMemAlloc);
     if (matrixArrayList == NULL) return -1;
     for (size_t iterator = 1; iterator < matrixArrayList->amountOfElements; iterator++) {
@@ -45,8 +44,7 @@ int vectorCheckIfLinear(matrix* matrixOfVectors,size_t* maxMemAlloc)
     return 0;
 }
 
-int vectorCheckIfLinearWithSpann(ArrayList* spannOfVectors)
-{
+int vectorCheckIfLinearWithSpann(ArrayList* spannOfVectors) {
     for (size_t iterator = 1; iterator < spannOfVectors->amountOfElements; iterator++) {
         if (matrixCompareEqualityZeroMatrix(arrayListElementGetMatrix(spannOfVectors, iterator))) { 
             arrayListDestroy(spannOfVectors); 
@@ -56,8 +54,7 @@ int vectorCheckIfLinearWithSpann(ArrayList* spannOfVectors)
     return 0;
 }
 
-int vectorCheckIfBase(matrix* base, matrix* room,size_t* maxMemAlloc)
-{
+int vectorCheckIfBase(matrix* base, matrix* room,size_t* maxMemAlloc) {
     ArrayList* spannOfBase = vectorSpann(base, maxMemAlloc);
     if (spannOfBase == NULL) return -1;
 
@@ -68,37 +65,37 @@ int vectorCheckIfBase(matrix* base, matrix* room,size_t* maxMemAlloc)
         return -2; 
     }
 
-    Set* set = setCreateVector(base);
+    BitSet* set = setCreateVector(base);
     if (set == NULL) { 
         for (size_t iterator = 0; iterator < spannOfBase->amountOfElements; iterator++)
             matrixFree(arrayListElementGetMatrix(spannOfBase, iterator),maxMemAlloc);
         arrayListDestroy(spannOfBase); 
         return -1; 
     }
-    Set* secondSet = setCreateVector(arrayListElementGetMatrix(spannOfBase, 0));
+    BitSet* secondSet = setCreateVector(arrayListElementGetMatrix(spannOfBase, 0));
     if (secondSet == NULL) {
         for (size_t iterator = 0; iterator < spannOfBase->amountOfElements; iterator++)
             matrixFree(arrayListElementGetMatrix(spannOfBase, iterator),maxMemAlloc);
         arrayListDestroy(spannOfBase);
-        setDestroy(set);
+        bitSetDestroy(set);
         return -1;
     }
 
     hashVectorsInMatrix(set, room);
     for (size_t iterator = 0; iterator < spannOfBase->amountOfElements; iterator++)
-    {
-        setAdd(secondSet, baseXtoBase10Vector(arrayListElementGetMatrix(spannOfBase, iterator),0));
-    }
+        bitSetAdd(secondSet, baseXtoBase10Vector(arrayListElementGetMatrix(spannOfBase, iterator),0));
+
     for (size_t iterator = 0; iterator < spannOfBase->amountOfElements; iterator++)
         matrixFree(arrayListElementGetMatrix(spannOfBase, iterator),maxMemAlloc);
+
     arrayListDestroy(spannOfBase);
-    setAnd(set, secondSet);
-    setDestroy(secondSet);
-    if (setIsEmpty(set)) {
-        setDestroy(set);
+    bitSetAnd(set, secondSet);
+    bitSetDestroy(secondSet);
+    if (bitSetIsEmpty(set)) {
+        bitSetDestroy(set);
         return 1;
     }
-    setDestroy(set);
+    bitSetDestroy(set);
     return 0;
 }
 
@@ -126,24 +123,23 @@ matrix* createRoom(matrix* base,size_t* maxMemAlloc) {
     return returnMatrix;
 }
 
-int vectorCheckIfRoom(matrix* room,size_t* maxMemAlloc)
-{
+int vectorCheckIfRoom(matrix* room,size_t* maxMemAlloc) {
     ArrayList* spannOfRoom = vectorSpann(room, maxMemAlloc);
     if (spannOfRoom == NULL) return -1;
 
-    Set* set = setCreateVector(room);
+    BitSet* set = setCreateVector(room);
     if (set == NULL) {
         for (size_t iterator = 0; iterator < spannOfRoom->amountOfElements; iterator++)
             matrixFree(arrayListElementGetMatrix(spannOfRoom, iterator),maxMemAlloc);
         arrayListDestroy(spannOfRoom);
         return -1;
     }
-    Set* secondSet = setCreateVector(arrayListElementGetMatrix(spannOfRoom, 0));
+    BitSet* secondSet = setCreateVector(arrayListElementGetMatrix(spannOfRoom, 0));
     if (secondSet == NULL) {
         for (size_t iterator = 0; iterator < spannOfRoom->amountOfElements; iterator++)
             matrixFree(arrayListElementGetMatrix(spannOfRoom, iterator),maxMemAlloc);
         arrayListDestroy(spannOfRoom);
-        setDestroy(set);
+        bitSetDestroy(set);
         return -1;
     }
 
@@ -155,12 +151,12 @@ int vectorCheckIfRoom(matrix* room,size_t* maxMemAlloc)
         matrixFree(arrayListElementGetMatrix(spannOfRoom, iterator),maxMemAlloc);
 
     arrayListDestroy(spannOfRoom);
-    setAnd(set, secondSet);
-    setDestroy(secondSet);
+    bitSetAnd(set, secondSet);
+    bitSetDestroy(secondSet);
     if (setIsEmpty(set)) {
-        setDestroy(set);
+        bitSetDestroy(set);
         return 1;
     }
-    setDestroy(set);
+    bitSetDestroy(set);
     return 0;
 }

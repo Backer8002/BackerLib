@@ -1,5 +1,5 @@
-#ifndef hashMap_h_
-#define hashMap_h_
+#ifndef HashMap_h_
+#define HashMap_h_
 
 #ifdef DLL
 #ifdef BASICFUNCTIONS_EXPORTS 
@@ -12,53 +12,78 @@
 #endif
 
 #include<stddef.h>
-#include<stdbool.h>
 #include<stdint.h>
+#include<stdarg.h>
 #include<arrayList.h>
+#include<backerLibListTypes.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif // __cplusplus
 
-    HASHMAP typedef enum {
-        Vector
-    } hashTypes;
-
-    //sets.c
-    HASHMAP typedef struct set
+    HASHMAP typedef struct
     {
+        DataTypeHeader header;
         size_t sizeOfArray;
         uint64_t* array;
-        uint64_t theHashOfTheSet;
-        hashTypes typeOfHash;
-        bool (*equalityChecker)(struct set*, struct set*);
-    }Set;
+        uint64_t (*hashFunction)(void* element,size_t elementSize);
+        
+    }BitSet;
+    extern HASHMAP bool bitSetGet(BitSet* set, uint64_t hash);
+    extern HASHMAP bool bitSetAdd(BitSet* set, uint64_t hash);
+    extern HASHMAP bool bitSetRemove(BitSet* set, uint64_t hash);
+    extern HASHMAP bool bitSetIsEmpty(BitSet* set);
+    extern HASHMAP int bitSetAnd(BitSet* firstSet, BitSet* secondSet);
+    extern HASHMAP bool bitSetCompare(BitSet* firstSet, BitSet* secondSet);
+    extern HASHMAP void bitSetDestroy(BitSet* set);
 
-    extern HASHMAP bool setGet(Set* set, uint64_t hash);
-    extern HASHMAP bool setAdd(Set* set, uint64_t hash);
-    extern HASHMAP bool setRemove(Set* set, uint64_t hash);
-    extern HASHMAP bool setIsEmpty(Set* set);
-    extern HASHMAP int setAnd(Set* firstSet, Set* secondSet);
-    extern HASHMAP bool setCompare(Set* firstSet, Set* secondSet);
-    extern HASHMAP void setDestroy(Set* set);
 
-    //hashMap.c
+    typedef struct hashArrayNode{
+        struct hashArrayNode* next;
+        void* element;
+        void* key;
+    } HashArrayNode;
 
-    HASHMAP typedef struct hashMap {
-        size_t sizeOfArray;
-        size_t amountOfValues;
-        ArrayList* array;
-        uint64_t theHashOfTheSet;
-        uint64_t(*hashFunction)(void*);
-        hashTypes typeOfHash;
-        void* (*get)(struct hashMap, uint64_t);
-        void (*put)(struct hashMap, uint64_t, void*);
-        void* (*remove)(struct hashMap, uint64_t);
-        Set* (*keySet)(struct hashMap);
-        ArrayList* (*valueList)(struct hashMap);
+    typedef struct {
+        DataTypeHeader header;
+        ListTypes_t keyType;
+        uint64_t(*hashFunction)(const void* element,size_t elementSize);
+        size_t sizeOfHashArray;
+        size_t sizeOfKey;
+        size_t sizeOfElement;
+        HashArrayNode* hashArray;
     } HashMap;
+
+    typedef HashMap Set;
+
+    typedef enum HashMapError {
+        HashMapOperationSuccsess = 0,
+        HashMapCannotAllocMem,
+        HashMapKeyAlreadyExists,
+        HashMapKeyDoesNotExist
+    } HashMapError_t;
+
+
+extern uint64_t hashFunctionDefualt(size_t amountOfVars, ...);
+extern HashMap hashMapCreateStack(size_t intialSize, size_t keySize, size_t elementSize, ListTypes_t keyType, ListTypes_t elementType, bool elementsArePointers, uint64_t(*hashFunction)(const void* element, size_t elementSize));
+extern HashMap* hashMapCreate(size_t intialSize, size_t keySize, size_t elementSize, ListTypes_t keyType, ListTypes_t elementType, bool elementsArePointers, uint64_t(*hashFunction)(const void* element, size_t elementSize));
+extern Set setCreateStack(size_t intialSize, size_t keySize, size_t elementSize, ListTypes_t keyType, ListTypes_t elementType, bool elementsArePointers, uint64_t(*hashFunction)(const void* element, size_t elementSize));
+extern Set* setCreate(size_t intialSize, size_t keySize, size_t elementSize, ListTypes_t keyType, ListTypes_t elementType, bool elementsArePointers, uint64_t(*hashFunction)(const void* element, size_t elementSize));
+
+extern HashMapError_t hashMapInsert(HashMap* hashMap, void* key, size_t keySize, void* element, size_t elementSize);
+
+inline uint64_t hashFunctionDefualtSingleVar(const void* element, size_t size) { return hashFunctionDefualt(1, size, element); }
+
+#ifndef Implementation
+#define HashArrayNode void
+#define hashArrayNode void
+
+#define hashMapInsert(hashMap, key, element) hashMapInsert(hashMap,key,sizeof(key),element,sizeof(element))
+#endif // !Implementation
+
 #ifdef __cplusplus
 }
 #endif // __cplusplus
 
 #endif
+

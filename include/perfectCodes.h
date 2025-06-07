@@ -24,7 +24,7 @@ extern "C" {
     extern CODES uint32_t sizeOfBall(matrix* vector, uint32_t radius);
     extern CODES ball findBall(matrix* vector, uint32_t radius, uint64_t* maxMemAlloc);
 
-    extern CODES Set* ballToSet(ball* Ball);
+    extern CODES BitSet* ballToSet(ball* Ball);
     extern CODES ArrayList* ballToMatrixArrayList(ball* Ball);
 #ifdef __cplusplus
 }

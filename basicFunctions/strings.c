@@ -9,12 +9,13 @@
 #include<stdio.h>
 
 
-String stringCreate(char* string, size_t length) {
+String stringCreate(const char* string, size_t length) {
     if (length == 0) {
-        String stringAlloced = { .list = NULL,.listType = ListNone};
+        String stringAlloced = { .list = NULL,.header.dataArrayVarType = ListNone};
         return stringAlloced;
     }
     String allocatedString = arrayListCreateStack(length,sizeof(char),ListInt8,false);
+    allocatedString.header.objectType = ListString;
     if (allocatedString.list == NULL)
         return allocatedString;
     memcpy_s(allocatedString.list,length,string,length);
@@ -22,17 +23,17 @@ String stringCreate(char* string, size_t length) {
     return allocatedString;
 }
 
-inline char stringGetChar(String* string, size_t index) {
-    return *(char*)arrayListElementGetGeneric(string, index);
+inline char stringGetChar(const String* string, size_t index) {
+    return *(char*)arrayListElementGet(string, index);
 }
 
 inline void stringRemoveSlice(String* string, size_t firstIndex, size_t lastIndex) {
     arrayListElementRemove(string, firstIndex, lastIndex);
 }
 
-String stringGetSlice(String* string, size_t firstIndex, size_t lastIndex) {
-    if ((string->listType != ListInt8) | (string->amountOfElements <= lastIndex) | (firstIndex > lastIndex)) {
-        String stringAlloced = { .list = NULL, .listType = ListNone };
+String stringGetSlice(const String* string, size_t firstIndex, size_t lastIndex) {
+    if ((string->header.dataArrayVarType != ListInt8) | (string->amountOfElements <= lastIndex) | (firstIndex > lastIndex)) {
+        String stringAlloced = { .list = NULL, .header.dataArrayVarType = ListNone };
         return stringAlloced;
     }
 
@@ -58,16 +59,16 @@ String stringGetSlice(String* string, size_t firstIndex, size_t lastIndex) {
     }
 }
 
-inline String stringCopy(String* string) {
+inline String stringCopy(const String* string) {
     return stringGetSlice(string, 0, string->amountOfElements - 1);
 }
 
-inline String stringReverse(String* string) {
+inline String stringReverse(const String* string) {
     return stringGetSlice(string, string->amountOfElements - 1, 0);
 }
 
-int stringAdd(String* destString, char* string2,size_t length) {
-    if((string2 == NULL)|(length==0)|(destString->listType!=ListInt8)) return -2;
+int stringAdd(String* destString, const char* string2,size_t length) {
+    if((string2 == NULL)|(length==0)|(destString->header.dataArrayVarType!=ListInt8)) return -2;
     size_t endOfDestString = destString->amountOfElements;
     destString->amountOfElements += length;
     if (arrayListSizeCheckAdd(destString) == -1) {
@@ -78,8 +79,8 @@ int stringAdd(String* destString, char* string2,size_t length) {
     return 0;
 }
 
-int stringConcat(String* destString,String* secondString) {
-    if ((destString->listType != ListInt8) | (secondString->listType != ListInt8)) return -2;
+int stringConcat(String* destString,const String* secondString) {
+    if ((destString->header.dataArrayVarType != ListInt8) | (secondString->header.dataArrayVarType != ListInt8)) return -2;
     size_t endOfDestString = destString->amountOfElements;
     destString->amountOfElements += secondString->amountOfElements;
     if (arrayListSizeCheckAdd(destString) == -1) {
@@ -90,9 +91,9 @@ int stringConcat(String* destString,String* secondString) {
     return 0;
 }
 
-String stringStrip(String* string, char charToStrip,bool enforceStripLimit ,int64_t amountToStrip) {
-    if (string->listType != ListInt8) {
-        String stringAlloced = { .list = NULL, .listType = ListNone };
+String stringStrip(const String* string, char charToStrip,bool enforceStripLimit ,int64_t amountToStrip) {
+    if (string->header.dataArrayVarType != ListInt8) {
+        String stringAlloced = { .list = NULL, .header.dataArrayVarType = ListNone };
         return stringAlloced;
     }
     size_t amountOfCharsThatCanBeStripped = 0;
@@ -100,11 +101,11 @@ String stringStrip(String* string, char charToStrip,bool enforceStripLimit ,int6
         if (stringGetChar(string, iterator) == charToStrip)
             amountOfCharsThatCanBeStripped++;
 
-    if (enforceStripLimit && amountOfCharsThatCanBeStripped > ((amountToStrip < 0) ? -amountToStrip : amountToStrip))
+    if (enforceStripLimit && amountOfCharsThatCanBeStripped > (size_t)((amountToStrip < 0) ? -amountToStrip : amountToStrip))
         amountOfCharsThatCanBeStripped = (amountToStrip < 0) ? -amountToStrip : amountToStrip;
 
     String returnString = arrayListCreateStack(string->amountOfElements-amountOfCharsThatCanBeStripped,sizeof(char),ListInt8,false);
-    if (returnString.listType == ListNone)
+    if (returnString.header.dataArrayVarType == ListNone)
         return returnString;
 
 
@@ -134,9 +135,9 @@ String stringStrip(String* string, char charToStrip,bool enforceStripLimit ,int6
     return returnString;
 }
 
-ArrayList stringSplit(String* string, char charToSplitOn,bool enforceSplitLimit, int64_t amountOfCharsToSplitAt) {
-    if (string->listType != ListInt8) {
-        String stringAlloced = { .list = NULL, .listType = ListNone };
+ArrayList stringSplit(const String* string, char charToSplitOn,bool enforceSplitLimit, int64_t amountOfCharsToSplitAt) {
+    if (string->header.dataArrayVarType != ListInt8) {
+        String stringAlloced = { .list = NULL, .header.dataArrayVarType = ListNone };
         return stringAlloced;
     }
     size_t amountOfStringsThatCanBeSplit = 0;
@@ -145,7 +146,7 @@ ArrayList stringSplit(String* string, char charToSplitOn,bool enforceSplitLimit,
             if (stringGetChar(string, iterator) == charToSplitOn)
                 amountOfStringsThatCanBeSplit++;
 
-        if (amountOfStringsThatCanBeSplit > ((amountOfCharsToSplitAt < 0) ? -amountOfCharsToSplitAt : amountOfCharsToSplitAt))
+        if (amountOfStringsThatCanBeSplit > (size_t)((amountOfCharsToSplitAt < 0) ? -amountOfCharsToSplitAt : amountOfCharsToSplitAt))
             amountOfStringsThatCanBeSplit = (amountOfCharsToSplitAt < 0) ? -amountOfCharsToSplitAt : amountOfCharsToSplitAt;
     }
     ArrayList stringArray = arrayListCreateStack(amountOfStringsThatCanBeSplit+1,sizeof(String),ListString,false);
@@ -168,7 +169,7 @@ ArrayList stringSplit(String* string, char charToSplitOn,bool enforceSplitLimit,
                 firstIndexOfSubString = 0;
                 String subString = stringGetSlice(string, firstIndexOfSubString, lastIndexOfSubString);
                 if (subString.list == NULL) goto stringSplitErrorExit;
-                arrayListElementSetGeneric(&stringArray, stringArray.amountOfElements, &subString,sizeof(String));
+                arrayListElementSet(&stringArray, stringArray.amountOfElements, &subString);
                 break;
             }
 
@@ -180,7 +181,7 @@ ArrayList stringSplit(String* string, char charToSplitOn,bool enforceSplitLimit,
             if (firstIndexOfSubString <= lastIndexOfSubString) {
                 String subString = stringGetSlice(string, firstIndexOfSubString, lastIndexOfSubString);
                 if (subString.list == NULL) goto stringSplitErrorExit;
-                arrayListElementSetGeneric(&stringArray, stringArray.amountOfElements, &subString,sizeof(String));
+                arrayListElementSet(&stringArray, stringArray.amountOfElements, &subString);
             }
             lastIndexOfSubString = iterator - 1;
         }
@@ -199,7 +200,7 @@ ArrayList stringSplit(String* string, char charToSplitOn,bool enforceSplitLimit,
                 lastIndexOfSubString = string->amountOfElements-1;
                 String subString = stringGetSlice(string, firstIndexOfSubString, lastIndexOfSubString);
                 if (subString.list == NULL) goto stringSplitErrorExit;
-                arrayListElementSetGeneric(&stringArray, stringArray.amountOfElements, &subString,sizeof(String));
+                arrayListElementSet(&stringArray, stringArray.amountOfElements, &subString);
                 break;
             }
 
@@ -213,7 +214,7 @@ ArrayList stringSplit(String* string, char charToSplitOn,bool enforceSplitLimit,
                 String subString = stringGetSlice(string, firstIndexOfSubString, lastIndexOfSubString);
                 if (subString.list == NULL)
                     goto stringSplitErrorExit;
-                arrayListElementSetGeneric(&stringArray, stringArray.amountOfElements, &subString, sizeof(String));
+                arrayListElementSet(&stringArray, stringArray.amountOfElements, &subString);
             }
             firstIndexOfSubString = iterator + 1;
         }

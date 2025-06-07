@@ -46,7 +46,7 @@ ball findBall(matrix* vector, uint32_t radius,uint64_t* maxMemAlloc) {
 
         while (1)
         {
-            if(computeHammingDistanceTwoVector(counter,vector) <= radius) break;
+            if(computeHammingDistanceTwoVector(counter,0,vector,0) <= radius) break;
             int code = matrixVectorCounterIncrement(counter);
             if(code == -1) {
                 Ball.amountOfElementsInBall = countOfElement+1;

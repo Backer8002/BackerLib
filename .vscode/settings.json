@@ -1,0 +1,7 @@
+{
+    "files.associations": {
+        "backerliblisttypes.h": "c",
+        "_mingw.h": "c",
+        "winuser.h": "c"
+    }
+}

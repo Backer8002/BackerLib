@@ -34,45 +34,45 @@ void matrixOutput(matrix* matrix,FILE* stream) {
     fwrite("[",1,1,stream);
     for(uint16_t row = 0; row < matrix->rows;row++) {
         String outputString = stringCreate("[",1);
-        if (outputString == NULL) goto exit;
+        if (outputString.list == NULL) goto exit;
 
         switch (matrix->matrixVarType)
         {
         case 0:
             for (uint16_t column = 0;column < matrix->columns;column++) {
                 amountOfChars = _snprintf_s(itoaBuff,charsPerInt,charsPerInt,"%hhu",*(uint8_t*)matrixGetPointer(matrix,row,column));
-                code |= stringAdd(outputString,itoaBuff,amountOfChars);
-                if (column < matrix->columns-1) code|= stringAdd(outputString,",",1);
+                code |= stringAdd(&outputString,itoaBuff,amountOfChars);
+                if (column < matrix->columns-1) code|= stringAdd(&outputString,",",1);
             }
             break;
         case 1:
             for (uint16_t column = 0;column < matrix->columns;column++) {
                 amountOfChars = _snprintf_s(itoaBuff,charsPerInt,charsPerInt,"%hu",*(uint16_t*)matrixGetPointer(matrix,row,column));
-                code |= stringAdd(outputString,itoaBuff,amountOfChars);
-                if (column < matrix->columns-1) code|= stringAdd(outputString,",",1);
+                code |= stringAdd(&outputString,itoaBuff,amountOfChars);
+                if (column < matrix->columns-1) code|= stringAdd(&outputString,",",1);
             }
             break;
         case 2:
             for (uint16_t column = 0;column < matrix->columns;column++) {
                 amountOfChars = _snprintf_s(itoaBuff,charsPerInt,charsPerInt,"%u",*(uint32_t*)matrixGetPointer(matrix,row,column));
-                code |= stringAdd(outputString,itoaBuff,amountOfChars);
-                if (column < matrix->columns-1) code|= stringAdd(outputString,",",1);
+                code |= stringAdd(&outputString,itoaBuff,amountOfChars);
+                if (column < matrix->columns-1) code|= stringAdd(&outputString,",",1);
             }
             break;
         case 3:
             for (uint16_t column = 0;column < matrix->columns;column++) {
                 amountOfChars = _snprintf_s(itoaBuff,charsPerInt,charsPerInt,"%d",*(int32_t*)matrixGetPointer(matrix,row,column));
-                code |= stringAdd(outputString,itoaBuff,amountOfChars);
-                if (column < matrix->columns-1) code|= stringAdd(outputString,",",1);
+                code |= stringAdd(&outputString,itoaBuff,amountOfChars);
+                if (column < matrix->columns-1) code|= stringAdd(&outputString,",",1);
             }
             break;
         default:
-            stringDestroy(outputString);
+            arrayListDestroy(&outputString);
             goto exit;
         }
-        if(code == 0) fwrite(outputString->list,sizeof(char),outputString->amountOfElements,stream);
+        if(code == 0) fwrite(outputString.list,sizeof(char),outputString.amountOfElements,stream);
         if (row < matrix->rows-1) fwrite("],\n",sizeof(char),3,stream);
-        stringDestroy(outputString);
+        arrayListDestroy(&outputString);
     }
     fwrite("]]\n",sizeof(char),3,stream);
     exit:

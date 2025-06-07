@@ -341,7 +341,7 @@ matrix* matrixFindInverse(matrix* matrixInput,size_t* maxMemAlloc) {
             if (code == -1) goto errorExit;
             matrix* multiplyedMatrix = matrixMultiply(matrixInput,counter,maxMemAlloc);
             if (multiplyedMatrix == NULL) goto errorExit;
-            if(computeHammingDistanceTwoVector(multiplyedMatrix,vectorOfUnityMatrix) == 0) {matrixFree(multiplyedMatrix,maxMemAlloc);break;}
+            if(computeHammingDistanceTwoVector(multiplyedMatrix,0,vectorOfUnityMatrix,0) == 0) {matrixFree(multiplyedMatrix,maxMemAlloc);break;}
             matrixFree(multiplyedMatrix,maxMemAlloc);
         }
         for(uint16_t rowIterator = 0; rowIterator < counter->rows;rowIterator++) {
