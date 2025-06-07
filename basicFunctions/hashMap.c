@@ -33,7 +33,7 @@ inline void m_hashMapCreateInit(
     HashMap* newHashMap,
     size_t intialSize, size_t keySize, size_t elementSize,
     ListTypes_t keyType, ListTypes_t elementType, bool elementsArePointers,
-    uint64_t(*hashFunction)(void* element, size_t elementSize)
+    uint64_t(*hashFunction)(const void* element, size_t elementSize)
 ) {
     if (hashFunction == NULL)
         newHashMap->hashFunction = hashFunctionDefualtSingleVar;
@@ -56,7 +56,7 @@ inline void m_hashMapCreateInit(
 HashMap hashMapCreateStack(
     size_t intialSize, size_t keySize, size_t elementSize,
     ListTypes_t keyType ,ListTypes_t elementType, bool elementsArePointers, 
-    uint64_t (*hashFunction)(void* element, size_t elementSize)
+    uint64_t (*hashFunction)(const void* element, size_t elementSize)
 ) {
     HashMap newHashMap         = {.header.dataArrayVarType = ListNone};
     m_hashMapCreateInit(&newHashMap,intialSize,keySize,elementSize,keyType,elementType,elementsArePointers,hashFunction);
@@ -66,7 +66,7 @@ HashMap hashMapCreateStack(
 HashMap* hashMapCreate(
     size_t intialSize, size_t keySize, size_t elementSize,
     ListTypes_t keyType, ListTypes_t elementType, bool elementsArePointers, 
-    uint64_t (*hashFunction)(void* element, size_t elementSize)
+    uint64_t (*hashFunction)(const void* element, size_t elementSize)
 ) {
     HashMap* newHashMap = malloc(sizeof(HashMap));
     if (newHashMap == NULL)
@@ -83,7 +83,7 @@ HashMap* hashMapCreate(
 inline Set setCreateStack(
     size_t intialSize, size_t keySize, size_t elementSize,
     ListTypes_t keyType, ListTypes_t elementType, bool elementsArePointers,
-    uint64_t (*hashFunction)(void* element, size_t elementSize)
+    uint64_t (*hashFunction)(const void* element, size_t elementSize)
 ) {
     Set newSet = hashMapCreateStack(intialSize,keySize,elementSize,keyType,elementType,elementsArePointers,hashFunction);
     newSet.header.objectType = ListSet;
@@ -93,7 +93,7 @@ inline Set setCreateStack(
 inline Set* setCreate(
     size_t intialSize, size_t keySize, size_t elementSize,
     ListTypes_t keyType, ListTypes_t elementType, bool elementsArePointers,
-    uint64_t (*hashFunction)(void* element, size_t elementSize)
+    uint64_t (*hashFunction)(const void* element, size_t elementSize)
 ) {
     Set* newSet = hashMapCreate(intialSize,keySize,elementSize, keyType, elementType, elementsArePointers, hashFunction);
     if (newSet != NULL)
