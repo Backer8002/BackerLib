@@ -56,7 +56,7 @@ void arrayListElementRemove(ArrayList* arrayList, size_t index,size_t lastIndex)
         void*  currentIndex        = arrayListElementGet(arrayList, index);
         void*  nextIndex           = arrayListElementGet(arrayList, lastIndex + 1);
         size_t amountOfBytesToMove = (arrayList->amountOfElements - lastIndex - 1) * arrayList->elementSize;   
-        memmove_s(currentIndex,amountOfBytesToMove+((lastIndex-index+1)*arrayList->elementSize),nextIndex,amountOfBytesToMove);
+        memmove(currentIndex,nextIndex,amountOfBytesToMove);
     }
     arrayList->amountOfElements -= lastIndex-index+1;
     arrayListSizeCheckRemove(arrayList);
@@ -68,8 +68,7 @@ int arrayListElementInsert(ArrayList* arrayList, size_t index, void* element,siz
     if (arrayListSizeCheckAdd(arrayList) == -1) {
         return -1;
     }
-    memmove_s((unsigned char*) arrayList->list + (index + 1) * elementSize,
-        (arrayList->totalAmountOfElements - index + 2) * elementSize,
+    memmove((unsigned char*) arrayList->list + (index + 1) * elementSize,
         (unsigned char*) arrayList->list + index * elementSize,
         (arrayList->totalAmountOfElements - index + 1) * elementSize); //+2 and +1 for off by one
 
@@ -179,10 +178,9 @@ ArrayList* arrayListCopyStackToHeap(ArrayList* arrayList) {
     ArrayList* arrayListNew = arrayListCreate(arrayList->totalAmountOfElements,arrayList->elementSize,arrayList->header.dataArrayVarType,arrayList->header.flags & ObjectFlagContentsIsPointers);
     if (arrayListNew == NULL)
         return NULL;
-    memcpy_s(arrayListNew->list,
-        arrayListNew->totalAmountOfElements * arrayListNew->elementSize,
+    memcpy(arrayListNew->list,
         arrayList->list,
-        arrayList->totalAmountOfElements * arrayList->elementSize);
+        arrayListNew->totalAmountOfElements * arrayListNew->elementSize);
     arrayListNew->amountOfElements = arrayList->amountOfElements;
     return arrayListNew;
 }
@@ -192,10 +190,9 @@ ArrayList arrayListCopyStack(ArrayList* arrayList) {
     if (arrayListNew.list == NULL)
         return arrayListNew;
 
-    memcpy_s(arrayListNew.list,
-        arrayListNew.totalAmountOfElements * arrayListNew.elementSize,
+    memcpy(arrayListNew.list,
         arrayList->list,
-        arrayList->totalAmountOfElements * arrayList->elementSize);
+        arrayListNew.totalAmountOfElements * arrayListNew.elementSize);
     arrayListNew.amountOfElements = arrayList->amountOfElements;
     return arrayListNew;
 }
