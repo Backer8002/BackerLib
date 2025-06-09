@@ -67,10 +67,16 @@ extern "C" {
 extern uint64_t hashFunctionDefualt(size_t amountOfVars, ...);
 extern HashMap hashMapCreateStack(size_t intialSize, size_t keySize, size_t elementSize, ListTypes_t keyType, ListTypes_t elementType, bool elementsArePointers, uint64_t(*hashFunction)(const void* element, size_t elementSize));
 extern HashMap* hashMapCreate(size_t intialSize, size_t keySize, size_t elementSize, ListTypes_t keyType, ListTypes_t elementType, bool elementsArePointers, uint64_t(*hashFunction)(const void* element, size_t elementSize));
-extern Set setCreateStack(size_t intialSize, size_t keySize, size_t elementSize, ListTypes_t keyType, ListTypes_t elementType, bool elementsArePointers, uint64_t(*hashFunction)(const void* element, size_t elementSize));
-extern Set* setCreate(size_t intialSize, size_t keySize, size_t elementSize, ListTypes_t keyType, ListTypes_t elementType, bool elementsArePointers, uint64_t(*hashFunction)(const void* element, size_t elementSize));
+extern Set setCreateStack(size_t intialSize, size_t keySize, ListTypes_t keyType, uint64_t(*hashFunction)(const void* element, size_t elementSize));
+extern Set* setCreate(size_t intialSize, size_t keySize, ListTypes_t keyType,uint64_t(*hashFunction)(const void* element, size_t elementSize));
 
-extern HashMapError_t hashMapInsert(HashMap* hashMap, void* key, size_t keySize, void* element, size_t elementSize);
+extern HashMapError_t hashMapInsert(HashMap* hashMap, void* key, ListTypes_t keyType, void* element, ListTypes_t elementType, size_t reHashingIteration);
+extern HashMapError_t setInsert(HashMap* hashMap, void* key, ListTypes_t keyType, size_t reHashingIteration);
+extern HashMapError_t hashMapGet(const HashMap* hashMap, const void* key, ListTypes_t keyType, void** element);
+extern inline bool    setGet(const HashMap* hashMap, const void* key, ListTypes_t keyType);
+extern HashMapError_t hashMapRemove(HashMap* hashMap, const void* key, ListTypes_t keyType, void (*keyDestructor)(void* element), void (*elementDestructor)(void* element));
+extern inline HashMapError_t setRemove(HashMap* hashMap, void* key, ListTypes_t keyType, void (*keyDestructor)(void* element));
+extern HashMapError_t hashMapReplace(HashMap* hashMap, const void* key, ListTypes_t keyType, void* element, ListTypes_t elementType, void (*destrutorOfPreviousElement)(void* element));
 
 inline uint64_t hashFunctionDefualtSingleVar(const void* element, size_t size) { return hashFunctionDefualt(1, size, element); }
 
@@ -78,7 +84,7 @@ inline uint64_t hashFunctionDefualtSingleVar(const void* element, size_t size) {
 #define HashArrayNode void
 #define hashArrayNode void
 
-#define hashMapInsert(hashMap, key, element) hashMapInsert(hashMap,key,sizeof(key),element,sizeof(element))
+#define hashMapInsert(hashMap, key, keyType,element,elementType) hashMapInsert(hashMap,key,keyType,element,elementType,0)
 #endif // !Implementation
 
 #ifdef __cplusplus

@@ -11,6 +11,3 @@ set(CMAKE_CXX_STANDARD_REQUIRED 14)
 
 add_subdirectory(basicFunctions)
 add_subdirectory(BackerLoggingHandler)
-
-
-add_dependencies(BackerLoggingHandler basicFunctions)

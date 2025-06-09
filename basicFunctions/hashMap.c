@@ -58,7 +58,8 @@ HashMap hashMapCreateStack(
     ListTypes_t keyType ,ListTypes_t elementType, bool elementsArePointers, 
     uint64_t (*hashFunction)(const void* element, size_t elementSize)
 ) {
-    HashMap newHashMap         = {.header.dataArrayVarType = ListNone};
+    HashMap newHashMap;
+    newHashMap.header.dataArrayVarType = ListNone;
     m_hashMapCreateInit(&newHashMap,intialSize,keySize,elementSize,keyType,elementType,elementsArePointers,hashFunction);
     return newHashMap;
 }
@@ -81,27 +82,27 @@ HashMap* hashMapCreate(
 }
 
 inline Set setCreateStack(
-    size_t intialSize, size_t keySize, size_t elementSize,
-    ListTypes_t keyType, ListTypes_t elementType, bool elementsArePointers,
+    size_t intialSize, size_t keySize,
+    ListTypes_t keyType,
     uint64_t (*hashFunction)(const void* element, size_t elementSize)
 ) {
-    Set newSet = hashMapCreateStack(intialSize,keySize,elementSize,keyType,elementType,elementsArePointers,hashFunction);
+    Set newSet = hashMapCreateStack(intialSize,keySize,keySize,keyType,keyType,false,hashFunction);
     newSet.header.objectType = ListSet;
     return newSet;
 }
 
 inline Set* setCreate(
-    size_t intialSize, size_t keySize, size_t elementSize,
-    ListTypes_t keyType, ListTypes_t elementType, bool elementsArePointers,
+    size_t intialSize, size_t keySize,
+    ListTypes_t keyType,
     uint64_t (*hashFunction)(const void* element, size_t elementSize)
 ) {
-    Set* newSet = hashMapCreate(intialSize,keySize,elementSize, keyType, elementType, elementsArePointers, hashFunction);
+    Set* newSet = hashMapCreate(intialSize,keySize,keySize, keyType, keyType, false, hashFunction);
     if (newSet != NULL)
         newSet->header.objectType = ListSet;
     return newSet;
 }
 
-bool m_memCmpKey(ListTypes_t keyType, const void* key, size_t keySize, const void* hashArrayElement) {
+static bool m_memCmpKey(ListTypes_t keyType, const void* key, size_t keySize, const void* hashArrayElement) {
     if (typeIsPrimitive(keyType))
         return (memcmp(key, hashArrayElement, keySize) == 0) ? true : false;
 
@@ -115,11 +116,61 @@ bool m_memCmpKey(ListTypes_t keyType, const void* key, size_t keySize, const voi
     }
 }
 
-HashMapError_t hashMapInsert(HashMap* hashMap, void* key, size_t keySize, void* element, size_t elementSize) {
+HashMapError_t hashMapInsert(HashMap* hashMap, void* key, ListTypes_t keyType, void* element, ListTypes_t elementType,size_t reHashingIteration) {
+    assert(keyType == hashMap->keyType);
 
+    uint64_t       hash     = hashFunctionDefualtSingleVar(key, hashMap->sizeOfKey) % hashMap->sizeOfHashArray;
+    size_t         iterator = 1;
+    HashArrayNode* hashNode = hashMap->hashArray + hash;
+    void*          keyToAssign      = malloc(hashMap->sizeOfKey);
+    if (keyToAssign == NULL)
+        return HashMapCannotAllocMem;
+    memcpy(keyToAssign, key, hashMap->sizeOfKey);
+    void* elementToAssign = NULL;
+    if (!(hashMap->header.flags & ObjectFlagContentsIsPointers) && hashMap->header.objectType != ListSet) {
+        elementToAssign = malloc(hashMap->sizeOfElement);
+        if (elementToAssign == NULL) {
+            free(keyToAssign);
+            return HashMapCannotAllocMem;
+        }
+        memcpy(elementToAssign, element, hashMap->sizeOfElement);
+    }
+
+    if (hashNode->key != NULL) {
+        while (hashNode->next != NULL) {
+            if (m_memCmpKey(keyType, key, hashMap->sizeOfKey, hashNode->key)) {
+                free(keyToAssign);
+                if (elementToAssign != NULL)
+                    free(elementToAssign);
+                return HashMapKeyAlreadyExists;
+            }
+            hashNode = hashNode->next;
+            iterator++;
+        }
+        hashNode->next = malloc(sizeof(HashArrayNode));
+        if (hashNode->next == NULL) {
+            free(keyToAssign);
+            if (elementToAssign != NULL)
+                free(elementToAssign);
+            return HashMapCannotAllocMem;
+        }
+        hashNode = hashNode->next;
+    }
+    
+    hashNode->next == NULL;
+    hashNode->key = keyToAssign;
+    if (elementToAssign == NULL)
+        hashNode->element = element;
+    else
+        hashNode->element = elementToAssign;
+
+
+    return HashMapOperationSuccsess;
 }
 
-HashArrayNode* m_hashArrayGetFromKey(const HashMap* hashMap, const void* key, ListTypes_t keyType) {
+inline HashMapError_t setInsert(HashMap* hashMap, void* key, ListTypes_t keyType, size_t reHashingIteration) { hashMapInsert(hashMap, key, keyType, NULL, keyType, 0); }
+
+static HashArrayNode* m_hashArrayGetFromKey(const HashMap* hashMap, const void* key, ListTypes_t keyType) {
     assert(keyType == hashMap->keyType);
 
     uint64_t       hash     = hashFunctionDefualtSingleVar(key, hashMap->sizeOfKey) % hashMap->sizeOfHashArray;
@@ -158,13 +209,52 @@ inline bool    setGet(const HashMap* hashMap, const void* key, ListTypes_t keyTy
     return (m_hashArrayGetFromKey != NULL) ? true : false; 
 }
 
-HashMapError_t hashMapRemove(HashMap* hashMap, void* key, ListTypes_t keyType, void (*destructor)(void* element)) {
+HashMapError_t hashMapRemove(HashMap* hashMap, const void* key, ListTypes_t keyType, void (*keyDestructor)(void* element), void (*elementDestructor)(void* element)) {
+    assert(keyType == hashMap->keyType);
 
+    uint64_t       hash     = hashFunctionDefualtSingleVar(key, hashMap->sizeOfKey) % hashMap->sizeOfHashArray;
+
+    HashArrayNode* hashNode = hashMap->hashArray + hash;
+    if (hashNode->key == NULL)
+        return HashMapKeyDoesNotExist;
+    HashArrayNode* prevHashNode = hashNode;
+    while (!m_memCmpKey(keyType, key, hashMap->sizeOfKey, hashNode->key)) {
+        if (hashNode->next == NULL)
+            return HashMapKeyDoesNotExist;
+
+        prevHashNode = hashNode;
+        hashNode = hashNode->next;
+    }
+
+    if (keyDestructor != NULL)
+        keyDestructor(hashNode->key);
+
+    if (elementDestructor != NULL)
+        elementDestructor(hashNode->element);
+
+    if (prevHashNode == hashNode) {
+        if (hashNode->next == NULL) {
+            hashNode->key = NULL;
+            return HashMapOperationSuccsess;
+        }
+        hashNode = hashNode->next;
+        *prevHashNode = *hashNode;
+        free(hashNode);
+        return HashMapOperationSuccsess;
+    }
+
+    if (hashNode->next != NULL)
+        prevHashNode->next = hashNode->next;
+    else
+        prevHashNode->next == NULL;
+
+    free(hashNode);
+    return HashMapOperationSuccsess;
 }
 
-inline HashMapError_t setRemove(HashMap* hashMap, void* key, ListTypes_t keyType) { return hashMapRemove(hashMap, key, keyType,NULL); }
+inline HashMapError_t setRemove(HashMap* hashMap, void* key, ListTypes_t keyType, void (*keyDestructor)(void* element)) { return hashMapRemove(hashMap, key, keyType,keyDestructor,NULL); }
 
-HashMapError_t hashMapReplace(HashMap* hashMap, const void* key, ListTypes_t keyType, void* element, ListTypes_t elementType) {
+HashMapError_t hashMapReplace(HashMap* hashMap, const void* key, ListTypes_t keyType, void* element, ListTypes_t elementType, void (*destrutorOfPreviousElement)(void* element)) {
     assert(keyType == hashMap->keyType);
     assert(elementType == hashMap->header.dataArrayVarType);
     assert(hashMap->header.objectType == ListHashMap);
@@ -173,9 +263,19 @@ HashMapError_t hashMapReplace(HashMap* hashMap, const void* key, ListTypes_t key
     if (hashArrayNode == NULL)
         return HashMapKeyDoesNotExist;
 
-    if (hashMap->header.flags & ObjectFlagContentsIsPointers)
+    if (hashMap->header.flags & ObjectFlagContentsIsPointers) {
         hashArrayNode->element = element;
-    else
-        memcpy(hashArrayNode->element, element, hashMap->sizeOfElement);
+        return HashMapOperationSuccsess;
+    }
+
+    if (destrutorOfPreviousElement != NULL) {
+        destrutorOfPreviousElement(hashArrayNode->element);
+        hashArrayNode->element = malloc(hashMap->sizeOfElement);
+        if (hashArrayNode->element == NULL)
+            return HashMapCannotAllocMem;
+    }
+    memcpy(hashArrayNode->element, element, hashMap->sizeOfElement);
+    if (!typeIsPrimitive(elementType))
+        ((DataTypeHeader*) hashArrayNode->element)->flags |= ObjectFlagIsOnHeap;
     return HashMapOperationSuccsess;
 }

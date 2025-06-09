@@ -36,7 +36,7 @@ inline void arrayListElementsClear(ArrayList* arrayList) {
     mtx_unlock(&arrayList->mutex);
 }
 
-void* arrayListElementGet(ArrayList* arrayList,size_t index) {
+void* arrayListElementGet(const ArrayList* arrayList,size_t index) {
     assert(index < arrayList->amountOfElements);
     unsigned char* returnVal = (arrayList->header.flags & ObjectFlagContentsIsPointers) ? *((unsigned char**) arrayList->list + (index * arrayList->elementSize)) : ((unsigned char*) arrayList->list + (index * arrayList->elementSize));
     return returnVal;

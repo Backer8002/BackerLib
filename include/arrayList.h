@@ -31,7 +31,7 @@ extern "C" {
     extern ARRAYLIST int arrayListSizeCheckAdd(ArrayList* arrayList);
     extern ARRAYLIST int arrayListSizeCheckRemove(ArrayList* arraylist);
     extern ARRAYLIST void arrayListElementsClear(ArrayList* arrayList);
-    extern ARRAYLIST void* arrayListElementGet(ArrayList* arrayList, size_t index);
+    extern ARRAYLIST void* arrayListElementGet(const ArrayList* arrayList, size_t index);
     extern ARRAYLIST void arrayListElementPop(ArrayList* arrayList);
     extern ARRAYLIST void arrayListElementRemove(ArrayList* arrayList, size_t index, size_t lastIndex);
     extern ARRAYLIST int arrayListElementInsert(ArrayList* arrayList, size_t index, void* element, size_t elementSize);
