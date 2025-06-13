@@ -8,26 +8,26 @@
 #undef arrayListElementSet
 #undef arrayListElementInsert
 
-int arrayListSizeCheckAdd(ArrayList* arrayList) {
+ArrayListError_t arrayListSizeCheckAdd(ArrayList* arrayList) {
     if(arrayList->amountOfElements >= arrayList->totalAmountOfElements) {
-        size_t indexesToAssign = arrayList->totalAmountOfElements * 2 + 1;
+        size_t indexesToAssign = arrayList->amountOfElements * 2 + 1;
         void*  newPointer      = realloc(arrayList->list, arrayList->elementSize * indexesToAssign);
         if(newPointer == NULL) 
-            return -1;
+            return ArrayListCannotAllocMemory;
         arrayList->list                  = newPointer;
         arrayList->totalAmountOfElements = indexesToAssign;
     }
-    return 1;
+    return ArrayListOperationSuccsess;
 }
-int arrayListSizeCheckRemove(ArrayList* arrayList) {
+ArrayListError_t arrayListSizeCheckRemove(ArrayList* arrayList) {
     if(arrayList->totalAmountOfElements>>1 > arrayList->amountOfElements) {
         void* newPointer = realloc(arrayList->list,arrayList->elementSize*(arrayList->totalAmountOfElements>>1));
         if (newPointer == NULL)
-            return -1;
+            return ArrayListCannotAllocMemory;
         arrayList->list = newPointer;
         arrayList->totalAmountOfElements >>= 1;
     }
-    return 1;
+    return ArrayListOperationSuccsess;
 }
 
 inline void arrayListElementsClear(ArrayList* arrayList) {
@@ -37,17 +37,18 @@ inline void arrayListElementsClear(ArrayList* arrayList) {
 }
 
 void* arrayListElementGet(const ArrayList* arrayList,size_t index) {
-    assert(index < arrayList->amountOfElements);
-    unsigned char* returnVal = (arrayList->header.flags & ObjectFlagContentsIsPointers) ? *((unsigned char**) arrayList->list + (index * arrayList->elementSize)) : ((unsigned char*) arrayList->list + (index * arrayList->elementSize));
+    if (index >= arrayList->amountOfElements)
+        return NULL;
+    Bytes returnVal = (arrayList->header.flags & ObjectFlagContentsIsPointers) ? *((Bytes*) arrayList->list + (index * arrayList->elementSize)) : ((Bytes) arrayList->list + (index * arrayList->elementSize));
     return returnVal;
 }
 
-void arrayListElementPop(ArrayList* arrayList) {
-    if (arrayList->amountOfElements == 0) {
-        return;
-    }
+ArrayListError_t arrayListElementPop(ArrayList* arrayList) {
+    if (arrayList->amountOfElements == 0)
+        return ArrayListAccessViolation;
     arrayList->amountOfElements--;
     arrayListSizeCheckRemove(arrayList);
+    return ArrayListOperationSuccsess;
 }
 
 void arrayListElementRemove(ArrayList* arrayList, size_t index,size_t lastIndex) {
@@ -62,34 +63,38 @@ void arrayListElementRemove(ArrayList* arrayList, size_t index,size_t lastIndex)
     arrayListSizeCheckRemove(arrayList);
 }
 
-int arrayListElementInsert(ArrayList* arrayList, size_t index, void* element,size_t elementSize) {
-    assert(index <= arrayList->amountOfElements);
-    assert(elementSize == arrayList->elementSize);
-    if (arrayListSizeCheckAdd(arrayList) == -1) {
-        return -1;
+ArrayListError_t arrayListElementInsert(ArrayList* arrayList, size_t index, void* elements,size_t amountOfElements,ListTypes_t elementType) {
+    if (index > arrayList->amountOfElements)
+        return ArrayListAccessViolation;
+    if (elementType != arrayList->header.dataArrayVarType)
+        return ArrayListInvalidType;
+    arrayList->amountOfElements += amountOfElements;
+    if (arrayListSizeCheckAdd(arrayList) == ArrayListCannotAllocMemory) {
+        arrayList->amountOfElements -= amountOfElements;
+        return ArrayListCannotAllocMemory;
     }
-    memmove((unsigned char*) arrayList->list + (index + 1) * elementSize,
-        (unsigned char*) arrayList->list + index * elementSize,
-        (arrayList->totalAmountOfElements - index + 1) * elementSize); //+2 and +1 for off by one
 
-    for (size_t i = 0; i < elementSize; i++)
-        *((unsigned char*) arrayList->list + arrayList->elementSize * index + i) = *((unsigned char*) element + i);
-    arrayList->amountOfElements++;
-    return 0;
+    memmove((Bytes) arrayList->list + (index + amountOfElements) * arrayList->elementSize,
+        (Bytes) arrayList->list + index * arrayList->elementSize,
+        (arrayList->totalAmountOfElements - index) * arrayList->elementSize);
+
+    memcpy((Bytes) arrayList->list + arrayList->elementSize * index, elements, arrayList->elementSize*amountOfElements);
+    return ArrayListOperationSuccsess;
 }
 
-int arrayListElementSet(ArrayList* arrayList, size_t index,void* element,size_t elementSize) {
-    assert(index <= arrayList->amountOfElements);
-    assert(elementSize == arrayList->elementSize);
+ArrayListError_t arrayListElementSet(ArrayList* arrayList, size_t index,void* element,ListTypes_t elementType) {
+    if (index > arrayList->amountOfElements)
+        return ArrayListAccessViolation;
+    if (elementType != arrayList->header.dataArrayVarType)
+        return ArrayListInvalidType;
+
     if (index == arrayList->amountOfElements) {
-        if (arrayListSizeCheckAdd(arrayList) == -1) {
-            return -1;
-        }
+        if (arrayListSizeCheckAdd(arrayList) == ArrayListCannotAllocMemory)
+            return ArrayListCannotAllocMemory;
         arrayList->amountOfElements++;
     }
-    for (size_t i = 0; i < elementSize; i++)
-        *((unsigned char*) arrayList->list + arrayList->elementSize * index + i) = *((unsigned char*) element + i);
-    return 0;
+    memcpy((Bytes) arrayList->list + arrayList->elementSize * index, element,arrayList->elementSize);
+    return ArrayListOperationSuccsess;
 }
 
 

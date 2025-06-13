@@ -1,4 +1,4 @@
-#define Implementation
+#define HashMapImplementation
 
 #include"pch.h"
 #include<hashMap.h>
@@ -29,7 +29,7 @@ uint64_t hashFunctionDefualt(size_t amountOfVars,...) {
 }
 
 
-inline void m_hashMapCreateInit(
+inline static void m_hashMapCreateInit(
     HashMap* newHashMap,
     size_t intialSize, size_t keySize, size_t elementSize,
     ListTypes_t keyType, ListTypes_t elementType, bool elementsArePointers,
@@ -40,13 +40,14 @@ inline void m_hashMapCreateInit(
     else
         newHashMap->hashFunction = hashFunction;
     newHashMap->sizeOfHashArray = intialSize;
-    newHashMap->hashArray       = calloc(intialSize, sizeof(HashArrayNode));
+    newHashMap->hashArray       = calloc(intialSize, sizeof(HashArrayNode*));
     if (newHashMap->hashArray == NULL) {
         newHashMap->header.dataArrayVarType = ListNone;
         return;
     }
     newHashMap->sizeOfKey               = keySize;
     newHashMap->sizeOfElement           = elementSize;
+    newHashMap->amountOfElements        = 0;
     newHashMap->keyType                 = keyType;
     newHashMap->header.dataArrayVarType = elementType;
     newHashMap->header.flags            = ((elementsArePointers) ? ObjectFlagContentsIsPointers : 0);
@@ -86,8 +87,8 @@ inline Set setCreateStack(
     ListTypes_t keyType,
     uint64_t (*hashFunction)(const void* element, size_t elementSize)
 ) {
-    Set newSet = hashMapCreateStack(intialSize,keySize,keySize,keyType,keyType,false,hashFunction);
-    newSet.header.objectType = ListSet;
+    Set newSet               = {hashMapCreateStack(intialSize, keySize, keySize, keyType, keyType, false, hashFunction)};
+    newSet.hashMap.header.objectType = ListSet;
     return newSet;
 }
 
@@ -98,96 +99,152 @@ inline Set* setCreate(
 ) {
     Set* newSet = hashMapCreate(intialSize,keySize,keySize, keyType, keyType, false, hashFunction);
     if (newSet != NULL)
-        newSet->header.objectType = ListSet;
+        newSet->hashMap.header.objectType = ListSet;
     return newSet;
+}
+
+static uint64_t m_hashMapHashSingelVar(size_t elementSize, const void* element, ListTypes_t elementType, uint64_t(*hashFunction)(const void* element, size_t elementSize)) {
+    if (typeIsPrimitive(elementType))
+        return hashFunction(&element, elementSize);
+
+    switch (elementType) {
+    case ListArrayList:
+    case ListString:
+        return hashFunction(((ArrayList*) element)->list, ((ArrayList*)element)->amountOfElements*elementSize);
+        break;
+    default:
+        return 0;
+        break;
+    }
 }
 
 static bool m_memCmpKey(ListTypes_t keyType, const void* key, size_t keySize, const void* hashArrayElement) {
     if (typeIsPrimitive(keyType))
-        return (memcmp(key, hashArrayElement, keySize) == 0) ? true : false;
+        return key == hashArrayElement;
 
     switch (keyType) {
     case ListString:
-        if (((String*) key)->amountOfElements != ((String*)hashArrayElement)->amountOfElements)
+        if (((ArrayList*) key)->amountOfElements != ((ArrayList*)hashArrayElement)->amountOfElements)
             return false;
-        return (memcmp(((String*) key)->list, ((String*) hashArrayElement)->list, ((String*) key)->amountOfElements) == 0) ? true : false;
+        return (memcmp(((ArrayList*) key)->list, ((ArrayList*) hashArrayElement)->list, ((ArrayList*) key)->amountOfElements) == 0) ? true : false;
         break;
     default: return false; break;
     }
 }
 
-HashMapError_t hashMapInsert(HashMap* hashMap, void* key, ListTypes_t keyType, void* element, ListTypes_t elementType,size_t reHashingIteration) {
-    assert(keyType == hashMap->keyType);
-
-    uint64_t       hash     = hashFunctionDefualtSingleVar(key, hashMap->sizeOfKey) % hashMap->sizeOfHashArray;
-    size_t         iterator = 1;
-    HashArrayNode* hashNode = hashMap->hashArray + hash;
-    void*          keyToAssign      = malloc(hashMap->sizeOfKey);
-    if (keyToAssign == NULL)
+static HashMapError_t    m_rehash(HashMap* hashMap,size_t newSize) {
+    HashArrayNode** newHashArray = calloc(newSize, sizeof(HashArrayNode*));
+    if (newHashArray == NULL)
         return HashMapCannotAllocMem;
-    memcpy(keyToAssign, key, hashMap->sizeOfKey);
-    void* elementToAssign = NULL;
-    if (!(hashMap->header.flags & ObjectFlagContentsIsPointers) && hashMap->header.objectType != ListSet) {
-        elementToAssign = malloc(hashMap->sizeOfElement);
-        if (elementToAssign == NULL) {
-            free(keyToAssign);
-            return HashMapCannotAllocMem;
-        }
-        memcpy(elementToAssign, element, hashMap->sizeOfElement);
-    }
 
-    if (hashNode->key != NULL) {
+    for (HashArrayNode** nextBucket = hashMap->hashArray; nextBucket < hashMap->hashArray + hashMap->sizeOfHashArray; nextBucket++) {
+        HashArrayNode* next = *nextBucket;
+        HashArrayNode* oldNext;
+        while (next) {
+            oldNext               = next;
+            next                  = next->next;
+            uint64_t newHash      = m_hashMapHashSingelVar(hashMap->sizeOfKey, oldNext->key, hashMap->keyType, hashMap->hashFunction) % newSize;
+            oldNext->next         = newHashArray[newHash] == NULL ? NULL : newHashArray[newHash];
+            newHashArray[newHash] = oldNext;
+        }
+    }
+    free(hashMap->hashArray);
+    hashMap->hashArray       = newHashArray;
+    hashMap->sizeOfHashArray = newSize;
+    return HashMapOperationSuccsess;
+}
+
+HashMapError_t hashMapInsert(HashMap* hashMap, void* key, ListTypes_t keyType, void* element, ListTypes_t elementType) {
+    assert(keyType == hashMap->keyType);
+    assert(elementType == hashMap->header.dataArrayVarType);
+
+    uint64_t hash = m_hashMapHashSingelVar(hashMap->sizeOfElement, key, keyType, hashMap->hashFunction) % hashMap->sizeOfHashArray;
+
+    size_t         iterator    = 1;
+    HashArrayNode* hashNode    = hashMap->hashArray[hash];
+    HashArrayNode* prevHashNode = hashNode;
+    if (hashNode != NULL) {
         while (hashNode->next != NULL) {
-            if (m_memCmpKey(keyType, key, hashMap->sizeOfKey, hashNode->key)) {
-                free(keyToAssign);
-                if (elementToAssign != NULL)
-                    free(elementToAssign);
+            if (m_memCmpKey(keyType, key, hashMap->sizeOfKey, hashNode->key))
                 return HashMapKeyAlreadyExists;
-            }
+
             hashNode = hashNode->next;
             iterator++;
         }
         hashNode->next = malloc(sizeof(HashArrayNode));
-        if (hashNode->next == NULL) {
-            free(keyToAssign);
-            if (elementToAssign != NULL)
-                free(elementToAssign);
+        if (hashNode->next == NULL)
             return HashMapCannotAllocMem;
-        }
         hashNode = hashNode->next;
+    } else {
+        hashNode = malloc(sizeof(HashArrayNode));
+        if (hashNode == NULL)
+            return HashMapCannotAllocMem;
+        hashMap->hashArray[hash] = hashNode;
     }
-    
-    hashNode->next == NULL;
-    hashNode->key = keyToAssign;
-    if (elementToAssign == NULL)
+
+    if (typeIsPrimitive(keyType))
+        hashNode->key = key; 
+    else {
+        hashNode->key = malloc(hashMap->sizeOfKey);
+        if (hashNode->key == NULL) {
+            if (hashNode == hashMap->hashArray[hash])
+                goto HashMapInsertErrorExitFirst;
+            goto HashMapInsertErrorExitNotFirst;
+        }
+        memcpy(hashNode->key, key, hashMap->sizeOfKey);
+    }
+
+
+    if ((hashMap->header.flags & ObjectFlagContentsIsPointers) || hashMap->header.objectType == ListSet)
         hashNode->element = element;
-    else
-        hashNode->element = elementToAssign;
+    else {
+        hashNode->element = malloc(hashMap->sizeOfElement);
 
+        if (hashNode->element == NULL) {
+            if (!typeIsPrimitive(keyType))
+                free(hashNode->key);
+            if (hashNode == hashMap->hashArray[hash])
+                goto HashMapInsertErrorExitFirst;
+            goto HashMapInsertErrorExitNotFirst;
+        }
+        memcpy(hashNode->element, element, hashMap->sizeOfElement);
+    }
 
+    hashNode->next = NULL;
+
+    hashMap->amountOfElements++;
+
+    if ((float)hashMap->amountOfElements/(float)hashMap->sizeOfHashArray >= HASHMAP_MAX_LOADFACTOR || iterator >= HASHMAP_MAX_DEPTH)
+        m_rehash(hashMap, hashMap->sizeOfHashArray * 2 + 1);
     return HashMapOperationSuccsess;
+
+HashMapInsertErrorExitFirst:
+    hashMap->hashArray[hash] = NULL;
+    free(hashNode);
+    return HashMapCannotAllocMem;
+HashMapInsertErrorExitNotFirst:
+    prevHashNode->next = NULL;
+    free(hashNode);
+    return HashMapCannotAllocMem;
 }
 
-inline HashMapError_t setInsert(HashMap* hashMap, void* key, ListTypes_t keyType, size_t reHashingIteration) { hashMapInsert(hashMap, key, keyType, NULL, keyType, 0); }
+inline HashMapError_t setInsert(HashMap* hashMap, void* key, ListTypes_t keyType) {return hashMapInsert(hashMap, key, keyType, NULL, keyType); }
 
 static HashArrayNode* m_hashArrayGetFromKey(const HashMap* hashMap, const void* key, ListTypes_t keyType) {
     assert(keyType == hashMap->keyType);
 
-    uint64_t       hash     = hashFunctionDefualtSingleVar(key, hashMap->sizeOfKey) % hashMap->sizeOfHashArray;
+    uint64_t       hash     = m_hashMapHashSingelVar(hashMap->sizeOfElement, key, keyType, hashMap->hashFunction) % hashMap->sizeOfHashArray;
 
-    HashArrayNode* hashNode = hashMap->hashArray + hash;
-    if (hashNode->key == NULL)
+    HashArrayNode* hashNode = hashMap->hashArray[hash];
+    if (hashNode == NULL)
         return NULL;
-    while (true) {
-        if (m_memCmpKey(keyType, key, hashMap->sizeOfKey, hashNode->key)) {
-            return hashNode;
-        }
 
+    while (!m_memCmpKey(keyType, key, hashMap->sizeOfKey, hashNode->key)) {
         if (hashNode->next == NULL)
             return NULL;
-
         hashNode = hashNode->next;
     }
+    return hashNode;
 }
 
 HashMapError_t hashMapGet(const HashMap* hashMap, const void* key, ListTypes_t keyType,void** element) {
@@ -205,17 +262,16 @@ HashMapError_t hashMapGet(const HashMap* hashMap, const void* key, ListTypes_t k
 
 inline bool    setGet(const HashMap* hashMap, const void* key, ListTypes_t keyType) { 
     assert(keyType == hashMap->keyType);
-    assert(hashMap->header.objectType == ListSet);
     return (m_hashArrayGetFromKey != NULL) ? true : false; 
 }
 
 HashMapError_t hashMapRemove(HashMap* hashMap, const void* key, ListTypes_t keyType, void (*keyDestructor)(void* element), void (*elementDestructor)(void* element)) {
     assert(keyType == hashMap->keyType);
 
-    uint64_t       hash     = hashFunctionDefualtSingleVar(key, hashMap->sizeOfKey) % hashMap->sizeOfHashArray;
+    uint64_t       hash     = m_hashMapHashSingelVar(hashMap->sizeOfKey,key,keyType,hashMap->hashFunction) % hashMap->sizeOfHashArray;
 
-    HashArrayNode* hashNode = hashMap->hashArray + hash;
-    if (hashNode->key == NULL)
+    HashArrayNode* hashNode = hashMap->hashArray[hash];
+    if (hashNode == NULL)
         return HashMapKeyDoesNotExist;
     HashArrayNode* prevHashNode = hashNode;
     while (!m_memCmpKey(keyType, key, hashMap->sizeOfKey, hashNode->key)) {
@@ -226,29 +282,28 @@ HashMapError_t hashMapRemove(HashMap* hashMap, const void* key, ListTypes_t keyT
         hashNode = hashNode->next;
     }
 
-    if (keyDestructor != NULL)
+    if (keyDestructor == NULL || typeIsPrimitive(keyType))
+        ;
+    else
         keyDestructor(hashNode->key);
 
-    if (elementDestructor != NULL)
+    if ((hashMap->header.flags & ObjectFlagContentsIsPointers) || elementDestructor == NULL)
+        ;
+    else if (typeIsPrimitive(hashMap->header.dataArrayVarType))
+        free(hashNode->element);
+    else
         elementDestructor(hashNode->element);
 
-    if (prevHashNode == hashNode) {
-        if (hashNode->next == NULL) {
-            hashNode->key = NULL;
-            return HashMapOperationSuccsess;
-        }
-        hashNode = hashNode->next;
-        *prevHashNode = *hashNode;
-        free(hashNode);
-        return HashMapOperationSuccsess;
+    if (hashNode == prevHashNode)
+        hashMap->hashArray[hash] = hashNode->next;
+    else {
+        if (hashNode->next != NULL)
+            prevHashNode->next = hashNode->next;
+        else
+            prevHashNode->next = NULL;
     }
-
-    if (hashNode->next != NULL)
-        prevHashNode->next = hashNode->next;
-    else
-        prevHashNode->next == NULL;
-
     free(hashNode);
+    hashMap->amountOfElements--;
     return HashMapOperationSuccsess;
 }
 
@@ -278,4 +333,24 @@ HashMapError_t hashMapReplace(HashMap* hashMap, const void* key, ListTypes_t key
     if (!typeIsPrimitive(elementType))
         ((DataTypeHeader*) hashArrayNode->element)->flags |= ObjectFlagIsOnHeap;
     return HashMapOperationSuccsess;
+}
+
+
+void hashMapDestroy(HashMap* hashMap, void (*keyDestructor)(void* key), void (*elementDestructor)(void* element)) {
+    for (HashArrayNode** nextBucket = hashMap->hashArray; nextBucket < hashMap->hashArray + hashMap->sizeOfHashArray; nextBucket++) {
+        HashArrayNode* next = *nextBucket;
+        HashArrayNode* oldNext;
+        while (next) {
+            oldNext               = next;
+            next                  = next->next;
+            if (keyDestructor != NULL && !typeIsPrimitive(hashMap->keyType))
+                keyDestructor(oldNext->key);
+            if (elementDestructor != NULL && !(hashMap->header.flags & ObjectFlagContentsIsPointers))
+                elementDestructor(oldNext->element);
+            free(oldNext);
+        }
+    }
+    free(hashMap->hashArray);
+    if (hashMap->header.flags & ObjectFlagIsOnHeap)
+        free(hashMap);
 }

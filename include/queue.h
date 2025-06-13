@@ -61,9 +61,6 @@ extern "C" {
     void queueDestroy(Queue* queue, void(elementDestructor)(void* element));
 
 
-#define queueEnqueue(queue,element) queueEnqueue(queue,element,sizeof(*element))
-#define queueDequeue(queue,elementBuff) queueDequeue(queue,elementBuff,sizeof(*elementBuff))
-
 #ifdef __cplusplus
 }
 #endif

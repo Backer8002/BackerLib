@@ -1,6 +1,5 @@
 #pragma once
 #include<stdint.h>
-
 typedef unsigned char Byte;
 typedef Byte* Bytes;
 
@@ -16,7 +15,6 @@ typedef enum ListTypes {
 	ListUInt64,
 	ListFloat,
 	ListDouble,
-	ListLongDouble,
 	ListArrayList,
 	ListString,
 	ListQueue,
@@ -52,7 +50,6 @@ inline bool typeIsPrimitive(ListTypes_t listType) {
 	case ListUInt64:
 	case ListFloat:
 	case ListDouble:
-	case ListLongDouble:
 		return true;
 	default:
 		return false;

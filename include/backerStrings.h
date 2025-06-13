@@ -18,7 +18,7 @@
 extern "C" {
 #endif // __cplusplus
 
-	typedef ArrayList String;
+	typedef struct { ArrayList arrayList; } String;
 
 	extern BACKERSTRINGS String stringCreate(const char* string, size_t length);
 	extern inline BACKERSTRINGS char stringGetChar(const String* string, size_t index);

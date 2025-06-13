@@ -180,7 +180,7 @@ void queueClearOut(Queue* queue, void(operation)(void* element,ListTypes_t listT
 void queueDestroy(Queue* queue, void(elementDestructor)(void* element)) {
     if ((queue->currentDequeueIndex != queue->currentEnqueueIndex || queue->header.flags & FlagQueueIsFull)&&elementDestructor != NULL) {
         for (size_t currentIndex = queue->currentDequeueIndex; currentIndex != queue->currentEnqueueIndex; currentIndex = (currentIndex + 1) % queue->queueSize)
-            elementDestructor((queue->header.flags & ObjectFlagContentsIsPointers) ? *(unsigned char**) queue->queue + currentIndex * queue->elementSize : (unsigned char*) queue->queue + currentIndex * queue->elementSize);
+            elementDestructor((queue->header.flags & ObjectFlagContentsIsPointers) ? *(Bytes*) queue->queue + currentIndex * queue->elementSize : (Bytes) queue->queue + currentIndex * queue->elementSize);
     }
     if (queue->queue != NULL)
         free(queue->queue);

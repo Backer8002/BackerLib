@@ -28,14 +28,21 @@ extern "C" {
         void* list;
     } ArrayList;
 
-    extern ARRAYLIST int arrayListSizeCheckAdd(ArrayList* arrayList);
-    extern ARRAYLIST int arrayListSizeCheckRemove(ArrayList* arraylist);
+    typedef enum ArrayListError {
+        ArrayListOperationSuccsess = 0,
+        ArrayListCannotAllocMemory,
+        ArrayListAccessViolation,
+        ArrayListInvalidType
+    } ArrayListError_t;
+
+    extern ARRAYLIST ArrayListError_t arrayListSizeCheckAdd(ArrayList* arrayList);
+    extern ARRAYLIST ArrayListError_t arrayListSizeCheckRemove(ArrayList* arraylist);
     extern ARRAYLIST void arrayListElementsClear(ArrayList* arrayList);
     extern ARRAYLIST void* arrayListElementGet(const ArrayList* arrayList, size_t index);
-    extern ARRAYLIST void arrayListElementPop(ArrayList* arrayList);
+    extern ARRAYLIST ArrayListError_t arrayListElementPop(ArrayList* arrayList);
     extern ARRAYLIST void arrayListElementRemove(ArrayList* arrayList, size_t index, size_t lastIndex);
-    extern ARRAYLIST int arrayListElementInsert(ArrayList* arrayList, size_t index, void* element, size_t elementSize);
-    extern ARRAYLIST int arrayListElementSet(ArrayList* arrayList, size_t index, void* element, size_t elementSize);
+    extern ARRAYLIST ArrayListError_t arrayListElementInsert(ArrayList* arrayList, size_t index, void* elements, size_t amountOfElements,ListTypes_t elementType);
+    extern ARRAYLIST ArrayListError_t arrayListElementSet(ArrayList* arrayList, size_t index, void* element, ListTypes_t elementType);
     extern ARRAYLIST ArrayList arrayListCreateStack(size_t intialSize, size_t elementSize, ListTypes_t elementType, bool elementsArePointers);
     extern ARRAYLIST ArrayList* arrayListCreate(size_t intialSize, size_t elementSize, ListTypes_t elementType, bool elementsArePointers);
     extern ARRAYLIST void arrayListDestroy(void* arraylist);
@@ -44,9 +51,6 @@ extern "C" {
     extern ARRAYLIST ArrayList arrayListMoveStack(ArrayList* arrayList);
     extern ARRAYLIST ArrayList* arrayListCopyStackToHeap(ArrayList* arrayList);
     extern ARRAYLIST ArrayList arrayListCopyStack(ArrayList* arrayList);
-
-#define arrayListElementInsert(arrayList,index,element) arrayListElementInsert(arrayList,index,element,sizeof(*element))
-#define arrayListElementSet(arrayList,index,element) arrayListElementSet(arrayList,index,element,sizeof(*element))
 
 #ifdef __cplusplus
 }
