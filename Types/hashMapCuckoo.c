@@ -1,4 +1,4 @@
-// Cuckoo hash algorith mostly as described by https://en.wikipedia.org/wiki/Cuckoo_hashing, last updated 30 April 2025
+// Cuckoo hash algorith mostly as described by https://en.wikipedia.org/wiki/Cuckoo_hashing, site last updated 30 April 2025
 
 #include<hashMap.h>
 #include<stdlib.h>
@@ -6,7 +6,7 @@
 #include<stdio.h>
 #include<assert.h>
 
-static uint64_t m_hashMapHashSingelVarWithSalt(size_t elementSize, const void* element, ListTypes_t elementType,uint32_t salt, uint64_t (*hashFunction)(const void* element, size_t elementSize,uint32_t salt)) {
+static uint64_t Internal_hashMapHashSingelVarWithSalt(size_t elementSize, const void* element, ListTypes_t elementType,uint32_t salt, uint64_t (*hashFunction)(const void* element, size_t elementSize,uint32_t salt)) {
     if (typeIsPrimitive(elementType))
         return hashFunction(element, elementSize,salt);
 
@@ -21,7 +21,7 @@ static uint64_t m_hashMapHashSingelVarWithSalt(size_t elementSize, const void* e
     }
 }
 
-static bool m_memCmpKey(ListTypes_t keyType, size_t sizeOfKey, const void* key, const void* hashArrayElement) {
+static bool CuckooInternal_memCmpKey(ListTypes_t keyType, size_t sizeOfKey, const void* key, const void* hashArrayElement) {
     if (hashArrayElement == NULL)
         return false;
     if (typeIsPrimitive(keyType))
@@ -39,7 +39,7 @@ static bool m_memCmpKey(ListTypes_t keyType, size_t sizeOfKey, const void* key, 
     }
 }
 
-static void m_hashMapCuckooInit(HashMapCuckoo* newHashMap,size_t intialSize, size_t keySize, size_t elementSize, ListTypes_t keyType, ListTypes_t elementType,bool elementsArePointers, uint64_t(*hashFunction)(const void* element, size_t elementSize, uint32_t salt)) {
+static void Internal_hashMapCuckooInit(HashMapCuckoo* newHashMap,size_t intialSize, size_t keySize, size_t elementSize, ListTypes_t keyType, ListTypes_t elementType,bool elementsArePointers, uint64_t(*hashFunction)(const void* element, size_t elementSize, uint32_t salt)) {
     newHashMap->hashArray = calloc(intialSize, sizeof(HashArrayElement));
     if (newHashMap->hashArray == NULL) {
         newHashMap->header.dataArrayVarType = ListNone;
@@ -67,7 +67,7 @@ HashMapCuckoo hashMapCuckooCreateStack(
 ) {
     HashMapCuckoo newHashMap;
     newHashMap.header.dataArrayVarType = ListNone;
-    m_hashMapCuckooInit(&newHashMap, intialSize, keySize, elementSize, keyType, elementType, elementsArePointers, hashFunction);
+    Internal_hashMapCuckooInit(&newHashMap, intialSize, keySize, elementSize, keyType, elementType, elementsArePointers, hashFunction);
     return newHashMap;
 }
 
@@ -79,7 +79,7 @@ HashMapCuckoo* hashMapCuckooCreate(
     HashMapCuckoo* newHashMap = malloc(sizeof(HashMapCuckoo));
     if (newHashMap == NULL)
         return NULL;
-    m_hashMapCuckooInit(newHashMap, intialSize, keySize, elementSize, keyType, elementType, elementsArePointers, hashFunction);
+    Internal_hashMapCuckooInit(newHashMap, intialSize, keySize, elementSize, keyType, elementType, elementsArePointers, hashFunction);
     if (newHashMap->header.dataArrayVarType == ListNone) {
         free(newHashMap);
         return NULL;
@@ -89,10 +89,10 @@ HashMapCuckoo* hashMapCuckooCreate(
 }
 
 static bool m_rehash(HashMapCuckoo* hashMap) {
-    size_t newAllocedSize = hashMap->sizeOfOneHashArray*2;
-    size_t rehashCount = 0;
+    size_t newAllocedSizeForOneHashArray = hashMap->sizeOfOneHashArray;
 rehashNewAlloc:
-    HashArrayElement* newHashArray = calloc(newAllocedSize, sizeof(HashArrayElement));
+    size_t rehashCount = 0;
+    HashArrayElement* newHashArray = calloc(newAllocedSizeForOneHashArray*2, sizeof(HashArrayElement));
     if (newHashArray == NULL)
         return false;
 rehashNoNewAlloc:
@@ -104,7 +104,7 @@ rehashNoNewAlloc:
             continue;
         size_t count = 0;
         while (1) {
-            uint64_t hash1 = m_hashMapHashSingelVarWithSalt(hashMap->sizeOfKey, elementToInsert.key, hashMap->keyType, newSalt1, hashMap->hashFunction) % (newAllocedSize / 2);
+            uint64_t hash1 = Internal_hashMapHashSingelVarWithSalt(hashMap->sizeOfKey, elementToInsert.key, hashMap->keyType, newSalt1, hashMap->hashFunction) % (newAllocedSizeForOneHashArray);
             HashArrayElement swapSpace;
             if (newHashArray[hash1].key == NULL) {
                 newHashArray[hash1] = elementToInsert;
@@ -113,7 +113,7 @@ rehashNoNewAlloc:
 
             swapSpace                 = newHashArray[hash1];
             newHashArray[hash1] = elementToInsert;
-            uint64_t hash2            = (m_hashMapHashSingelVarWithSalt(hashMap->sizeOfKey, swapSpace.key, hashMap->keyType, newSalt2, hashMap->hashFunction) % (newAllocedSize / 2)) + newAllocedSize / 2;
+            uint64_t hash2            = (Internal_hashMapHashSingelVarWithSalt(hashMap->sizeOfKey, swapSpace.key, hashMap->keyType, newSalt2, hashMap->hashFunction) % (newAllocedSizeForOneHashArray)) + newAllocedSizeForOneHashArray;
             if (newHashArray[hash2].key == NULL) {
                 newHashArray[hash2] = swapSpace;
                 break;
@@ -123,19 +123,18 @@ rehashNoNewAlloc:
             newHashArray[hash2] = swapSpace;
             if (++count >= (float)hashMap->sizeOfOneHashArray * MAX_CUCKOO_OF_SIZE) {
                 if (++rehashCount >= MAX_REHASH) {
-                    newAllocedSize *= 2;
-                    rehashCount = 0;
+                    newAllocedSizeForOneHashArray *= 2;
                     free(newHashArray);
                     goto rehashNewAlloc;
                 }
-                memset(newHashArray, 0, newAllocedSize);
+                memset(newHashArray, 0, newAllocedSizeForOneHashArray);
                 goto rehashNoNewAlloc;
             }
         }
     }
     free(hashMap->hashArray);
     hashMap->hashArray = newHashArray;
-    hashMap->sizeOfOneHashArray = newAllocedSize / 2;
+    hashMap->sizeOfOneHashArray = newAllocedSizeForOneHashArray;
     hashMap->salt1              = newSalt1;
     hashMap->salt2              = newSalt2;
     return true;
@@ -145,10 +144,10 @@ HashMapError_t hashMapCuckooInsert(HashMapCuckoo* hashMap, void** key, ListTypes
     assert(keyType == hashMap->keyType);
     assert(elementType == hashMap->header.dataArrayVarType);
     
-    uint64_t hash1 = m_hashMapHashSingelVarWithSalt(hashMap->sizeOfKey,*key,keyType,hashMap->salt1,hashMap->hashFunction) % hashMap->sizeOfOneHashArray;
-    uint64_t hash2 = (m_hashMapHashSingelVarWithSalt(hashMap->sizeOfKey, *key, keyType, hashMap->salt2, hashMap->hashFunction) % hashMap->sizeOfOneHashArray) + hashMap->sizeOfOneHashArray;
+    uint64_t hash1 = Internal_hashMapHashSingelVarWithSalt(hashMap->sizeOfKey,*key,keyType,hashMap->salt1,hashMap->hashFunction) % hashMap->sizeOfOneHashArray;
+    uint64_t hash2 = (Internal_hashMapHashSingelVarWithSalt(hashMap->sizeOfKey, *key, keyType, hashMap->salt2, hashMap->hashFunction) % hashMap->sizeOfOneHashArray) + hashMap->sizeOfOneHashArray;
 
-    if (m_memCmpKey(keyType,hashMap->sizeOfKey, *key, hashMap->hashArray[hash1].key) || m_memCmpKey(keyType,hashMap->sizeOfKey, *key, hashMap->hashArray[hash2].key))
+    if (CuckooInternal_memCmpKey(keyType,hashMap->sizeOfKey, *key, hashMap->hashArray[hash1].key) || CuckooInternal_memCmpKey(keyType,hashMap->sizeOfKey, *key, hashMap->hashArray[hash2].key))
         return HashMapKeyAlreadyExists;
 
     void*            keyAlloced      = malloc(hashMap->sizeOfKey);
@@ -181,7 +180,7 @@ HashMapError_t hashMapCuckooInsert(HashMapCuckoo* hashMap, void** key, ListTypes
 
         swapSpace = hashMap->hashArray[hash1];
         hashMap->hashArray[hash1] = elementToInsert;
-        hash2                     = (m_hashMapHashSingelVarWithSalt(hashMap->sizeOfKey, swapSpace.key, keyType, hashMap->salt2, hashMap->hashFunction) % hashMap->sizeOfOneHashArray) + hashMap->sizeOfOneHashArray;
+        hash2                     = (Internal_hashMapHashSingelVarWithSalt(hashMap->sizeOfKey, swapSpace.key, keyType, hashMap->salt2, hashMap->hashFunction) % hashMap->sizeOfOneHashArray) + hashMap->sizeOfOneHashArray;
         if (hashMap->hashArray[hash2].key == NULL) {
             hashMap->hashArray[hash2] = swapSpace;
             return HashMapOperationSuccsess;
@@ -197,19 +196,19 @@ HashMapError_t hashMapCuckooInsert(HashMapCuckoo* hashMap, void** key, ListTypes
             }
             count = 0;
         }
-        hash1                     = m_hashMapHashSingelVarWithSalt(hashMap->sizeOfKey, elementToInsert.key, keyType, hashMap->salt1, hashMap->hashFunction) % hashMap->sizeOfOneHashArray;
+        hash1                     = Internal_hashMapHashSingelVarWithSalt(hashMap->sizeOfKey, elementToInsert.key, keyType, hashMap->salt1, hashMap->hashFunction) % hashMap->sizeOfOneHashArray;
     }
 }
 
 void* hashMapCuckooGet(const HashMapCuckoo* hashMap, const void* key, ListTypes_t keyType) {
     assert(hashMap->keyType == keyType);
-    uint64_t hash1 = m_hashMapHashSingelVarWithSalt(hashMap->sizeOfKey, key, keyType, hashMap->salt1, hashMap->hashFunction) % hashMap->sizeOfOneHashArray;
+    uint64_t hash1 = Internal_hashMapHashSingelVarWithSalt(hashMap->sizeOfKey, key, keyType, hashMap->salt1, hashMap->hashFunction) % hashMap->sizeOfOneHashArray;
 
-    if (m_memCmpKey(keyType, hashMap->sizeOfKey, key, hashMap->hashArray[hash1].key))
+    if (CuckooInternal_memCmpKey(keyType, hashMap->sizeOfKey, key, hashMap->hashArray[hash1].key))
         return hashMap->hashArray[hash1].element;
 
-    uint64_t hash2 = (m_hashMapHashSingelVarWithSalt(hashMap->sizeOfKey, key, keyType, hashMap->salt2, hashMap->hashFunction) % hashMap->sizeOfOneHashArray) + hashMap->sizeOfOneHashArray;
-    if (m_memCmpKey(keyType, hashMap->sizeOfKey, key, hashMap->hashArray[hash2].key))
+    uint64_t hash2 = (Internal_hashMapHashSingelVarWithSalt(hashMap->sizeOfKey, key, keyType, hashMap->salt2, hashMap->hashFunction) % hashMap->sizeOfOneHashArray) + hashMap->sizeOfOneHashArray;
+    if (CuckooInternal_memCmpKey(keyType, hashMap->sizeOfKey, key, hashMap->hashArray[hash2].key))
         return hashMap->hashArray[hash2].element;
 
     return NULL;
@@ -217,15 +216,15 @@ void* hashMapCuckooGet(const HashMapCuckoo* hashMap, const void* key, ListTypes_
 
 HashMapError_t hashMapCuckooRemove(HashMapCuckoo* hashMap, const void* key, ListTypes_t keyType, void (*keyDestructor)(void* object), void (*elementDestructor)(void* object)) {
     assert(hashMap->keyType == keyType);
-    uint64_t hash1 = m_hashMapHashSingelVarWithSalt(hashMap->sizeOfKey, key, keyType, hashMap->salt1, hashMap->hashFunction) % hashMap->sizeOfOneHashArray;
+    uint64_t hash1 = Internal_hashMapHashSingelVarWithSalt(hashMap->sizeOfKey, key, keyType, hashMap->salt1, hashMap->hashFunction) % hashMap->sizeOfOneHashArray;
 
     HashArrayElement thingToFree;
-    if (m_memCmpKey(keyType, hashMap->sizeOfKey, key, hashMap->hashArray[hash1].key)) {
+    if (CuckooInternal_memCmpKey(keyType, hashMap->sizeOfKey, key, hashMap->hashArray[hash1].key)) {
         thingToFree                   = hashMap->hashArray[hash1];
         hashMap->hashArray[hash1].key = NULL;
     } else {
-        uint64_t hash2 = (m_hashMapHashSingelVarWithSalt(hashMap->sizeOfKey, key, keyType, hashMap->salt1, hashMap->hashFunction) % hashMap->sizeOfOneHashArray) + hashMap->sizeOfOneHashArray;
-        if (!m_memCmpKey(keyType, hashMap->sizeOfKey, key, hashMap->hashArray[hash2].key))
+        uint64_t hash2 = (Internal_hashMapHashSingelVarWithSalt(hashMap->sizeOfKey, key, keyType, hashMap->salt1, hashMap->hashFunction) % hashMap->sizeOfOneHashArray) + hashMap->sizeOfOneHashArray;
+        if (!CuckooInternal_memCmpKey(keyType, hashMap->sizeOfKey, key, hashMap->hashArray[hash2].key))
             return HashMapKeyDoesNotExist;
         thingToFree    = hashMap->hashArray[hash2];
         hashMap->hashArray[hash2].key = NULL;
@@ -239,4 +238,21 @@ HashMapError_t hashMapCuckooRemove(HashMapCuckoo* hashMap, const void* key, List
         elementDestructor(thingToFree.element);
 
     return HashMapOperationSuccsess;
+}
+
+void hashMapCuckooDestroy(HashMapCuckoo* hashMap, void (*keyDestructor)(void* object), void (*elementDestructor)(void* object)) {
+    for(size_t i = 0; i < hashMap->sizeOfOneHashArray * 2; i++) {
+        HashArrayElement* objectToFree = hashMap->hashArray + i;
+        if (objectToFree->key == NULL)
+            continue;
+        if(keyDestructor)
+            free(objectToFree->key);
+        if(elementDestructor && objectToFree->element)
+            free(objectToFree->element);
+    }
+
+    free(hashMap->hashArray);
+
+    if(hashMap->header.flags & ObjectFlagIsOnHeap)
+        free(hashMap);
 }

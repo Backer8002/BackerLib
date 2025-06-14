@@ -97,10 +97,10 @@ inline Set* setCreate(
     ListTypes_t keyType,
     uint64_t (*hashFunction)(const void* element, size_t elementSize)
 ) {
-    Set* newSet = hashMapCreate(intialSize,keySize,keySize, keyType, keyType, false, hashFunction);
+    HashMap* newSet = hashMapCreate(intialSize,keySize,keySize, keyType, keyType, false, hashFunction);
     if (newSet != NULL)
-        newSet->hashMap.header.objectType = ListSet;
-    return newSet;
+        newSet->header.objectType = ListSet;
+    return (Set*)newSet;
 }
 
 static uint64_t m_hashMapHashSingelVar(size_t elementSize, const void* element, ListTypes_t elementType, uint64_t(*hashFunction)(const void* element, size_t elementSize)) {

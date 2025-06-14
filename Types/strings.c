@@ -21,7 +21,7 @@ String stringCreate(const char* string, size_t length) {
 }
 
 inline char stringGetChar(const String* string, size_t index) {
-    char* element = arrayListElementGet(string, index);
+    char* element = arrayListElementGet((const ArrayList*)string, index);
     if (element != NULL)
         return *element;
     assert(false);
@@ -29,7 +29,7 @@ inline char stringGetChar(const String* string, size_t index) {
 }
 
 inline void stringRemoveSlice(String* string, size_t firstIndex, size_t lastIndex) {
-    arrayListElementRemove(string, firstIndex, lastIndex);
+    arrayListElementRemove((ArrayList*)string, firstIndex, lastIndex);
 }
 
 String stringGetSlice(const String* string, size_t firstIndex, size_t lastIndex) {
@@ -72,7 +72,7 @@ int stringAdd(String* destString, const char* string2,size_t length) {
     if((string2 == NULL)|(length==0)|(destString->arrayList.header.dataArrayVarType!=ListInt8)) return -2;
     size_t endOfDestString = destString->arrayList.amountOfElements;
     destString->arrayList.amountOfElements += length;
-    if (arrayListSizeCheckAdd(destString) == -1) {
+    if (arrayListSizeCheckAdd((ArrayList*)destString) == -1) {
         return -1;
     }
     for (size_t iterator = 0; iterator < length; iterator++)
@@ -84,7 +84,7 @@ int stringConcat(String* destString,const String* secondString) {
     if ((destString->arrayList.header.dataArrayVarType != ListInt8) | (secondString->arrayList.header.dataArrayVarType != ListInt8)) return -2;
     size_t endOfDestString = destString->arrayList.amountOfElements;
     destString->arrayList.amountOfElements += secondString->arrayList.amountOfElements;
-    if (arrayListSizeCheckAdd(destString) == -1) {
+    if (arrayListSizeCheckAdd((ArrayList*)destString) == -1) {
         return -1;
     }
     for (size_t iterator = 0; iterator < secondString->arrayList.amountOfElements; iterator++)

@@ -37,7 +37,7 @@ typedef struct {
 
 
 
-inline bool typeIsPrimitive(ListTypes_t listType) {
+static inline bool typeIsPrimitive(ListTypes_t listType) {
 	switch (listType) {
 	case ListNone:
 	case ListInt8:

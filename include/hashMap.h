@@ -67,8 +67,8 @@ extern "C" {
 
     #define HASHMAP_MAX_DEPTH UINT32_MAX
     #define HASHMAP_MAX_LOADFACTOR 0.75f
-    #define MAX_CUCKOO_OF_SIZE 0.5f
-    #define MAX_REHASH 5ull
+    #define MAX_CUCKOO_OF_SIZE 0.1f
+    #define MAX_REHASH 1ull
 
 extern uint64_t hashFunctionDefualt(size_t amountOfVars, ...);
 extern HashMap hashMapCreateStack(size_t intialSize, size_t keySize, size_t elementSize, ListTypes_t keyType, ListTypes_t elementType, bool elementsArePointers, uint64_t(*hashFunction)(const void* element, size_t elementSize));
@@ -80,13 +80,14 @@ extern HashMapError_t hashMapInsert(HashMap* hashMap, void* key, ListTypes_t key
 extern HashMapError_t setInsert(HashMap* hashMap, void* key, ListTypes_t keyType);
 extern HashMapError_t hashMapGet(const HashMap* hashMap, const void* key, ListTypes_t keyType, void** element);
 extern inline bool    setGet(const HashMap* hashMap, const void* key, ListTypes_t keyType);
-inline bool hashMapContainsKey(const HashMap* hashMap, const void* key, ListTypes_t keyType) { setGet(hashMap, key, keyType); }
+static inline bool hashMapContainsKey(const HashMap* hashMap, const void* key, ListTypes_t keyType) { setGet(hashMap, key, keyType); }
 extern HashMapError_t hashMapRemove(HashMap* hashMap, const void* key, ListTypes_t keyType, void (*keyDestructor)(void* element), void (*elementDestructor)(void* element));
 extern inline HashMapError_t setRemove(HashMap* hashMap, void* key, ListTypes_t keyType, void (*keyDestructor)(void* element));
 extern HashMapError_t hashMapReplace(HashMap* hashMap, const void* key, ListTypes_t keyType, void* element, ListTypes_t elementType, void (*destrutorOfPreviousElement)(void* element));
 extern void hashMapDestroy(HashMap* hashMap, void(*keyDestructor)(void* key), void(*elementDestructor)(void* element));
-inline uint64_t hashFunctionDefualtSingleVar(const void* element, size_t size) { return hashFunctionDefualt(1, size, element); }
-inline uint64_t hashFunctionDefualtSingleVarWithSalt(const void* element, size_t size,uint32_t salt) { return hashFunctionDefualt(2, sizeof(uint32_t),&salt, size, element); }
+
+static inline uint64_t hashFunctionDefualtSingleVar(const void* element, size_t size) { return hashFunctionDefualt(1, size, element); }
+static inline uint64_t hashFunctionDefualtSingleVarWithSalt(const void* element, size_t size,uint32_t salt) { return hashFunctionDefualt(2, sizeof(uint32_t),&salt, size, element); }
 
 typedef struct {
     void* key;
@@ -110,6 +111,7 @@ extern void* hashMapCuckooGet(const HashMapCuckoo* hashMap, const void* key, Lis
 extern HashMapError_t hashMapCuckooInsert(HashMapCuckoo* hashMap, void** key, ListTypes_t keyType, void** element, ListTypes_t elementType);
 extern HashMapCuckoo* hashMapCuckooCreate(size_t intialSize, size_t keySize, size_t elementSize, ListTypes_t keyType, ListTypes_t elementType, bool elementsArePointers, uint64_t(*hashFunction)(const void* element, size_t elementSize, uint32_t salt));
 extern HashMapCuckoo hashMapCuckooCreateStack(size_t intialSize, size_t keySize, size_t elementSize, ListTypes_t keyType, ListTypes_t elementType, bool elementsArePointers, uint64_t(*hashFunction)(const void* element, size_t elementSize, uint32_t salt));
+extern void hashMapCuckooDestroy(HashMapCuckoo* hashMap, void (*keyDestructor)(void* object), void (*elementDestructor)(void* object));
 #ifdef __cplusplus
 }
 #endif // __cplusplus
