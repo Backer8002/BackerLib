@@ -1,25 +1,42 @@
 ﻿
-# How to use the logger
+# How to use the event subscriber system
+
+## Function prootypes
+
+If no additional args are supplied: 
+```C 
+void (*function)(EventCall) 
+```
+
+If additonal args are supplied:
+
+```C
+void (*function)(EventCall, size_t amountOfAdditionalArgs, ...)
+```
+
+## Flags
+
+0x1 Function will accept additional args provided at registration.  
+0x2 Function will be called in a new thread.
 
 ## Init functions
 
-- loggingInit(size\_t queueSize,bool shouldMemLogm,shouldLogFileLocation)  
-	>It will start the worker thread and create the log queue.  
-	>Save the pointer returnd from it since it is the logging handle.
+- eventInit(void)  
+	>It will start the worker thread and create the event queue.  
+	>Save the pointer returnd from it since it is the event handle.
 
-- loggingRegFileHandleToLogLevel(FILE\* handle, char\* logLevelsToReg)
-	>Registers the file handle to an error level or several. 
-	>The worker thread takes ownership if it already does not have it.
+- eventRegSubToId(EventHandle\*, const char\* ID, void\(*function)(EventCall))
+	>Registers function to an ID that only takes the call as a paramiter.  
+	>Returns EventOperationSuccsess if succsessful
 
-- loggingRegLogLevel(char\* logLevel,char\* LogLevelName)
-	>Registers a log level to the system
-- loggingRegDefualtConf()
-	>Registers a defualt setup that is used by backerLib
+- eventRegSubToIdWithAdditionalParams(EventHandle*, const char\* ID, void(*function)(EventCall,size\_t, va\_list additionalArgs), bool functionShouldRunOnSeperateThread, size\_t amountOfAdditionalParamiters, ...) 
+	>Registers function to an ID that takes the call as a parameter and additionally args. Has option for the worker thread to create a thread for execution.  
+	>Returns EventOperationSuccsess if succsessful
 
 ## Event Registers
 
-- logEvent(logHandle,const event\_t\*)
-- logEventFileLocation(logHandle,const event\_t\*)
+- eventCall(const event\* const, thrd\_t currentThread)
+- logCall(const event\* const, thrd\_t currentThread, uint32\_t line, const char\* file)
 - free
 - malloc
 - realloc

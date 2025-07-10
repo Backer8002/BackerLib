@@ -6,6 +6,7 @@
 # AfterClass; AfterControlStatement; AfterEnum; AfterFunction; AfterNamespace; 
 # AfterStruct; AfterUnion
 
+
 AccessModifierOffset: -4
 AlignAfterOpenBracket: Align
 AllowShortBlocksOnASingleLine: true

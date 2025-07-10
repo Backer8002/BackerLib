@@ -1,9 +1,9 @@
-#include"pch.h"
-#include<queue.h>
-#include<stdlib.h>
-#include<string.h>
-#include<assert.h>
-#include<threads.h>
+#include "queue.h"
+#include "backerLibListTypes.h"
+#include <assert.h>
+#include <stdlib.h>
+#include <string.h>
+#include <threads.h>
 
 #undef queueEnqueue
 #undef queueDequeue
@@ -16,10 +16,10 @@ Queue queueCreateStack(size_t size, size_t elementSize, ListTypes_t listType, bo
     returnQueue.header.flags            = (elementsArePointers) ? ObjectFlagContentsIsPointers : 0;
     returnQueue.elementSize             = elementSize;
     returnQueue.header.dataArrayVarType = listType;
-    returnQueue.header.objectType      = ListQueue;
+    returnQueue.header.objectType       = ListQueue;
     returnQueue.queueSize               = size;
 
-    returnQueue.queue = malloc(elementSize*size);
+    returnQueue.queue                   = malloc(elementSize * size);
     if (returnQueue.queue == NULL) {
         returnQueue.header.dataArrayVarType = ListNone;
         return returnQueue;
@@ -42,7 +42,7 @@ Queue* queueCreate(size_t size, size_t elementSize, ListTypes_t listType, bool e
     returnQueue->header.objectType       = ListQueue;
     returnQueue->queueSize               = size;
 
-    returnQueue->queue = malloc(elementSize * size);
+    returnQueue->queue                   = malloc(elementSize * size);
     if (returnQueue->queue == NULL) {
         free(returnQueue);
         return NULL;
@@ -58,7 +58,7 @@ Queue* queueMoveStackToHeap(Queue queue, bool destroyInputOnFailiure) {
     Queue* queueNew = malloc(sizeof(Queue));
     if (queueNew == NULL) {
         if (destroyInputOnFailiure)
-            queueDestroy(&queue,NULL);
+            queueDestroy(&queue, NULL);
         return NULL;
     }
     *queueNew = queue;
@@ -74,7 +74,7 @@ Queue queueMoveStack(Queue* queue) {
     return queueNew;
 }
 
-Queue* queueListCopyStackToHeap(Queue* queue) {
+Queue* queueCopyStackToHeap(Queue* queue) {
     if (queue->header.flags & ObjectFlagMutexExists)
         mtx_lock(&queue->mutex);
     if (queue->header.flags & ObjectFlagIsOnHeap || queue->queue == NULL) {
@@ -89,8 +89,8 @@ Queue* queueListCopyStackToHeap(Queue* queue) {
         return NULL;
     }
     memcpy(queueNew->queue,
-        queue->queue,
-        queueNew->queueSize * queueNew->elementSize);
+           queue->queue,
+           queueNew->queueSize * queueNew->elementSize);
     queueNew->currentDequeueIndex = queue->currentDequeueIndex;
     queueNew->currentEnqueueIndex = queue->currentEnqueueIndex;
     if (mtx_init(&queueNew->mutex, mtx_plain) == thrd_success)
@@ -102,7 +102,7 @@ Queue* queueListCopyStackToHeap(Queue* queue) {
     return queueNew;
 }
 
-Queue queueListCopyStack(Queue* queue) {
+Queue queueCopyStack(Queue* queue) {
     if (queue->header.flags & ObjectFlagMutexExists)
         mtx_lock(&queue->mutex);
     Queue queueNew = queueCreateStack(queue->queueSize, queue->elementSize, queue->header.dataArrayVarType, queue->header.flags & ObjectFlagContentsIsPointers);
@@ -113,8 +113,8 @@ Queue queueListCopyStack(Queue* queue) {
     }
 
     memcpy(queueNew.queue,
-        queue->queue,
-        queueNew.queueSize * queueNew.elementSize);
+           queue->queue,
+           queueNew.queueSize * queueNew.elementSize);
     queue->currentDequeueIndex = queue->currentDequeueIndex;
     queue->currentEnqueueIndex = queue->currentEnqueueIndex;
     if (queue->header.flags & ObjectFlagMutexExists)
@@ -151,16 +151,16 @@ QueueError_t queueDequeue(Queue* queue, void* element, size_t elementSize) {
     return DEQUEUE_SUCCESS;
 }
 
-void queueClearOut(Queue* queue, void(operation)(void* element,ListTypes_t listType), void(elementDestructor)(void* element)) {
+void queueClearOut(Queue* queue, void(operation)(void* element, ListTypes_t listType), void(elementDestructor)(void* element)) {
     if (queue->header.flags & ObjectFlagMutexExists)
         mtx_lock(&queue->mutex);
 
     if ((queue->currentDequeueIndex != queue->currentEnqueueIndex || queue->header.flags & FlagQueueIsFull)) {
         for (size_t currentIndex = queue->currentDequeueIndex; currentIndex != queue->currentEnqueueIndex; currentIndex = (currentIndex + 1) % queue->queueSize) {
             operation(
-                (queue->header.flags & ObjectFlagContentsIsPointers) 
-                    ? *(unsigned char**) queue->queue + currentIndex * queue->elementSize 
-                    : (unsigned char*) queue->queue + currentIndex * queue->elementSize, 
+                (queue->header.flags & ObjectFlagContentsIsPointers)
+                    ? *(unsigned char**) queue->queue + currentIndex * queue->elementSize
+                    : (unsigned char*) queue->queue + currentIndex * queue->elementSize,
                 queue->header.dataArrayVarType);
             if (elementDestructor != NULL)
                 elementDestructor(
@@ -178,7 +178,7 @@ void queueClearOut(Queue* queue, void(operation)(void* element,ListTypes_t listT
 }
 
 void queueDestroy(Queue* queue, void(elementDestructor)(void* element)) {
-    if ((queue->currentDequeueIndex != queue->currentEnqueueIndex || queue->header.flags & FlagQueueIsFull)&&elementDestructor != NULL) {
+    if ((queue->currentDequeueIndex != queue->currentEnqueueIndex || queue->header.flags & FlagQueueIsFull) && elementDestructor != NULL) {
         for (size_t currentIndex = queue->currentDequeueIndex; currentIndex != queue->currentEnqueueIndex; currentIndex = (currentIndex + 1) % queue->queueSize)
             elementDestructor((queue->header.flags & ObjectFlagContentsIsPointers) ? *(Bytes*) queue->queue + currentIndex * queue->elementSize : (Bytes) queue->queue + currentIndex * queue->elementSize);
     }

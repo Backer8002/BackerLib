@@ -10,4 +10,4 @@ set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED 14)
 
 add_subdirectory(Types)
-add_subdirectory(BackerLoggingHandler)
+add_subdirectory(Event)
