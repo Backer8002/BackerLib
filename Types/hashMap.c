@@ -283,7 +283,7 @@ HashMapError_t hashMapGet(const HashMap* hashMap, const void* key, ListTypes_t k
 
 inline bool setGet(const HashMap* hashMap, const void* key, ListTypes_t keyType) {
     assert(keyType == hashMap->keyType);
-    return (internal_hashArrayGetFromKey != NULL) ? true : false;
+    return m_hashArrayGetFromKey(hashMap,key,keyType) != NULL ? true : false;
 }
 
 HashMapError_t hashMapRemove(HashMap* hashMap, const void* key, ListTypes_t keyType, void (*keyDestructor)(void* element), void (*elementDestructor)(void* element)) {

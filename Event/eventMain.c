@@ -2,6 +2,7 @@
 #include <assert.h>
 #include <signal.h>
 #include <threads.h>
+#include <BackerLibCommonEvents.h>
 
 #ifdef _DEBUG
 static HashMap memoryAllocs = {0};
@@ -10,6 +11,8 @@ static HashMap memoryAllocs = {0};
 #undef calloc
 #undef realloc
 #undef free
+#else
+static int memoryAllocs;
 #endif
 
 static EventHandle* mainEventHandle = NULL;
@@ -73,7 +76,7 @@ EventHandle* eventSystemInit(void) {
 
 EventError_t internal_invokeSubscriber(EventCall* eventCall, const char* subscriberID, EventSubscriber* eventSubscriber) {
     if (eventSubscriber->eventSubscriberMain.flags & EVENT_FLAG_CREATE_THREAD) {
-        _wassert("Not implemented", __FILE__, __LINE__);
+        assert("Not implemented");
     } else {
         if (eventSubscriber->typeOfSubscriber == EventSubscriberNormal)
             eventSubscriber->eventSubscriberMain.function(*eventCall, subscriberID);
@@ -191,11 +194,14 @@ void logCall(const Event* const event, thrd_t currentThread, uint32_t line, cons
     mtx_unlock(&mainEventHandle->eventQueue.mutex);
 }
 
-const Event freeMemDoesNotExist = {.id = "Unable to free memory since it does not exist", .amountOfGroups = 2, .groupIds = {"Memory", "Error"}};
-const Event mallocEvent         = {.id = "Allocated memory via malloc", .amountOfGroups = 3, .groupIds = {"MemoryAlloc", "Memory", "Debug"}};
-const Event callocEvent         = {.id = "Allocated memory via calloc", .amountOfGroups = 3, .groupIds = {"MemoryAlloc", "Memory", "Debug"}};
-const Event reallocEvent        = {.id = "Reallocated memory", .amountOfGroups = 3, .groupIds = {"MemoryAlloc", "Memory", "Debug"}};
-const Event freeEvent           = {.id = "Freed memory", .amountOfGroups = 3, .groupIds = {"MemoryDeAlloc", "Memory", "Debug"}};
+const char* freeMemDoesNotExistGroupIds[] = {MemoryGroupId,ErrorLogLevel};
+const char* allocEventsGroupIds[] = {MemoryGroupId,DebugLogLevel,AllocMemoryGroupId};
+const char* freeEventGroupId[] = {DebugLogLevel,MemoryGroupId,DeallocMemoryGroupId};
+const Event freeMemDoesNotExist = {.id = "Unable to free memory since it does not exist", .amountOfGroups = 2, .groupIds = freeMemDoesNotExistGroupIds};
+const Event mallocEvent         = {.id = "Allocated memory via malloc", .amountOfGroups = 3, .groupIds = AllocMemoryGroupId};
+const Event callocEvent         = {.id = "Allocated memory via calloc", .amountOfGroups = 3, .groupIds = AllocMemoryGroupId};
+const Event reallocEvent        = {.id = "Reallocated memory", .amountOfGroups = 3, .groupIds = AllocMemoryGroupId};
+const Event freeEvent           = {.id = "Freed memory", .amountOfGroups = 3, .groupIds = DeallocMemoryGroupId};
 
 void        internal_memoryLogCall(const Event* const event, uint32_t line, const char* file, size_t size, size_t address) {
 

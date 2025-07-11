@@ -6,9 +6,12 @@ static const char DebugLogLevel[] = "Debug";
 static const char WarningLogLevel[] = "Warning";
 static const char ErrorLogLevel[] = "Error";
 static const char CriticalLogLevel[] = "Critical";
+static const char MemoryGroupId[] = "Memory";
+static const char AllocMemoryGroupId[] = "AllocMem";
+static const char DeallocMemoryGroupId[] = "DeallocMem";
 
 static const char* const LogUnableToAllocMemGroupIds[] = {WarningLogLevel,
-                                                          "Memory"};
+                                                          MemoryGroupId};
 static const Event LogUnableToAllocMem = {
     .id = "Unable to allocate memory",
     .amountOfGroups = 2,
