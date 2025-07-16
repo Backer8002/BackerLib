@@ -1,6 +1,7 @@
 #pragma once
 #include "../Event/eventInternalHeader.h"
 
+
 static const char InfoLogLevel[] = "Info";
 static const char DebugLogLevel[] = "Debug";
 static const char WarningLogLevel[] = "Warning";

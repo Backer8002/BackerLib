@@ -46,8 +46,8 @@ extern HASHMAP HashMapError_t bitSetOr(BitSet* firstSet, BitSet* secondSet);
 extern HASHMAP void           bitSetDestroy(BitSet* set);
 extern HASHMAP HashMapError_t bitSetInit(BitSet* set, size_t amountOfElements, bool objectIsHeapAlloced);
 
-typedef struct hashArrayNode {
-    struct hashArrayNode* next;
+typedef struct HashArrayNode {
+    struct HashArrayNode* next;
     void*                 element;
     void*                 key;
 } HashArrayNode;
@@ -134,15 +134,15 @@ extern HashMapError_t
                                           void (*elementDestructor)(void* object));
 extern void*          hashMapCuckooGet(HashMapCuckoo* hashMap, const void* key,
                                        ListTypes_t keyType);
-extern HashMapError_t hashMapCuckooInsert(HashMapCuckoo* hashMap, void* key,
-                                          ListTypes_t keyType, void* element,
+extern HashMapError_t hashMapCuckooInsert(HashMapCuckoo* hashMap, const void* key,
+                                          ListTypes_t keyType, const void* element,
                                           ListTypes_t elementType);
-extern HashMapCuckoo* hashMapCuckooCreate(
+[[nodiscard]] extern HashMapCuckoo* hashMapCuckooCreate(
     size_t intialSize, size_t keySize, size_t elementSize, ListTypes_t keyType,
     ListTypes_t elementType, bool elementsArePointers,
     uint64_t (*hashFunction)(const void* element, size_t elementSize, uint32_t salt));
 
-extern HashMapCuckoo hashMapCuckooCreateStack(
+[[nodiscard]] extern HashMapCuckoo hashMapCuckooCreateStack(
     size_t intialSize, size_t keySize, size_t elementSize, ListTypes_t keyType,
     ListTypes_t elementType, bool elementsArePointers,
     uint64_t (*hashFunction)(const void* element, size_t elementSize, uint32_t salt));

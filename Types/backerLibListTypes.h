@@ -3,7 +3,17 @@
 #include <stdint.h>
 typedef unsigned char Byte;
 typedef Byte*         Bytes;
+typedef char* CString;
 
+#define REFERENCE(type) type* const
+
+#ifndef DEBUG
+#define DESTRUCTOR(name) void name(void* ptr,uint32_t line,const CString file)
+#define DESTRUCTOR_ARGS ptr,line,file
+#else
+#define DESTRUCTOR(name) void name(void* ptr);
+#define DESTRUCTOR_ARGS ptr
+#endif
 
 typedef enum ListTypes {
     ListNone = 0,
@@ -39,7 +49,9 @@ typedef struct {
 #define ObjectFlagContentsIsPointers 0x4
 
 static inline bool isValidObject(DataTypeHeader* header) {
-    return header->dataArrayVarType != ListNone;
+    if (header)
+        return header->dataArrayVarType != ListNone;
+    return false;
 }
 
 static inline bool typeIsPrimitive(ListTypes_t listType) {

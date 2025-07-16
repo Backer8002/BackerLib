@@ -21,44 +21,44 @@ extern "C" {
 #include <threads.h>
 
 #define FlagQueueIsFull 0x100
-typedef struct {
-    DataTypeHeader header;
-    mtx_t          mutex;
-    size_t         queueSize;
-    size_t         currentEnqueueIndex;
-    size_t         currentDequeueIndex;
-    size_t         elementSize;
-    void*          queue;
-} Queue;
+    typedef struct {
+        DataTypeHeader header;
+        mtx_t          mutex;
+        size_t         queueSize;
+        size_t         currentEnqueueIndex;
+        size_t         currentDequeueIndex;
+        size_t         elementSize;
+        void*          queue;
+    } Queue;
 
-typedef enum {
-    ENQUEUE_SUCCSESS = 0,
-    ENQUEUE_QUEUE_FULL,
-    ENQUEUE_UNKNOWN_FAILURE,
-    DEQUEUE_SUCCESS = 0,
-    DEQUEUE_QUEUE_EMPTY,
-    DEQUEUE_UNKOWN_FAILURE
-} QueueError_t;
+    typedef enum {
+        QueueOperationSuccess = 0,
+        QueueQueueWasFull,
+        QueueQueueWasEmpty,
+        QueueInvalidSizeOfBuffer
+    } QueueError_t;
 
-Queue        queueCreateStack(size_t size, size_t elementSize, ListTypes_t listType, bool elementsArePointers);
+    extern Queue        queueCreateStack(size_t size, size_t elementSize, ListTypes_t listType, bool elementsArePointers);
 
-Queue*       queueCreate(size_t size, size_t elementSize, ListTypes_t listType, bool elementsArePointers);
+    extern Queue*       queueCreate(size_t size, size_t elementSize, ListTypes_t listType, bool elementsArePointers);
 
-Queue*       queueMoveStackToHeap(Queue queue, bool destroyInputOnFailiure);
+    extern Queue*       queueMoveStackToHeap(Queue queue);
 
-Queue        queueMoveStack(Queue* queue);
+    extern Queue        queueMoveStack(Queue* queue);
 
-Queue*       queueCopyStackToHeap(Queue* queue);
+    extern Queue*       queueCopyStackToHeap(Queue* queue);
 
-Queue        queueCopyStack(Queue* queue);
+    extern Queue        queueCopyStack(Queue* queue);
 
-QueueError_t queueEnqueue(Queue* queue, void* element, size_t elementSize);
+    extern QueueError_t queueEnqueue(Queue* queue, const void* element, size_t elementSize);
 
-QueueError_t queueDequeue(Queue* queue, void* element, size_t elementSize);
+    extern QueueError_t queueDequeue(Queue* queue, void* element, size_t elementSize);
 
-void         queueClearOut(Queue* queue, void(operation)(void* element, ListTypes_t listType), void(elementDestructor)(void* element));
+    extern void         queueClearOut(Queue* queue, void(operation)(void* element, ListTypes_t listType), void(elementDestructor)(void* element),uint32_t line,const char* file);
 
-void         queueDestroy(Queue* queue, void(elementDestructor)(void* element));
+    extern size_t queueGetAmountOfElements(const Queue* queue);
+    extern const void* queuePeak(const Queue* queue, size_t offset);
+    extern void         queueDestroy(Queue* queue, void(elementDestructor)(void* element),uint32_t line, const char* file);
 
 
 #ifdef __cplusplus

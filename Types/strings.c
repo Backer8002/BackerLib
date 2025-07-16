@@ -1,11 +1,12 @@
 #include "backerLibListTypes.h"
 #include "backerStrings.h"
+#include <stdlib.h>
 #include <assert.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
+#include <BackerLibLogging.h>
 
 
 // Creates a string. Use isValidObject() to check validity
@@ -23,7 +24,7 @@ String stringCreate(const char* string, size_t length) {
     return allocatedString;
 }
 
-// Access to induvidual char in a string. If accsess was invalid this returns '\0'
+// Access to individual char in a string. If access was invalid this returns '\0'
 inline char stringGetChar(const String* string, size_t index) {
     char* element = arrayListElementGet((const ArrayList*) string, index);
     if (element != NULL)
@@ -32,7 +33,7 @@ inline char stringGetChar(const String* string, size_t index) {
     return 0;
 }
 
-// Wraper for arrayListElementRemove
+// Wrapper for arrayListElementRemove
 inline ArrayListError_t stringRemoveSlice(String* string, size_t firstIndex, size_t lastIndex) {
     return arrayListElementRemove((ArrayList*) string, firstIndex, lastIndex);
 }
@@ -52,18 +53,17 @@ String stringGetSlice(const String* string, size_t firstIndex, size_t lastIndex)
         for (size_t iterator = 0; iterator < lastIndex - firstIndex + 1; iterator++)
             *((char*) returnString.arrayList.list + iterator) = stringGetChar(string, iterator + firstIndex);
         return returnString;
-    } else {
-        String returnString = {arrayListCreateStack(firstIndex - lastIndex + 1, sizeof(char), ListInt8, false)}; // of by one error
-        if (returnString.arrayList.list == NULL)
-            return returnString;
-        returnString.arrayList.amountOfElements = firstIndex - lastIndex + 1;
-        size_t returnIterator                   = returnString.arrayList.amountOfElements - 1;
-        for (size_t iterator = lastIndex; iterator <= firstIndex; iterator++) {
-            *((char*) string->arrayList.list + returnIterator) = stringGetChar(string, iterator);
-            returnIterator--;
-        }
-        return returnString;
     }
+    String returnString = {arrayListCreateStack(firstIndex - lastIndex + 1, sizeof(char), ListInt8, false)}; // of by one error
+    if (returnString.arrayList.list == NULL)
+        return returnString;
+    returnString.arrayList.amountOfElements = firstIndex - lastIndex + 1;
+    size_t returnIterator                   = returnString.arrayList.amountOfElements - 1;
+    for (size_t iterator = lastIndex; iterator <= firstIndex; iterator++) {
+        *((char*) string->arrayList.list + returnIterator) = stringGetChar(string, iterator);
+        returnIterator--;
+    }
+    return returnString;
 }
 
 // Returns a copy of a given string. Use isValidObject() to check validity
@@ -89,7 +89,7 @@ ArrayListError_t stringAdd(String* destString, const char* string2, size_t lengt
 
     for (size_t iterator = 0; iterator < length; iterator++)
         *((char*) destString->arrayList.list + endOfDestString + iterator) = *(string2 + iterator);
-    return ArrayListOperationSuccsess;
+    return ArrayListOperationSuccess;
 }
 
 // Adds secondString to the end of destString. Returns ArrayListCannotAllocMemory if it cannot grow and returns ArrayListInvalidType if the operation was invalid.
@@ -105,7 +105,7 @@ ArrayListError_t stringConcat(String* destString, const String* secondString) {
     }
     for (size_t iterator = 0; iterator < secondString->arrayList.amountOfElements; iterator++)
         *((char*) destString->arrayList.list + endOfDestString + iterator) = *((char*) secondString->arrayList.list + iterator);
-    return ArrayListOperationSuccsess;
+    return ArrayListOperationSuccess;
 }
 
 // Returns a new string object where charToStrip has been removed given a String. If enforceStripLimit is high this will remove up to amountToStrip char. If it's sign is negative the search is preformed in reverse order. Use isValidObject() to check validity of returned object.

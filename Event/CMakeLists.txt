@@ -9,5 +9,6 @@ set(CMAKE_CXX_STANDARD_REQUIRED 14)
 
 include_directories(BackerLibEvent INTERFACE "${PROJECT_SOURCE_DIR}/../include")
 
-add_library(BackerLibEvent STATIC eventMain.c)
+add_library(BackerLibEvent STATIC eventMain.c
+        logFunctions.c)
 

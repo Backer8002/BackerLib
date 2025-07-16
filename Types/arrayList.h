@@ -34,7 +34,7 @@ typedef struct {
 } ArrayList;
 
 typedef enum ArrayListError {
-    ArrayListOperationSuccsess = 0,
+    ArrayListOperationSuccess = 0,
     ArrayListCannotAllocMemory,
     ArrayListAccessViolation,
     ArrayListInvalidType
@@ -46,10 +46,10 @@ extern ARRAYLIST void             arrayListElementsClear(ArrayList* arrayList);
 extern ARRAYLIST void*            arrayListElementGet(const ArrayList* arrayList, size_t index);
 extern ARRAYLIST ArrayListError_t arrayListElementPop(ArrayList* arrayList);
 extern ARRAYLIST ArrayListError_t arrayListElementRemove(ArrayList* arrayList, size_t index, size_t lastIndex);
-extern ARRAYLIST ArrayListError_t arrayListElementInsert(ArrayList* arrayList, size_t index, size_t amountOfElements, void* elements, ListTypes_t elementType);
+extern ARRAYLIST ArrayListError_t arrayListElementInsert(ArrayList* arrayList, size_t index, size_t amountOfElements, const void* elements, ListTypes_t elementType);
 extern ARRAYLIST ArrayListError_t arrayListElementSet(ArrayList* arrayList, size_t index, void* element, ListTypes_t elementType);
-extern ARRAYLIST ArrayList        arrayListCreateStack(size_t intialSize, size_t elementSize, ListTypes_t elementType, bool elementsArePointers);
-extern ARRAYLIST ArrayList*       arrayListCreate(size_t intialSize, size_t elementSize, ListTypes_t elementType, bool elementsArePointers);
+extern ARRAYLIST ArrayList        arrayListCreateStack(size_t initialSize, size_t elementSize, ListTypes_t elementType, bool elementsArePointers);
+extern ARRAYLIST ArrayList*       arrayListCreate(size_t initialSize, size_t elementSize, ListTypes_t elementType, bool elementsArePointers);
 extern ARRAYLIST void             arrayListDestroy(void* arraylist);
 extern ARRAYLIST void             arrayListDestroyWithElements(ArrayList* arrayList, void(elementDestructor)(void* element));
 extern ARRAYLIST ArrayList*       arrayListMoveStackToHeap(ArrayList arrayList, bool destroyInputOnFailiure);

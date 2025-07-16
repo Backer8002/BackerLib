@@ -283,7 +283,7 @@ HashMapError_t hashMapGet(const HashMap* hashMap, const void* key, ListTypes_t k
 
 inline bool setGet(const HashMap* hashMap, const void* key, ListTypes_t keyType) {
     assert(keyType == hashMap->keyType);
-    return m_hashArrayGetFromKey(hashMap,key,keyType) != NULL ? true : false;
+    return internal_hashArrayGetFromKey(hashMap,key,keyType) != NULL ? true : false;
 }
 
 HashMapError_t hashMapRemove(HashMap* hashMap, const void* key, ListTypes_t keyType, void (*keyDestructor)(void* element), void (*elementDestructor)(void* element)) {
@@ -362,13 +362,12 @@ HashMapError_t        hashMapReplace(HashMap* hashMap, const void* key, ListType
 void hashMapDestroy(HashMap* hashMap, void (*keyDestructor)(void* key), void (*elementDestructor)(void* element)) {
     for (HashArrayNode** nextBucket = hashMap->hashArray; nextBucket < hashMap->hashArray + hashMap->sizeOfHashArray; nextBucket++) {
         HashArrayNode* next = *nextBucket;
-        HashArrayNode* oldNext;
         while (next) {
-            oldNext = next;
+            HashArrayNode* oldNext = next;
             next    = next->next;
-            if (keyDestructor != NULL && !typeIsPrimitive(hashMap->keyType))
+            if (keyDestructor != NULL)
                 keyDestructor(oldNext->key);
-            if (elementDestructor != NULL && !(hashMap->header.flags & ObjectFlagContentsIsPointers))
+            if (elementDestructor != NULL)
                 elementDestructor(oldNext->element);
             free(oldNext);
         }

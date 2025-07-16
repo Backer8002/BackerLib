@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <BackerLibLogging.h>
 
 static uint64_t Internal_hashMapHashSingelVarWithSalt(size_t elementSize, const void* element, ListTypes_t elementType, uint32_t salt, uint64_t (*hashFunction)(const void* element, size_t elementSize, uint32_t salt)) {
     if (typeIsPrimitive(elementType))
@@ -153,7 +154,7 @@ rehashNoNewAlloc:
     return true;
 }
 
-HashMapError_t hashMapCuckooInsert(HashMapCuckoo* hashMap, void* key, ListTypes_t keyType, void* element, ListTypes_t elementType) {
+HashMapError_t hashMapCuckooInsert(HashMapCuckoo* hashMap, const void* key, ListTypes_t keyType, const void* element, ListTypes_t elementType) {
     assert(keyType == hashMap->keyType);
     assert(elementType == hashMap->header.dataArrayVarType);
 

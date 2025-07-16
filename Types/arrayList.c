@@ -14,7 +14,7 @@ ArrayListError_t arrayListSizeCheckAdd(ArrayList* arrayList) {
         arrayList->list                  = newPointer;
         arrayList->totalAmountOfElements = indexesToAssign;
     }
-    return ArrayListOperationSuccsess;
+    return ArrayListOperationSuccess;
 }
 
 // Function to be called when a resize to a smaller array seems fit. Will resize if needed. If resize cannot happen this returns ArrayListCannotAllocMemory.
@@ -26,7 +26,7 @@ ArrayListError_t arrayListSizeCheckRemove(ArrayList* arrayList) {
         arrayList->list = newPointer;
         arrayList->totalAmountOfElements >>= 1;
     }
-    return ArrayListOperationSuccsess;
+    return ArrayListOperationSuccess;
 }
 
 // Sets then amount of elements in the arraylist to 0. Locks the mutex.
@@ -50,7 +50,7 @@ ArrayListError_t arrayListElementPop(ArrayList* arrayList) {
         return ArrayListAccessViolation;
     arrayList->amountOfElements--;
     arrayListSizeCheckRemove(arrayList);
-    return ArrayListOperationSuccsess;
+    return ArrayListOperationSuccess;
 }
 
 // Removes elements from index to lastIndex (inclusive) from the array. Returns ArrayListAccessViolation if index is larger than lastIndex or if the indexes are invalid
@@ -68,17 +68,17 @@ ArrayListError_t arrayListElementRemove(ArrayList* arrayList, size_t index, size
     }
     arrayList->amountOfElements -= lastIndex - index + 1;
     arrayListSizeCheckRemove(arrayList);
-    return ArrayListOperationSuccsess;
+    return ArrayListOperationSuccess;
 }
 
 /*
 Inserts array elements starting at index.
 
 Returns ArrayListAccessViolation if the index was invalid.
-Returns ArrayListInvalidType if the gived type was not the one of the ArrayList.
+Returns ArrayListInvalidType if the given type was not the one of the ArrayList.
 Returns ArrayListCannotAllocMemory if the list cannot grow.
 */
-ArrayListError_t arrayListElementInsert(ArrayList* arrayList, size_t index, size_t amountOfElements, void* elements, ListTypes_t elementType) {
+ArrayListError_t arrayListElementInsert(ArrayList* arrayList, size_t index, size_t amountOfElements, const void* elements, ListTypes_t elementType) {
     if (index > arrayList->amountOfElements)
         return ArrayListAccessViolation;
 
@@ -96,14 +96,14 @@ ArrayListError_t arrayListElementInsert(ArrayList* arrayList, size_t index, size
             (arrayList->totalAmountOfElements - index) * arrayList->elementSize);
 
     memcpy((Bytes) arrayList->list + arrayList->elementSize * index, elements, arrayList->elementSize * amountOfElements);
-    return ArrayListOperationSuccsess;
+    return ArrayListOperationSuccess;
 }
 
 /*
 Sets element at index.
 
 Returns ArrayListAccessViolation if the index was invalid.
-Returns ArrayListInvalidType if the gived type was not the one of the ArrayList.
+Returns ArrayListInvalidType if the given type was not the one of the ArrayList.
 Returns ArrayListCannotAllocMemory if the list cannot grow.
 */
 ArrayListError_t arrayListElementSet(ArrayList* arrayList, size_t index, void* element, ListTypes_t elementType) {
@@ -119,11 +119,11 @@ ArrayListError_t arrayListElementSet(ArrayList* arrayList, size_t index, void* e
         arrayList->amountOfElements++;
     }
     memcpy((Bytes) arrayList->list + arrayList->elementSize * index, element, arrayList->elementSize);
-    return ArrayListOperationSuccsess;
+    return ArrayListOperationSuccess;
 }
 
 // Creates an ArrayList object on the stack.
-ArrayList arrayListCreateStack(size_t intialSize, size_t elementSize, ListTypes_t elementType, bool elementsArePointers) {
+ArrayList arrayListCreateStack(size_t initialSize, size_t elementSize, ListTypes_t elementType, bool elementsArePointers) {
     ArrayList arrayList               = {0};
     arrayList.amountOfElements        = 0;
     arrayList.elementSize             = elementSize;
@@ -131,7 +131,7 @@ ArrayList arrayListCreateStack(size_t intialSize, size_t elementSize, ListTypes_
     arrayList.header.flags            = (elementsArePointers) ? ObjectFlagContentsIsPointers : 0;
     arrayList.header.objectType       = ListArrayList;
 
-    arrayList.list                    = malloc(elementSize * intialSize);
+    arrayList.list                    = malloc(elementSize * initialSize);
     if (arrayList.list == NULL) {
         arrayList.totalAmountOfElements = 0;
         arrayList.elementSize           = 0;
@@ -139,12 +139,12 @@ ArrayList arrayListCreateStack(size_t intialSize, size_t elementSize, ListTypes_
     }
     if (mtx_init(&arrayList.mutex, mtx_plain) == thrd_success)
         arrayList.header.flags |= ObjectFlagMutexExists;
-    arrayList.totalAmountOfElements = intialSize;
+    arrayList.totalAmountOfElements = initialSize;
     return arrayList;
 }
 
 // Creates an ArrayList object on the heap.
-ArrayList* arrayListCreate(size_t intialSize, size_t elementSize, ListTypes_t elementType, bool elementsArePointers) {
+ArrayList* arrayListCreate(size_t initialSize, size_t elementSize, ListTypes_t elementType, bool elementsArePointers) {
     ArrayList* arrayList = malloc(sizeof(ArrayList));
     if (arrayList == NULL)
         return NULL;
@@ -154,14 +154,14 @@ ArrayList* arrayListCreate(size_t intialSize, size_t elementSize, ListTypes_t el
     arrayList->header.flags            = ((elementsArePointers) ? elementsArePointers : 0) | ObjectFlagIsOnHeap;
     arrayList->header.objectType       = ListArrayList;
 
-    arrayList->list                    = malloc(elementSize * intialSize);
+    arrayList->list                    = malloc(elementSize * initialSize);
     if (arrayList->list == NULL) {
         free(arrayList);
         return NULL;
     }
     if (mtx_init(&arrayList->mutex, mtx_plain) == thrd_success)
         arrayList->header.flags |= ObjectFlagMutexExists;
-    arrayList->totalAmountOfElements = intialSize;
+    arrayList->totalAmountOfElements = initialSize;
     return arrayList;
 }
 
