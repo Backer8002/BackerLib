@@ -11,7 +11,7 @@ static const char MemoryGroupId[] = "Memory";
 static const char AllocMemoryGroupId[] = "AllocMem";
 static const char DeallocMemoryGroupId[] = "DeallocMem";
 
-static const char* const LogUnableToAllocMemGroupIds[] = {WarningLogLevel,
+static const char* LogUnableToAllocMemGroupIds[] = {WarningLogLevel,
                                                           MemoryGroupId};
 static const Event LogUnableToAllocMem = {
     .id = "Unable to allocate memory",

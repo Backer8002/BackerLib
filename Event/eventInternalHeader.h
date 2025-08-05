@@ -1,15 +1,14 @@
 #pragma once
 
-#include "../Types/arrayList.h"
-#include "../Types/hashMap.h"
+#include "../Types/ArrayList.h"
+#include "../Types/HashMap.h"
 #include <stdatomic.h>
 #include <stdbool.h>
-#include <stdlib.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <threads.h>
 
-#define EVENT_FLAG_ADDITIONAL_ARGS 0x1
 #define EVENT_FLAG_CREATE_THREAD   0x2
 
 #ifdef _Windows

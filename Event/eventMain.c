@@ -83,9 +83,11 @@ static void internal_freeMemAllocsElements(void* element) {
 void eventSystemShutdown(void) {
     mainEventHandle->shouldQuit = true;
     thrd_join(mainEventHandle->eventThread,NULL);
+    EventHandle* eventHandleToDestroy = mainEventHandle;
+    mainEventHandle = NULL;
 
-    arrayListDestroy(&mainEventHandle->eventQueue);
-    hashMapCuckooDestroy(&mainEventHandle->eventSubscribers,free,free);
+    arrayListDestroy(&eventHandleToDestroy->eventQueue);
+    hashMapCuckooDestroy(&eventHandleToDestroy->eventSubscribers,free,free);
 
     if (debugFileStreams[0] && debugFileStreams[0] != stdout)
         fclose(debugFileStreams[0]);
@@ -101,6 +103,7 @@ void eventSystemShutdown(void) {
     hashMapDestroy(&memoryAllocs,internal_freeMemAllocsKey,internal_freeMemAllocsElements);
     fprintf(stderr,"\e[32mEnd of memory leaks.\e[0m\n");
     fflush(stderr);
+    memoryAllocs.header.dataArrayVarType = ListNone;
 #endif
     fprintf(stdout,"Bye from event handler.\n");
 }
@@ -129,16 +132,18 @@ extern bool eventInitDefualtLog(const char* debugLogFile, bool outputToStdout,co
         debugFileStreams[0] = stdout;
         errorFileStreams[0] = stdout;
         debugFileStreams[1] = debugLog;
-    } else
+    } else {
         debugFileStreams[0] = debugLog;
+    }
 
     if (outputErrorsToStdErr) {
         errorFileStreams[0] = stderr;
         errorFileStreams[1] = errorLog;
-    } else if (outputToStdout)
+    } else if (outputToStdout) {
         errorFileStreams[1] = errorLog;
-    else
+    } else {
         errorFileStreams[0] = errorLog;
+    }
 
     eventRegLogSubToID(mainEventHandle,InfoLogLevel,writeEventToLogLocations,false,(errorLog != NULL) + outputToStdout, debugFileStreams);
     eventRegLogSubToID(mainEventHandle,DebugLogLevel,writeEventToLogLocations,false,(errorLog != NULL) + outputToStdout, debugFileStreams);
@@ -273,9 +278,9 @@ void logCall(const Event* const event, thrd_t currentThread, uint32_t line, cons
     mtx_unlock(&mainEventHandle->eventQueue.mutex);
 }
 
-const char* const freeMemDoesNotExistGroupIds[] = {MemoryGroupId,ErrorLogLevel};
-const char* const allocEventsGroupIds[] = {MemoryGroupId,DebugLogLevel,AllocMemoryGroupId};
-const char* const freeEventGroupId[] = {DebugLogLevel,MemoryGroupId,DeallocMemoryGroupId};
+const char* freeMemDoesNotExistGroupIds[] = {MemoryGroupId,ErrorLogLevel};
+const char* allocEventsGroupIds[] = {MemoryGroupId,DebugLogLevel,AllocMemoryGroupId};
+const char* freeEventGroupId[] = {DebugLogLevel,MemoryGroupId,DeallocMemoryGroupId};
 const Event freeMemDoesNotExist = {.id = "Unable to free memory since it does not exist", .amountOfGroups = 2, .groupIds = freeMemDoesNotExistGroupIds};
 const Event mallocEvent         = {.id = "Allocated memory via malloc", .amountOfGroups = 3, .groupIds = allocEventsGroupIds};
 const Event callocEvent         = {.id = "Allocated memory via calloc", .amountOfGroups = 3, .groupIds = allocEventsGroupIds};
@@ -399,11 +404,11 @@ void writeEventToLogLocations(EventCall event, const char* logLevel, size_t amou
     }
 }
 
-static const char* const InfoLogGroupIDs[] = {InfoLogLevel};
-static const char* const DebugLogGroupIDs[] = {DebugLogLevel};
-static const char* const WarningLogGroupIDs[] = {WarningLogLevel};
-static const char* const ErrorLogGroupIDs[] = {ErrorLogLevel};
-static const char* const CriticalLogGroupIDs[] = {CriticalLogLevel};
+static const char* InfoLogGroupIDs[] = {InfoLogLevel};
+static const char* DebugLogGroupIDs[] = {DebugLogLevel};
+static const char* WarningLogGroupIDs[] = {WarningLogLevel};
+static const char* ErrorLogGroupIDs[] = {ErrorLogLevel};
+static const char* CriticalLogGroupIDs[] = {CriticalLogLevel};
 
 void logInfoCall(const char* message,uint32_t line,const char* file) {
     Event event = {.id = message,.groupIds = InfoLogGroupIDs,.amountOfGroups = 1};
