@@ -5,6 +5,7 @@
 #include "Container.h"
 #include "DynamicContainer.h"
 #include <stddef.h>
+#include <string.h>
 
 #ifdef __cplusplus
 namespace BackerLib {
@@ -83,7 +84,34 @@ namespace BackerLib {
      */
     extern ContainerError        stringReplace(String* destString, const String* stringToReplaceWith, size_t firstIndex);
 
+    /**
+     * An non owning constant string. Existing so that it can be appended to a string or have read operations that must know the length of it.
+     */
+    typedef const union StringView {
+        struct {
+            DataTypeFlags  header;
+            const uint32_t byteSizeOfSingleElement;
+            const size_t   amountOfIndexes;
+            const char*    array;
+        };
+        Container container;
+    } StringView;
 
+    /**
+     * @param cString Any valid constexpr char[]
+     */
+#define stringViewInitConstExpr(cString) {.amountOfIndexes = sizeof(cString), .array = cString, .byteSizeOfSingleElement = 1, .header = ObjectFlagIsValid | ObjectFlagIsContainer}
+
+
+    /**
+     *
+     * @param str Any valid C-string
+     * @return StringView Object with len counted.
+     */
+    static inline StringView stringViewInit(const char* str) {
+        StringView stringView = {.amountOfIndexes = strlen(str), .array = str, .byteSizeOfSingleElement = 1, .header = ObjectFlagIsValid | ObjectFlagIsContainer};
+        return stringView;
+    }
 #ifdef __cplusplus
     }
 };

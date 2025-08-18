@@ -1,7 +1,6 @@
 #pragma once
 
-#include "../Types/ArrayList.h"
-#include "../Types/HashMap.h"
+#include <BackerLibTypes.h>
 #include <stdatomic.h>
 #include <stdbool.h>
 #include <stdint.h>
@@ -9,12 +8,12 @@
 #include <stdlib.h>
 #include <threads.h>
 
-#define EVENT_FLAG_CREATE_THREAD   0x2
+#define EVENT_FLAG_CREATE_THREAD 0x2
 
 #ifdef _Windows
-    static const thrd_t noThread = {0};
+static const thrd_t noThread = {0};
 #else
-    #define noThread 0
+#define noThread 0
 #endif
 
 
@@ -38,8 +37,8 @@ typedef enum {
 
 typedef struct {
     EventType    eventType;
-    const char*  id;
-    const char** groupIds;
+    StringView  id;
+    StringView* groupIds;
     thrd_t       callerThread;
     uint32_t     amountOfGroups;
 } EventCallMain;
@@ -64,21 +63,21 @@ typedef union {
 } EventCall;
 
 typedef struct {
-    const char*  id;
-    const char** groupIds;
+    StringView  id;
+    StringView* groupIds;
     uint32_t     amountOfGroups;
 } Event;
 
 typedef struct {
     EventSubscriberType eventSubscriberType;
     uint32_t            flags;
-    void (*function)(EventCall, const char*);
+    void (*function)(EventCall, StringView);
 } EventSubscriberMain;
 
 typedef struct {
     EventSubscriberType eventSubscriberType;
     uint32_t            flags;
-    void (*function)(EventCall, const char*, size_t, FILE**);
+    void (*function)(EventCall, StringView, size_t, FILE**);
     FILE** outputFiles;
     size_t amountOfOutputFiles;
 } EventSubscriberLog;
@@ -93,19 +92,20 @@ typedef struct {
     ArrayList     eventQueue;
     HashMapCuckoo eventSubscribers;
     thrd_t        eventThread;
-    _Atomic bool          shouldQuit;
+    mtx_t         mutexForSubscriber;
+    _Atomic(bool)  shouldQuit;
 } EventHandle;
 
 extern EventHandle* eventSystemInit(void);
-extern void eventSystemShutdown(void);
+extern void         eventSystemShutdown(void);
 // Returns true if init was successful
-extern bool eventInitDefualtLog(const char* debugLogFile, bool outputToStdout,const char* errorLogFile,bool outputErrorsToStdErr);
-//Registers function to be called when ID is intercepeted.
-extern EventError_t eventRegSubToID(EventHandle* eventHandle, const char* ID, void (*function)(EventCall, const char*), bool shouldRunOnSeperateThread);
-//Registers function to be called when ID is intercepted. This function also takes in an array of files when calling function.
-extern EventError_t eventRegLogSubToID(EventHandle* eventHandle, const char* ID, void (*function)(EventCall, const char*, size_t, FILE**), bool shouldRunOnSeperateThread, size_t amountOfOutputs, FILE** outputs);
+extern bool         eventInitDefualtLog(const char* debugLogFile, bool outputToStdout, const char* errorLogFile, bool outputErrorsToStdErr);
+// Registers function to be called when ID is intercepeted.
+extern EventError_t eventRegSubToID(EventHandle* eventHandle, StringView ID, void (*function)(EventCall, StringView), bool shouldRunOnSeperateThread);
+// Registers function to be called when ID is intercepted. This function also takes in an array of files when calling function.
+extern EventError_t eventRegLogSubToID(EventHandle* eventHandle, StringView ID, void (*function)(EventCall, StringView, size_t, FILE**), bool shouldRunOnSeperateThread, size_t amountOfOutputs, FILE** outputs);
 
-//Puts event in the event queue given currentThread as the caller
+// Puts event in the event queue given currentThread as the caller
 extern void         eventCall(const Event* const event, thrd_t currentThread);
 
 extern void         logCall(const Event* const event, thrd_t currentThread, uint32_t line, const char* file);
@@ -124,9 +124,9 @@ extern void  freeLogVersion(void* ptr, uint32_t line, const char* file);
 #define free(ptr)                 freeLogVersion(ptr, (uint32_t) __LINE__, __FILE__)
 #endif
 
-extern void writeEventToLogLocations(EventCall event, const char* logLevel, size_t amountOfLocations, FILE** locations);
-extern void logInfoCall(const char* restrict message, uint32_t line,const char* file);
-extern void logDebugCall(const char* restrict message, uint32_t line,const char* file);
-extern void logWarnCall(const char* restrict message, uint32_t line,const char* file);
-extern void logErrorCall(const char* restrict message, uint32_t line,const char* file);
-extern void logCriticalCall(const char* restrict message, uint32_t line,const char* file);
+extern void writeEventToLogLocations(EventCall event, StringView logLevel, size_t amountOfLocations, FILE** locations);
+extern void logInfoCall(const char* restrict message, uint32_t line, const char* file);
+extern void logDebugCall(const char* restrict message, uint32_t line, const char* file);
+extern void logWarnCall(const char* restrict message, uint32_t line, const char* file);
+extern void logErrorCall(const char* restrict message, uint32_t line, const char* file);
+extern void logCriticalCall(const char* restrict message, uint32_t line, const char* file);
