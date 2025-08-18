@@ -157,13 +157,12 @@ static bool internal_insertKeyValuePair(HashMapCuckoo* hashMap, size_t keyValueP
                                                                hashMap->salt1,
                                                                hashMap->hashFunction) %
                          hashMap->lengthOfHashArray;
-        size_t swapSpace;
         if (!hashMap->hashArray[hash1]) {
             hashMap->hashArray[hash1] = keyValuePairToInsert;
             return true;
         }
 
-        swapSpace                 = hashMap->hashArray[hash1];
+        size_t swapSpace          = hashMap->hashArray[hash1];
         hashMap->hashArray[hash1] = keyValuePairToInsert;
         uint64_t hash2            = internal_hashMapHashSingelVarWithSalt(hashMap->keySize,
                                                                           unorderedContainerGet((UnorderedContainer*) hashMap, swapSpace).element,

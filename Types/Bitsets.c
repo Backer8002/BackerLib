@@ -2,23 +2,23 @@
 #include <stdbool.h>
 #include <stdlib.h>
 
-ContainerError bitSetGet(BitSet* set, size_t index) {
+ContainerError bitSetGet(const BitSet* set, size_t index) {
     if (set->maxAmountOfElements <= index)
         return ContainerInvalidIndex;
     return (set->array[index / 8] & 0x80 >> (index % 8)) ? ContainerOPSuccessful : ContainerOPUnsuccessful;
 }
 
 ContainerError bitSetAdd(BitSet* set, size_t index) {
-    ContainerError errorCode;
-    if ((errorCode = bitSetGet(set, index) != ContainerOPUnsuccessful))
+    ContainerError errorCode = bitSetGet(set, index);
+    if ((errorCode != ContainerOPUnsuccessful))
         return errorCode;
     set->array[index / 8] |= 0x80 >> (index % 8);
     return ContainerOPUnsuccessful;
 }
 
 ContainerError bitSetRemove(BitSet* set, size_t index) {
-    ContainerError errorCode;
-    if ((errorCode = bitSetGet(set, index) != ContainerOPSuccessful))
+    ContainerError errorCode = bitSetGet(set, index);
+    if ((errorCode != ContainerOPSuccessful))
         return errorCode;
     set->array[index / 8] &= ~(0x80 >> (index % 8));
     return ContainerOPSuccessful;
