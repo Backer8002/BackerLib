@@ -19,17 +19,16 @@ namespace BackerLib {
     } Trie;
 
     /**
-     * @brief
-     * @param amountOfCharsToStore
-     * @param composeCharToIndex
-     * @return
+     * @brief Creates a Trie on the stack. Use isValidObject to check validity
+     * @param amountOfCharsToStore Amount of diffrent chars that are going to be handled
+     * @param composeCharToIndex Callback to convert char to index in array. 0 shall be returned if char is out of range
      */
     extern Trie           trieCreateStack(size_t amountOfCharsToStore, size_t (*composeCharToIndex)(wchar_t chr));
     /**
-     * @brief
-     * @param amountOfCharsToStore
-     * @param composeCharToIndex
-     * @return
+     * @brief Creates a Trie on the heap.
+     * @param amountOfCharsToStore Amount of diffrent chars that are going to be handled
+     * @param composeCharToIndex Callback to convert char to index in array. 0 shall be returned if char is out of range
+     * @return NULL if allocation failed.
      */
     extern Trie*          trieCreateHeap(size_t amountOfCharsToStore, size_t (*composeCharToIndex)(wchar_t chr));
     /**

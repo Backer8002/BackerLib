@@ -18,7 +18,7 @@ static bool internal_memCmpKey(size_t keySize, const void* key, const void* hash
     if (!hashArrayElement || !key)
         return false;
     if (isDataTypeFlagsQualified) {
-        if ((DataTypeFlags*) key != (DataTypeFlags*) hashArrayElement)
+        if (*(DataTypeFlags*) key != *(DataTypeFlags*) hashArrayElement)
             return false;
         if ((*(DataTypeFlags*) key & ObjectFlagIsContainer) && (*(DataTypeFlags*) key & ObjectFlagIsNotContinuous) == 0) {
             if (((Container*) key)->amountOfIndexes != ((Container*) hashArrayElement)->amountOfIndexes || ((Container*) key)->byteSizeOfSingleElement != ((Container*) hashArrayElement)->byteSizeOfSingleElement)
@@ -53,7 +53,7 @@ static void internal_hashMapCuckooInit(HashMapCuckoo* hashMap, size_t initialSiz
         free(hashMap->hashArray);
         return;
     }
-    hashMap->header            = (keyIsDataTypeFlags ? FlagHashMapKeyIsDataTypeFlags : 0);
+    hashMap->header            |= (keyIsDataTypeFlags ? FlagHashMapKeyIsDataTypeFlags : 0);
     hashMap->lengthOfHashArray = initialSize;
     hashMap->keySize           = keySize;
     hashMap->salt1             = rand();
@@ -221,8 +221,9 @@ ContainerError hashMapCuckooInsert(HashMapCuckoo* hashMap, size_t keySize, const
                                                            hashMap->hashFunction) %
                          hashMap->lengthOfHashArray +
                      hashMap->lengthOfHashArray;
-
-    if (internal_memCmpKey(keySize, key, unorderedContainerGet((UnorderedContainer*) hashMap, hashMap->hashArray[hash1]).element, (hashMap->header & FlagHashMapKeyIsDataTypeFlags) ? true : false) || internal_memCmpKey(keySize, key, unorderedContainerGet((UnorderedContainer*) hashMap, hashMap->hashArray[hash2]).element, (hashMap->header & FlagHashMapKeyIsDataTypeFlags) ? true : false))
+    if (hashMap->hashArray[hash1] && internal_memCmpKey(keySize, key, unorderedContainerGet((UnorderedContainer*) hashMap, hashMap->hashArray[hash1]).element, (hashMap->header & FlagHashMapKeyIsDataTypeFlags) ? true : false))
+        return ContainerOPUnsuccessful;
+    if (hashMap->hashArray[hash2] && internal_memCmpKey(keySize, key, unorderedContainerGet((UnorderedContainer*) hashMap, hashMap->hashArray[hash2]).element, (hashMap->header & FlagHashMapKeyIsDataTypeFlags) ? true : false))
         return ContainerOPUnsuccessful;
 
     UnorderedContainerPutResult result = unorderedContainerPut((UnorderedContainer*) hashMap, keySize, key);
@@ -323,7 +324,9 @@ ContainerError hashMapCuckooRemove(HashMapCuckoo* hashMap, size_t keySize, const
 }
 
 void hashMapCuckooDestroy(HashMapCuckoo* hashMap, void (*keyDestructor)(void* object), void (*elementDestructor)(void* object)) {
-    for (size_t i = 0; i < hashMap->container.amountOfIndexes; i++) {
+    if (!isValidObject((DataTypeFlags*)hashMap))
+        return;
+    for (size_t i = (hashMap->header & HASHMAP_CUCKOO_SWAPSPACE_CONTAINS_OBJ) ? 0 : 1; i < hashMap->container.amountOfIndexes; i++) {
         if ((hashMap->unorderedContainer.bitset[i / 8] & (0x80 >> (i % 8))) == 0)
             continue;
         if (keyDestructor)

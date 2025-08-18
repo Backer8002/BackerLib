@@ -115,7 +115,7 @@ static inline void internal_unorderedContainerInit(UnorderedContainer* container
     container->maxSize = initialSize;
     container->container.amountOfIndexes = 0;
     container->container.byteSizeOfSingleElement = elementsArePointers ? sizeof(void*) : sizeOfElements;
-    container->container.array = malloc(initialSize * container->container.byteSizeOfSingleElement);
+    container->container.array = calloc(initialSize,container->container.byteSizeOfSingleElement);
     if (!container->container.array)
         return;
     container->bitset = calloc((initialSize + 7) / 8, sizeof(*container->bitset));
