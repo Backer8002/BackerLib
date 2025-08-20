@@ -21,12 +21,12 @@ ContainerError containerDynamicSizeCheckAdd(DynamicContainer* container) {
 }
 
 ContainerError containerDynamicSizeCheckRemove(DynamicContainer* container) {
-    if (container->container.amountOfIndexes >> 2 > container->container.amountOfIndexes) {
+    if (container->containerMaxSize >> 2 > container->container.amountOfIndexes) {
         void* newPointer = realloc(container->container.array, container->container.byteSizeOfSingleElement * container->container.amountOfIndexes);
         if (newPointer == NULL)
             return ContainerAllocFailure;
         container->container.array           = newPointer;
-        container->container.amountOfIndexes = container->container.amountOfIndexes;
+        container->containerMaxSize = container->container.amountOfIndexes;
     }
     return ContainerOPSuccessful;
 }

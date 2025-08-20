@@ -42,7 +42,7 @@ Container containerGetSubArray(const Container* container, size_t firstIndex, si
         return newContainer;
     }
 
-    Container returnContainer = containerCreateStack(lastIndex - firstIndex + 1, container->byteSizeOfSingleElement, container->header & ObjectFlagElementsArePointers ? true : false);
+    Container returnContainer = containerCreateStack(lastIndex - firstIndex + 1, container->byteSizeOfSingleElement, (container->header & ObjectFlagElementsArePointers) ? true : false);
     if (!isValidObject(&returnContainer.header))
         return returnContainer;
 

@@ -1,3 +1,4 @@
+#include "ANSIEscapeSequences.h"
 #include "eventInternalHeader.h"
 #include <BackerLibTypes.h>
 #include <stdbool.h>
@@ -18,7 +19,7 @@ static FILE *       debugFileStreams[2] = {NULL, NULL}, *errorFileStreams[2] = {
 #include <stdlib.h>
 
 int          internal_eventMainLoop(EventHandle* eventHandle);
-EventError_t internal_invokeSubscriber(const EventCall* eventCall, StringView subscriberID, EventSubscriber* eventSubscriber);
+EventError_t internal_invokeSubscriber(const EventCall* eventCall, StringView subscriberID, const EventSubscriber* eventSubscriber);
 void         internal_memoryLogCall(const Event* const event, uint32_t line, const char* file, size_t size, size_t address);
 
 EventHandle* eventSystemInit(void) {
@@ -47,7 +48,7 @@ EventHandle* eventSystemInit(void) {
         return NULL;
     }
 #if 1
-    memoryAllocs = hashMapCreateStack(100, sizeof(size_t), sizeof(size_t), false, true, hashFunctionDefualtSingleVar);
+    memoryAllocs = hashMapCreateStack(100, sizeof(size_t), sizeof(size_t), false, hashFunctionDefualtSingleVar);
     if (!isValidObject((DataTypeFlags*) &memoryAllocs)) {
         hashMapCuckooDestroy(&(eventHandle->eventSubscribers), NULL, NULL);
         arrayListDestroy(&(eventHandle->eventQueue));
@@ -101,9 +102,9 @@ void eventSystemShutdown(void) {
         fclose(errorFileStreams[1]);
 #if 1
     fflush(stdout);
-    fprintf(stderr, "\e[33mMemory leaks:\e[31m\n");
+    fprintf(stderr, ANSI_TEXT_RED "Memory leaks:" ANSI_TEXT_GREEN "\n");
     hashMapDestroy(&memoryAllocs, internal_freeMemAllocsKey, internal_freeMemAllocsElements);
-    fprintf(stderr, "\e[32mEnd of memory leaks.\e[0m\n");
+    fprintf(stderr, ANSI_TEXT_YELLOW "End of memory leaks." ANSI_RESET_ATTRIBUTE "\n");
     fflush(stderr);
 #endif
     fprintf(stdout, "Bye from event handler.\n");
@@ -156,7 +157,7 @@ extern bool eventInitDefualtLog(const char* debugLogFile, bool outputToStdout, c
     return true;
 }
 
-EventError_t internal_invokeSubscriber(const EventCall* eventCall, StringView subscriberID, EventSubscriber* eventSubscriber) {
+EventError_t internal_invokeSubscriber(const EventCall* eventCall, StringView subscriberID, const EventSubscriber* eventSubscriber) {
     if (eventSubscriber->eventSubscriberMain.flags & EVENT_FLAG_CREATE_THREAD) {
         assert("Not implemented");
     } else {
@@ -280,9 +281,9 @@ void logCall(const Event* const event, thrd_t currentThread, uint32_t line, cons
     mtx_unlock(&mainEventHandle->eventQueue.mutex);
 }
 
-StringView freeMemDoesNotExistGroupIds[] = {MemoryGroupId, ErrorLogLevel};
-StringView allocEventsGroupIds[]         = {MemoryGroupId, DebugLogLevel, AllocMemoryGroupId};
-StringView freeEventGroupId[]            = {DebugLogLevel, MemoryGroupId, DeallocMemoryGroupId};
+StringView  freeMemDoesNotExistGroupIds[] = {MemoryGroupId, ErrorLogLevel};
+StringView  allocEventsGroupIds[]         = {MemoryGroupId, DebugLogLevel, AllocMemoryGroupId};
+StringView  freeEventGroupId[]            = {DebugLogLevel, MemoryGroupId, DeallocMemoryGroupId};
 const Event freeMemDoesNotExist           = {.id = stringViewInitConstExpr("Unable to free memory since it does not exist"), .amountOfGroups = 2, .groupIds = freeMemDoesNotExistGroupIds};
 const Event mallocEvent                   = {.id = stringViewInitConstExpr("Allocated memory via malloc"), .amountOfGroups = 3, .groupIds = allocEventsGroupIds};
 const Event callocEvent                   = {.id = stringViewInitConstExpr("Allocated memory via calloc"), .amountOfGroups = 3, .groupIds = allocEventsGroupIds};
@@ -382,17 +383,17 @@ void writeEventToLogLocations(EventCall event, StringView logLevel, size_t amoun
     switch (event.type) {
     case EventNormal:
         for (size_t i = 0; i < amountOfLocations; i++)
-            fprintf(locations[i], "\e[33m%" PRIi64 " \e[37m[%s] \e[35m%s\e[0m\n", time(NULL), logLevel.array, event.eventCallMain.id.array);
+            fprintf(locations[i], ANSI_TEXT_YELLOW "%" PRIi64 ANSI_TEXT_WHITE "[%s]" ANSI_TEXT_MAGENTA "%s" ANSI_RESET_ATTRIBUTE "\n", time(NULL), logLevel.array, event.eventCallMain.id.array);
         break;
     case EventLogEvent:
         for (size_t i = 0; i < amountOfLocations; i++)
-            fprintf(locations[i], "\e[33m%" PRIi64 " \e[37m[%s] \e[35m%s \e[0min file: \e[36m%s\e[0m at line: \e[32m%zu\e[0m\n", time(NULL), logLevel.array, event.eventCallMain.id.array, event.eventCallLog.file, event.eventCallLog.line);
+            fprintf(locations[i], ANSI_TEXT_YELLOW "%" PRIi64 ANSI_TEXT_WHITE "[%s] " ANSI_TEXT_MAGENTA "%s " ANSI_RESET_ATTRIBUTE "min file: " ANSI_TEXT_CYAN ANSI_TEXT_BOLD "%s" ANSI_RESET_ATTRIBUTE " at line: " ANSI_TEXT_BLUE "%zu" ANSI_RESET_ATTRIBUTE "\n", time(NULL), logLevel.array, event.eventCallMain.id.array, event.eventCallLog.file, event.eventCallLog.line);
         break;
     case EventMemLogEvent:
         for (size_t i = 0; i < amountOfLocations; i++)
             fprintf(
                 locations[i],
-                "\e[33m%" PRIi64 " \e[37m[%s] \e[35m%s\e[0m of size: \e[36m%zu\e[0m at address: \e[31m0x%zx\e[0m in file: \e[36m%s\e[0m at line: \e[32m%zu\e[0m\n",
+                ANSI_TEXT_YELLOW "%" PRIi64 ANSI_TEXT_WHITE "[%s]" ANSI_TEXT_MAGENTA "%s" ANSI_RESET_ATTRIBUTE "of size: " ANSI_TEXT_YELLOW "%zu" ANSI_RESET_ATTRIBUTE " at address: " ANSI_TEXT_GREEN "0x%zx" ANSI_RESET_ATTRIBUTE " in file: " ANSI_TEXT_CYAN ANSI_TEXT_BOLD "%s" ANSI_RESET_ATTRIBUTE " at line: " ANSI_TEXT_BLUE "%zu" ANSI_RESET_ATTRIBUTE "\n",
                 time(NULL),
                 logLevel.array,
                 event.eventCallMain.id.array,
@@ -412,7 +413,7 @@ static StringView WarningLogGroupIDs[]  = {WarningLogLevel};
 static StringView ErrorLogGroupIDs[]    = {ErrorLogLevel};
 static StringView CriticalLogGroupIDs[] = {CriticalLogLevel};
 
-void               logInfoCall(const char* message, uint32_t line, const char* file) {
+void              logInfoCall(const char* message, uint32_t line, const char* file) {
     Event event = {.id = stringViewInit(message), .groupIds = InfoLogGroupIDs, .amountOfGroups = 1};
     logCall(&event, noThread, line, file);
 }

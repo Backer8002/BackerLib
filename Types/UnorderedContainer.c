@@ -43,7 +43,7 @@ UnorderedContainerPutResult unorderedContainerPut(UnorderedContainer* container,
         if (container->bitset[byteIterator] == UINT8_MAX)
             continue;
         for (size_t bitIterator = 0; bitIterator < 8; bitIterator++) {
-            if (!bitsetGet(container->bitset, byteIterator * 8 + bitIterator)) {
+            if (bitsetGet(container->bitset, byteIterator * 8 + bitIterator) == 0) {
                 bitsetAdd(container->bitset, byteIterator * 8 + bitIterator);
                 availableIndex = byteIterator * 8 + bitIterator;
                 break;
@@ -86,7 +86,7 @@ UnorderedContainerGetResult unorderedContainerGet(const UnorderedContainer* cont
         result.resultCode = ContainerInvalidIndex;
         return result;
     }
-    if (!bitsetGet(container->bitset, index)) {
+    if (bitsetGet(container->bitset, index) == 0) {
         result.resultCode = ContainerOPUnsuccessful;
         return result;
     }
@@ -99,7 +99,7 @@ UnorderedContainerGetResult unorderedContainerGet(const UnorderedContainer* cont
 ContainerError unorderedContainerRemove(UnorderedContainer* container, size_t index, void (*destructor)(void* element)) {
     if (index >= container->container.amountOfIndexes)
         return ContainerInvalidIndex;
-    if (!bitsetGet(container->bitset, index))
+    if (bitsetGet(container->bitset, index) == 0)
         return ContainerOPUnsuccessful;
     if (destructor)
         destructor((container->header & ObjectFlagElementsArePointers)

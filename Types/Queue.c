@@ -5,6 +5,7 @@
 #include <assert.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdalign.h>
 
 typedef struct QueueElement {
     size_t next;
@@ -19,7 +20,7 @@ typedef struct DequeueElement {
 
 
 static void internal_queueInit(Queue* queue, size_t initialSize, size_t elementSize, bool isDequeue) {
-    size_t correctedElementSize = sizeof(size_t) + isDequeue ? sizeof(size_t) : 0 + elementSize + (alignof(size_t) - elementSize % alignof(size_t));
+    size_t correctedElementSize = (sizeof(size_t) + isDequeue) ? sizeof(size_t) : 0 + elementSize + (alignof(size_t) - elementSize % alignof(size_t));
     queue->unorderedContainer   = unorderedContainerCreateStack(initialSize, correctedElementSize, false);
     queue->tailIndex            = 0;
     queue->headIndex            = 0;

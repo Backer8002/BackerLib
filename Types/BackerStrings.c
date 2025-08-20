@@ -35,7 +35,7 @@ inline ContainerError stringAppendString(String* destString, const String* strin
 
 String stringStrip(const String* string, char charToStrip, bool stripFromBack, uint64_t amountToStrip) {
     if (string->container.byteSizeOfSingleElement != sizeof(charToStrip)) {
-        String returnString = {};
+        String returnString = {0};
         return returnString;
     }
     String returnString = containerDynamicCreateStack(string->container.amountOfIndexes, sizeof(char), false);
