@@ -26,7 +26,7 @@ namespace BackerLib {
      * @return ContainerOPUnsuccessful if bit was low.
      * @return ContainerOPSuccessful if bit was high.
      */
-    extern ContainerError bitSetGet(BitSet* set, size_t index);
+    extern ContainerError bitSetGet(const BitSet* set, size_t index);
     /**
      * @brief Sets index bit to high. Returns previous state.
      * @param set Pointer to valid BitSet
@@ -198,7 +198,7 @@ namespace BackerLib {
      * @param ... size of element followed by pointer to element
      * @return Hash.
      */
-    extern uint64_t        hashFunctionDefualt(size_t amountOfVars, ...);
+    extern uint64_t       [[unsequenced]] hashFunctionDefualt(size_t amountOfVars, ...);
     /**
      *
      * @param element Pointer to element to hash

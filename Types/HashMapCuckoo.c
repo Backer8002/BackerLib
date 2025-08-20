@@ -6,6 +6,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stddef.h>
+#include <stdalign.h>
 
 static uint64_t internal_hashMapHashSingelVarWithSalt(size_t elementSize, const void* element, bool elementIsDataTypeFlags, uint32_t salt, uint64_t (*hashFunction)(const void* element, size_t elementSize, uint32_t salt)) {
     if (elementIsDataTypeFlags && (*(DataTypeFlags*) element & ObjectFlagIsContainer) && (*(DataTypeFlags*) element & ObjectFlagIsNotContinuous) == 0)

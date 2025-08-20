@@ -10,7 +10,7 @@
 
 #define EVENT_FLAG_CREATE_THREAD 0x2
 
-#ifdef _Windows
+#ifdef _WIN32
 static const thrd_t noThread = {0};
 #else
 #define noThread 0

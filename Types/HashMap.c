@@ -8,6 +8,8 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stddef.h>
+#include <stdalign.h>
 
 typedef struct HashArrayNode {
     _Alignas(max_align_t) size_t next;
@@ -53,6 +55,7 @@ static inline void internal_hashMapInit(
         unorderedContainerDestroy(hashMap);
         return;
     }
+    hashMap->lengthOfHashArray = initialSize;
     hashMap->keySize = keySize;
     hashMap->header |= (keyIsDataTypeFlags ? FlagHashMapKeyIsDataTypeFlags : 0);
     hashMap->unorderedContainer.bitset[0] |= 0x80;
@@ -116,19 +119,19 @@ static ContainerError internal_rehash(HashMap* hashMap, size_t newSize) {
         return ContainerAllocFailure;
 
     for (size_t* nextBucket = hashMap->hashArray; nextBucket < hashMap->hashArray + hashMap->lengthOfHashArray; nextBucket++) {
-        size_t* next    = nextBucket;
-        size_t* oldNext = NULL;
-        while (*next) {
+        size_t next    = *nextBucket;
+        size_t oldNext = 0;
+        while (next) {
             oldNext                    = next;
-            HashArrayNode* currentNode = unorderedContainerGet((UnorderedContainer*) hashMap, *next).element;
-            next                       = (size_t*) currentNode;
+            HashArrayNode* currentNode = unorderedContainerGet((UnorderedContainer*) hashMap, next).element;
+            next                       = currentNode->next;
             uint64_t newHash           = internal_hashMapHashSingelVar(hashMap->keySize,
                                                                        &currentNode->data,
                                                              (hashMap->header & FlagHashMapKeyIsDataTypeFlags) ? true : false,
                                                                        hashMap->hashFunction) %
                                newSize;
             currentNode->next     = newHashArray[newHash];
-            newHashArray[newHash] = *oldNext;
+            newHashArray[newHash] = oldNext;
         }
     }
     free(hashMap->hashArray);
@@ -215,7 +218,9 @@ ContainerError hashMapRemove(HashMap* hashMap, size_t sizeOfKey, const void* key
     size_t*        prevHashNode    = NULL;
     while (*hashNode) {
         currentHashNode = unorderedContainerGet((UnorderedContainer*) hashMap, *hashNode).element;
-        if (internal_memCmpKey(sizeOfKey, key, &currentHashNode->data, (hashMap->header & FlagHashMapKeyIsDataTypeFlags) ? true : false))
+        if (!currentHashNode)
+            return ContainerOPUnsuccessful;
+        if (internal_memCmpKey(sizeOfKey, key, currentHashNode->data, (hashMap->header & FlagHashMapKeyIsDataTypeFlags) ? true : false))
             goto HashMapRemoveHandleDestruct;
         prevHashNode = hashNode;
         hashNode     = &currentHashNode->next;
