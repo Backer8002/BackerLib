@@ -11,7 +11,9 @@ static void    internal_containerDynamicInit(DynamicContainer* container, size_t
 ContainerError containerDynamicSizeCheckAdd(DynamicContainer* container) {
     if (container->container.amountOfIndexes >= container->containerMaxSize) {
         size_t indexesToAssign = container->container.amountOfIndexes * 2 + 1;
-        void*  newPointer      = realloc(container->container.array, container->container.byteSizeOfSingleElement * indexesToAssign);
+        void*  newPointer      = container->containerMaxSize
+                                   ? realloc(container->container.array, container->container.byteSizeOfSingleElement * indexesToAssign)
+                                   : malloc(container->container.byteSizeOfSingleElement * indexesToAssign);
         if (newPointer == NULL)
             return ContainerAllocFailure;
         container->container.array  = newPointer;
@@ -23,9 +25,9 @@ ContainerError containerDynamicSizeCheckAdd(DynamicContainer* container) {
 ContainerError containerDynamicSizeCheckRemove(DynamicContainer* container) {
     if (container->containerMaxSize >> 2 > container->container.amountOfIndexes) {
         void* newPointer = realloc(container->container.array, container->container.byteSizeOfSingleElement * container->container.amountOfIndexes);
-        if (newPointer == NULL)
+        if (newPointer == NULL && container->container.amountOfIndexes != 0)
             return ContainerAllocFailure;
-        container->container.array           = newPointer;
+        container->container.array  = newPointer;
         container->containerMaxSize = container->container.amountOfIndexes;
     }
     return ContainerOPSuccessful;
@@ -137,8 +139,8 @@ static void internal_containerDynamicInit(DynamicContainer* container, size_t in
     container->container.byteSizeOfSingleElement = elementsArePointers ? sizeof(void*) : elementSize;
     container->containerMaxSize                  = initialSize;
 
-    container->container.array                   = malloc(elementSize * initialSize);
-    if (container->container.array == NULL)
+    container->container.array                   = initialSize ? malloc(elementSize * initialSize) : NULL;
+    if (container->container.array == NULL && initialSize)
         return;
 
     container->header = (elementsArePointers ? ObjectFlagElementsArePointers : 0) | ObjectFlagIsValid | ObjectFlagIsDynamicContainer | ObjectFlagIsContainer;

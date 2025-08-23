@@ -71,11 +71,17 @@ DynamicContainer stringSplit(const String* string, char charToSplitOn, bool spli
         if (amountOfCharsToSplitAt && amountOfCharsToSplitAt <= amountSplit)
             break;
 
-        if (splitFromBack)
-            firstIndexOfSubString = string->container.amountOfIndexes - iterator;
-        else
-            lastIndexOfSubString = iterator - 1;
         amountSplit++;
+
+        if (splitFromBack) {
+            firstIndexOfSubString = string->container.amountOfIndexes - iterator;
+        } else {
+            lastIndexOfSubString = iterator - 1;
+            if (iterator == 0) {
+                lastIndexOfSubString = 0;
+                firstIndexOfSubString = 1;
+            }
+        }
 
         if (firstIndexOfSubString <= lastIndexOfSubString) {
             DynamicContainer subString = containerConvertToDynamicStack(containerGetSubArray((Container*) string, firstIndexOfSubString, lastIndexOfSubString, false));
@@ -84,11 +90,13 @@ DynamicContainer stringSplit(const String* string, char charToSplitOn, bool spli
         }
         if (string->container.amountOfIndexes - iterator == 1)
             goto stringSplitExit;
+
         if (splitFromBack)
             lastIndexOfSubString = string->container.amountOfIndexes - iterator - 2;
         else
             firstIndexOfSubString = iterator + 1;
     }
+
     if (splitFromBack)
         firstIndexOfSubString = 0;
     else

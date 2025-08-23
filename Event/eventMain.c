@@ -387,7 +387,7 @@ void writeEventToLogLocations(EventCall event, StringView logLevel, size_t amoun
         break;
     case EventLogEvent:
         for (size_t i = 0; i < amountOfLocations; i++)
-            fprintf(locations[i], ANSI_TEXT_YELLOW "%" PRIi64 ANSI_TEXT_WHITE "[%s] " ANSI_TEXT_MAGENTA "%s " ANSI_RESET_ATTRIBUTE "min file: " ANSI_TEXT_CYAN ANSI_TEXT_BOLD "%s" ANSI_RESET_ATTRIBUTE " at line: " ANSI_TEXT_BLUE "%zu" ANSI_RESET_ATTRIBUTE "\n", time(NULL), logLevel.array, event.eventCallMain.id.array, event.eventCallLog.file, event.eventCallLog.line);
+            fprintf(locations[i], ANSI_TEXT_YELLOW "%" PRIi64 ANSI_TEXT_WHITE "[%s] " ANSI_TEXT_MAGENTA "%s " ANSI_RESET_ATTRIBUTE " in file: " ANSI_TEXT_CYAN ANSI_TEXT_BOLD "%s" ANSI_RESET_ATTRIBUTE " at line: " ANSI_TEXT_BLUE "%zu" ANSI_RESET_ATTRIBUTE "\n", time(NULL), logLevel.array, event.eventCallMain.id.array, event.eventCallLog.file, event.eventCallLog.line);
         break;
     case EventMemLogEvent:
         for (size_t i = 0; i < amountOfLocations; i++)

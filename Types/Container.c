@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-static void internal_containerInit(Container* container,size_t size, size_t elementSize, bool elementsArePointers);
+static void    internal_containerInit(Container* container, size_t size, size_t elementSize, bool elementsArePointers);
 
 ContainerError containerSet(Container* container, size_t index, size_t elementSize, const void* restrict element) {
     if (container->amountOfIndexes <= index)
@@ -11,28 +11,28 @@ ContainerError containerSet(Container* container, size_t index, size_t elementSi
     if (container->byteSizeOfSingleElement < elementSize && (container->header & ObjectFlagElementsArePointers) == 0)
         return ContainerInvalidSize;
     if (container->header & ObjectFlagElementsArePointers)
-        ((Bytes*)container->array)[index] = (Bytes)element;
+        ((Bytes*) container->array)[index] = (Bytes) element;
     else
-        memcpy((Bytes)container->array + container->byteSizeOfSingleElement * index,element,elementSize);
+        memcpy((Bytes) container->array + container->byteSizeOfSingleElement * index, element, elementSize);
     return ContainerOPSuccessful;
 }
 
-void* containerGet(const Container* container,size_t index) {
+void* containerGet(const Container* container, size_t index) {
     if (container->amountOfIndexes <= index)
         return NULL;
     return container->header & ObjectFlagElementsArePointers
-    ? ((Bytes*)container->array)[index]
-    : (Bytes)container->array + index * container->byteSizeOfSingleElement;
+             ? ((Bytes*) container->array)[index]
+             : (Bytes) container->array + index * container->byteSizeOfSingleElement;
 }
 
-static void internal_containerInit(Container* container,size_t size, size_t elementSize, bool elementsArePointers) {
+static void internal_containerInit(Container* container, size_t size, size_t elementSize, bool elementsArePointers) {
     container->header = 0;
-    container->array = calloc(size,elementSize);
+    container->array  = calloc(size, elementSize);
     if (!container->array)
         return;
     container->byteSizeOfSingleElement = elementsArePointers ? sizeof(void*) : elementSize;
-    container->amountOfIndexes = size;
-    container->header = ObjectFlagIsValid | (elementsArePointers ? ObjectFlagElementsArePointers : 0) | ObjectFlagIsContainer;
+    container->amountOfIndexes         = size;
+    container->header                  = ObjectFlagIsValid | (elementsArePointers ? ObjectFlagElementsArePointers : 0) | ObjectFlagIsContainer;
 }
 
 
@@ -49,21 +49,24 @@ Container containerGetSubArray(const Container* container, size_t firstIndex, si
 
     for (size_t iterator = 0; iterator < lastIndex - firstIndex + 1; iterator++) {
         memcpy((Bytes) returnContainer.array + iterator * returnContainer.byteSizeOfSingleElement,
-            (Bytes) container->array + (copyInReverse ? lastIndex - iterator : firstIndex + iterator) * returnContainer.byteSizeOfSingleElement,
-            returnContainer.byteSizeOfSingleElement);
+               (Bytes) container->array + (copyInReverse ? lastIndex - iterator : firstIndex + iterator) * returnContainer.byteSizeOfSingleElement,
+               returnContainer.byteSizeOfSingleElement);
     }
     return returnContainer;
 }
 
 void containerReverse(Container* container) {
-    uintptr_t front = (uintptr_t)container->array;
-    uintptr_t end = (uintptr_t)container->array + (container->amountOfIndexes-1) * container->byteSizeOfSingleElement;
+    if (container->amountOfIndexes == 0)
+        return;
+
+    uintptr_t front = (uintptr_t) container->array;
+    uintptr_t end   = (uintptr_t) container->array + (container->amountOfIndexes - 1) * container->byteSizeOfSingleElement;
 
     while (front < end) {
-        for (size_t i = 0; i < container->byteSizeOfSingleElement;i++) {
-            *(Byte*)(front + i) ^= *(Byte*)(end + i);
-            *(Byte*)(end + i) ^= *(Byte*)(front + i);
-            *(Byte*)(front + i) ^= *(Byte*)(end + i);
+        for (size_t i = 0; i < container->byteSizeOfSingleElement; i++) {
+            *(Byte*) (front + i) ^= *(Byte*) (end + i);
+            *(Byte*) (end + i) ^= *(Byte*) (front + i);
+            *(Byte*) (front + i) ^= *(Byte*) (end + i);
         }
         front += container->byteSizeOfSingleElement;
         end -= container->byteSizeOfSingleElement;
@@ -72,7 +75,7 @@ void containerReverse(Container* container) {
 
 Container containerCreateStack(size_t size, size_t elementSize, bool elementsArePointers) {
     Container container = {0};
-    internal_containerInit(&container,size,elementSize,elementsArePointers);
+    internal_containerInit(&container, size, elementSize, elementsArePointers);
     return container;
 }
 
@@ -81,8 +84,8 @@ Container* containerCreateHeap(size_t size, size_t elementSize, bool elementsAre
     if (!container)
         return NULL;
 
-    internal_containerInit(container,size,elementSize,elementsArePointers);
-    if (!isValidObject((DataTypeFlags*)container)) {
+    internal_containerInit(container, size, elementSize, elementsArePointers);
+    if (!isValidObject((DataTypeFlags*) container)) {
         free(container);
         return NULL;
     }
@@ -93,10 +96,11 @@ Container* containerCreateHeap(size_t size, size_t elementSize, bool elementsAre
 
 void containerDestroy(void* container) {
     if (isValidObject(container)) {
-        free(((Container*)container)->array);
-        if ((*(DataTypeFlags*)container) & ObjectFlagIsOnHeap)
+        if (((Container*) container)->array)
+            free(((Container*) container)->array);
+        if ((*(DataTypeFlags*) container) & ObjectFlagIsOnHeap)
             free(container);
         else
-            *(DataTypeFlags*)container &= ~ObjectFlagIsValid;
+            *(DataTypeFlags*) container &= ~ObjectFlagIsValid;
     }
 }
