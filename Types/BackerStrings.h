@@ -17,7 +17,7 @@ namespace BackerLib {
      */
     typedef DynamicContainer     String;
     /**
-     * @brief Creates a String that contains a copy of string param. If string is a CString it is not length checked with strlen instead function will copy length bytes.
+     * @brief Creates a String that contains a copy of string param. If string is a CString it is not length checked with, strlen instead function will copy length bytes.
      * @param string Valid char array or CString
      * @param length Length of array or string
      * @return String that contains a copy of string up to length chars.
@@ -85,7 +85,7 @@ namespace BackerLib {
     extern ContainerError        stringReplace(String* destString, const String* stringToReplaceWith, size_t firstIndex);
 
     /**
-     * An non owning constant string. Existing so that it can be appended to a string or have read operations that must know the length of it.
+     * A non owning constant string. Existing so that it can be appended to a string or have read operations that must know the length of it.
      */
     typedef const union StringView {
         struct {
@@ -109,7 +109,11 @@ namespace BackerLib {
      * @return StringView Object with len counted.
      */
     static inline StringView stringViewInit(const char* str) {
-        StringView stringView = {.amountOfIndexes = strlen(str), .array = str, .byteSizeOfSingleElement = 1, .header = ObjectFlagIsValid | ObjectFlagIsContainer};
+        StringView stringView = {
+            .amountOfIndexes         = strlen(str),
+            .array                   = str,
+            .byteSizeOfSingleElement = 1,
+            .header                  = ObjectFlagIsValid | ObjectFlagIsContainer};
         return stringView;
     }
 #ifdef __cplusplus
