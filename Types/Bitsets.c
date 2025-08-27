@@ -25,8 +25,8 @@ ContainerError bitSetRemove(BitSet* set, size_t index) {
 }
 
 bool bitSetIsEmpty(BitSet* set) {
-    for (size_t iterator = 0; iterator < (set->maxAmountOfElements - 1) / 8; iterator++) {
-        if (*(set->array + iterator) != 0)
+    for (size_t iterator = 0; iterator <= (set->maxAmountOfElements - 1) / 8; iterator++) {
+        if (set->array[iterator] != 0)
             return false;
     }
     return true;
@@ -36,7 +36,7 @@ ContainerError bitSetAnd(BitSet* firstSet, BitSet* secondSet) {
     if (firstSet->maxAmountOfElements != secondSet->maxAmountOfElements)
         return ContainerOPUnsuccessful;
 
-    for (size_t iterator = 0; iterator < (firstSet->maxAmountOfElements - 1) / 8; iterator++)
+    for (size_t iterator = 0; iterator <= (firstSet->maxAmountOfElements - 1) / 8; iterator++)
         *(firstSet->array + iterator) &= *(secondSet->array + iterator);
 
     return ContainerOPSuccessful;
@@ -46,7 +46,7 @@ ContainerError bitSetOr(BitSet* firstSet, BitSet* secondSet) {
     if (firstSet->maxAmountOfElements != secondSet->maxAmountOfElements)
         return ContainerOPUnsuccessful;
 
-    for (size_t iterator = 0; iterator < (firstSet->maxAmountOfElements - 1) / 8; iterator++)
+    for (size_t iterator = 0; iterator <= (firstSet->maxAmountOfElements - 1) / 8; iterator++)
         *(firstSet->array + iterator) |= *(secondSet->array + iterator);
 
     return ContainerOPSuccessful;
@@ -56,14 +56,14 @@ ContainerError bitSetXOr(BitSet* firstSet, BitSet* secondSet) {
     if (firstSet->maxAmountOfElements != secondSet->maxAmountOfElements)
         return ContainerOPUnsuccessful;
 
-    for (size_t iterator = 0; iterator < (firstSet->maxAmountOfElements - 1) / 8; iterator++)
+    for (size_t iterator = 0; iterator <= (firstSet->maxAmountOfElements - 1) / 8; iterator++)
         *(firstSet->array + iterator) ^= *(secondSet->array + iterator);
 
     return ContainerOPSuccessful;
 }
 
 void bitSetNot(BitSet* set) {
-    for (size_t iterator = 0; iterator < (set->maxAmountOfElements - 1) / 8; iterator++)
+    for (size_t iterator = 0; iterator <= (set->maxAmountOfElements - 1) / 8; iterator++)
         *(set->array + iterator) = ~*(set->array + iterator);
 }
 
@@ -77,7 +77,9 @@ void bitSetDestroy(BitSet* set) {
 
 BitSet bitSetCreate(size_t amountOfElements, bool objectIsHeapAllocated) {
     BitSet set = {0};
-    set.array    = malloc((amountOfElements + sizeof(*set.array) - 1) / sizeof(*set.array));
+    if (!amountOfElements)
+        return set;
+    set.array    = calloc((amountOfElements + sizeof(*set.array) - 1) / sizeof(*set.array),sizeof *set.array);
     if (set.array == NULL)
         return set;
 

@@ -10,7 +10,7 @@
 #include <stdalign.h>
 
 static uint64_t internal_hashMapHashSingelVarWithSalt(size_t elementSize, const void* element, bool elementIsDataTypeFlags, uint32_t salt, uint64_t (*hashFunction)(const void* element, size_t elementSize, uint32_t salt)) {
-    if (elementIsDataTypeFlags && (*(DataTypeFlags*) element & ObjectFlagIsContainer) && (*(DataTypeFlags*) element & ObjectFlagIsNotContinuous) == 0)
+    if (elementIsDataTypeFlags && (*((DataTypeFlags*) element) & ObjectFlagIsContainer) && ((*(DataTypeFlags*) element) & ObjectFlagIsNotContinuous) == 0)
         return hashFunction(((Container*) element)->array, ((Container*) element)->byteSizeOfSingleElement * ((Container*) element)->amountOfIndexes, salt);
 
     return hashFunction(element, elementSize, salt);
@@ -40,6 +40,8 @@ static bool internal_memCmpKey(size_t keySize, const void* key, const void* hash
 }
 
 static void internal_hashMapCuckooInit(HashMapCuckoo* hashMap, size_t initialSize, size_t keySize, size_t elementSize, bool keyIsDataTypeFlags, uint64_t (*hashFunction)(const void* element, size_t elementSize, uint32_t salt)) {
+    if (!initialSize)
+        initialSize = 1;
     hashMap->hashArray = calloc(initialSize * 2, sizeof(*hashMap->hashArray));
     if (!hashMap->hashArray)
         return;
@@ -109,7 +111,7 @@ rehashNoNewAlloc:
                                                                    newSalt1,
                                                                    hashMap->hashFunction) %
                              newLengthOfHashArray;
-            if (!newHashArray[hash1]) {
+            if (newHashArray[hash1] == 0) {
                 newHashArray[hash1] = elementToInsert;
                 break;
             }
@@ -123,7 +125,7 @@ rehashNoNewAlloc:
                                                                          hashMap->hashFunction) %
                               newLengthOfHashArray) +
                              newLengthOfHashArray;
-            if (!newHashArray[hash2]) {
+            if (newHashArray[hash2] == 0) {
                 newHashArray[hash2] = swapSpace;
                 break;
             }
@@ -152,6 +154,8 @@ rehashNoNewAlloc:
 static bool internal_insertKeyValuePair(HashMapCuckoo* hashMap, size_t keyValuePairToInsert) {
     size_t count       = 0;
     size_t rehashCount = 0;
+    if ((float)hashMap->lengthOfHashArray * HASHMAP_CUCKOO_MAX_CUCKOO_OF_SIZE * 2.0f < (float)hashMap->container.amountOfIndexes)
+        internal_rehash(hashMap,true);
     while (1) {
         uint64_t hash1 = internal_hashMapHashSingelVarWithSalt(hashMap->keySize,
                                                                unorderedContainerGet((UnorderedContainer*) hashMap, keyValuePairToInsert).element,

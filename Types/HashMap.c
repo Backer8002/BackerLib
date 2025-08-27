@@ -3,13 +3,13 @@
 #include "UnorderedContainer.h"
 
 #include <assert.h>
+#include <stdalign.h>
 #include <stdarg.h>
 #include <stdbool.h>
+#include <stddef.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
-#include <stddef.h>
-#include <stdalign.h>
 
 typedef struct HashArrayNode {
     _Alignas(max_align_t) size_t next;
@@ -19,7 +19,7 @@ typedef struct HashArrayNode {
 uint64_t hashFunctionDefualt(size_t amountOfVars, ...) {
     if (amountOfVars == 0)
         return 0;
-    va_list argsToHash = {0};
+    va_list argsToHash;
     va_start(argsToHash, amountOfVars);
     uint64_t hash = 0;
     for (size_t j = 0; j < amountOfVars; j++) {
@@ -39,6 +39,8 @@ static inline void internal_hashMapInit(
     size_t initialSize, size_t keySize, size_t elementSize, bool keyIsDataTypeFlags,
     uint64_t (*hashFunction)(const void* element, size_t elementSize)) {
 
+    if (!initialSize)
+        initialSize = 1;
     if (hashFunction == NULL)
         hashMap->hashFunction = hashFunctionDefualtSingleVar;
     else
@@ -56,7 +58,7 @@ static inline void internal_hashMapInit(
         return;
     }
     hashMap->lengthOfHashArray = initialSize;
-    hashMap->keySize = keySize;
+    hashMap->keySize           = keySize;
     hashMap->header |= (keyIsDataTypeFlags ? FlagHashMapKeyIsDataTypeFlags : 0);
     hashMap->unorderedContainer.bitset[0] |= 0x80;
     hashMap->container.amountOfIndexes++; // Use 0 as invalid index
@@ -70,7 +72,7 @@ HashMap hashMapCreateStack(size_t initialSize, size_t keySize, size_t elementSiz
 }
 
 HashMap* hashMapCreateHeap(size_t initialSize, size_t keySize, size_t elementSize, bool keyIsDataTypeFlags,
-                       uint64_t (*hashFunction)(const void* element, size_t elementSize)) {
+                           uint64_t (*hashFunction)(const void* element, size_t elementSize)) {
     HashMap* hashMap = malloc(sizeof(*hashMap));
     if (hashMap == NULL)
         return NULL;
@@ -180,14 +182,21 @@ ContainerError hashMapInsert(HashMap* hashMap, size_t sizeOfKey, const void* key
 }
 
 static HashArrayNode* internal_hashArrayGetFromKey(const HashMap* hashMap, const void* key) {
-    uint64_t hash     = internal_hashMapHashSingelVar(hashMap->keySize, key, (hashMap->header & FlagHashMapKeyIsDataTypeFlags) ? true : false, hashMap->hashFunction) % hashMap->lengthOfHashArray;
+    uint64_t hash = internal_hashMapHashSingelVar(hashMap->keySize,
+                                                  key,
+                                                  (hashMap->header & FlagHashMapKeyIsDataTypeFlags) ? true : false,
+                                                  hashMap->hashFunction) %
+                    hashMap->lengthOfHashArray;
 
-    size_t*  hashNode = hashMap->hashArray + hash;
-    while (*hashNode) {
-        HashArrayNode* nodeInContainer = unorderedContainerGet((UnorderedContainer*) hashMap, *hashNode).element;
-        if (internal_memCmpKey(hashMap->keySize, key, &nodeInContainer->data, (hashMap->header & FlagHashMapKeyIsDataTypeFlags) ? true : false))
+    size_t hashNode = hashMap->hashArray[hash];
+    while (hashNode) {
+        HashArrayNode* nodeInContainer = unorderedContainerGet((UnorderedContainer*) hashMap, hashNode).element;
+        if (internal_memCmpKey(hashMap->keySize,
+                               key,
+                               &nodeInContainer->data,
+                               (hashMap->header & FlagHashMapKeyIsDataTypeFlags) ? true : false))
             return nodeInContainer;
-        hashNode = &nodeInContainer->next;
+        hashNode = nodeInContainer->next;
     }
     return NULL;
 }
@@ -201,7 +210,7 @@ void* hashMapGet(const HashMap* hashMap, size_t sizeOfKey, const void* key) {
     return (Bytes) hashArrayNode + hashMap->elementOffset;
 }
 
-inline bool hashMapContainsKey(const HashMap* hashMap, size_t sizeOfKey, const void* key) {
+bool hashMapContainsKey(const HashMap* hashMap, size_t sizeOfKey, const void* key) {
     if (sizeOfKey == hashMap->keySize)
         return internal_hashArrayGetFromKey(hashMap, key) != NULL ? true : false;
     return false;
@@ -213,17 +222,17 @@ ContainerError hashMapRemove(HashMap* hashMap, size_t sizeOfKey, const void* key
 
     uint64_t       hash            = internal_hashMapHashSingelVar(sizeOfKey, key, (hashMap->header & FlagHashMapKeyIsDataTypeFlags) ? true : false, hashMap->hashFunction) % hashMap->lengthOfHashArray;
 
-    size_t*        hashNode        = hashMap->hashArray + hash;
+    size_t         hashNode        = hashMap->hashArray[hash];
     HashArrayNode* currentHashNode = NULL;
-    size_t*        prevHashNode    = NULL;
-    while (*hashNode) {
-        currentHashNode = unorderedContainerGet((UnorderedContainer*) hashMap, *hashNode).element;
+    size_t         prevHashNode    = 0;
+    while (hashNode) {
+        currentHashNode = unorderedContainerGet((UnorderedContainer*) hashMap, hashNode).element;
         if (!currentHashNode)
             return ContainerOPUnsuccessful;
         if (internal_memCmpKey(sizeOfKey, key, currentHashNode->data, (hashMap->header & FlagHashMapKeyIsDataTypeFlags) ? true : false))
             goto HashMapRemoveHandleDestruct;
         prevHashNode = hashNode;
-        hashNode     = &currentHashNode->next;
+        hashNode     = currentHashNode->next;
     }
 
     return ContainerOPUnsuccessful;
@@ -233,13 +242,12 @@ HashMapRemoveHandleDestruct:
         keyDestructor(&currentHashNode->data);
 
     if (elementDestructor)
-        elementDestructor((Bytes) hashNode + hashMap->elementOffset);
-
+        elementDestructor((Bytes) currentHashNode + hashMap->elementOffset);
     if (!prevHashNode)
-        hashMap->hashArray[hash] = 0;
+        hashMap->hashArray[hash] = currentHashNode->next;
     else
-        ((HashArrayNode*) unorderedContainerGet((UnorderedContainer*) hashMap, *prevHashNode).element)->next = currentHashNode->next;
-    unorderedContainerRemove((UnorderedContainer*) hashMap, *hashNode, NULL);
+        ((HashArrayNode*) unorderedContainerGet((UnorderedContainer*) hashMap, prevHashNode).element)->next = currentHashNode->next;
+    unorderedContainerRemove((UnorderedContainer*) hashMap, hashNode, NULL);
     return ContainerOPSuccessful;
 }
 
@@ -258,7 +266,7 @@ ContainerError hashMapReplace(HashMap* hashMap, size_t sizeOfKey, const void* ke
 }
 
 void hashMapDestroy(HashMap* hashMap, void (*keyDestructor)(void* key), void (*elementDestructor)(void* element)) {
-    if (!(DataTypeFlags*)hashMap)
+    if (!(DataTypeFlags*) hashMap)
         return;
     for (size_t i = 1; i < hashMap->container.amountOfIndexes; i++) {
         if ((hashMap->unorderedContainer.bitset[i / 8] & (0x80 >> (i % 8))) == 0)
