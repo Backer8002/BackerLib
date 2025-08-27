@@ -1,5 +1,6 @@
 #ifndef HEAP_H
 #define HEAP_H
+#include "Container.h"
 #include "DynamicContainer.h"
 
 #ifdef __cplusplus
@@ -8,8 +9,12 @@ namespace BackerLib {
 #endif
 
     typedef union Heap {
-        DataTypeFlags header;
-        Container     container;
+        struct {
+            DataTypeFlags header;
+        };
+        struct {
+            Container     container;
+        };
         struct {
             DynamicContainer dynamicContainer;
             bool (*compare)(const void*, const void*);
@@ -20,7 +25,7 @@ namespace BackerLib {
      * @param heap Pointer to valid Heap
      * @return Pointer to array (the top of the heap) if there is any element in the heap otherwise returns NULL.
      */
-    extern void*          heapTop(const Heap* heap);
+    extern const void*    heapTop(const Heap* heap);
     /**
      * @brief Removes the topmost element from the heap.
      * @param heap Pointer to valid heap
@@ -55,6 +60,14 @@ namespace BackerLib {
      * @return NULL if object could not be allocated.
      */
     extern Heap*          heapCreateHeap(size_t elementSize, bool (*compare)(const void*, const void*));
+
+    /**
+     * @brief Destroys heap if necessary
+     * @param heap Pointer to Heap
+     */
+    static inline void    heapDestroy(void* heap) {
+        containerDestroy(heap);
+    }
 
 #ifdef __cplusplus
     }

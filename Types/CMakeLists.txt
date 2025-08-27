@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.25)
 
-project(BackerLibTypes VERSION 0.1)
+project(BackerLibTypes LANGUAGES C VERSION 0.1)
 
 
 set(CMAKE_C_STANDARD 17)

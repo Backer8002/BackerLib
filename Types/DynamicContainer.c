@@ -24,9 +24,15 @@ ContainerError containerDynamicSizeCheckAdd(DynamicContainer* container) {
 
 ContainerError containerDynamicSizeCheckRemove(DynamicContainer* container) {
     if (container->containerMaxSize >> 2 > container->container.amountOfIndexes) {
-        void* newPointer = realloc(container->container.array, container->container.byteSizeOfSingleElement * container->container.amountOfIndexes);
-        if (newPointer == NULL && container->container.amountOfIndexes != 0)
-            return ContainerAllocFailure;
+        void* newPointer;
+        if (container->container.amountOfIndexes) {
+            newPointer = realloc(container->container.array, container->container.byteSizeOfSingleElement * container->container.amountOfIndexes);
+            if (newPointer == NULL)
+                return ContainerAllocFailure;
+        } else {
+            free(container->container.array);
+            newPointer = container->container.array;
+        }
         container->container.array  = newPointer;
         container->containerMaxSize = container->container.amountOfIndexes;
     }

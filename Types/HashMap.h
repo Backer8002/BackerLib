@@ -89,8 +89,12 @@ namespace BackerLib {
     extern BitSet         bitSetCreate(size_t amountOfElements, bool objectIsHeapAllocated);
 
     typedef union HashMap {
-        DataTypeFlags header;
-        Container     container;
+        struct {
+            DataTypeFlags header;
+        };
+        struct {
+            Container     container;
+        };
         struct {
             UnorderedContainer unorderedContainer;
             uint64_t (*hashFunction)(const void* element, size_t elementSize);
@@ -103,7 +107,7 @@ namespace BackerLib {
 
 #define HASHMAP_MAX_DEPTH                       UINT32_MAX
 #define HASHMAP_MAX_LOADFACTOR                  0.75f
-#define HASHMAP_CUCKOO_MAX_CUCKOO_OF_SIZE       0.75f
+#define HASHMAP_CUCKOO_MAX_CUCKOO_OF_SIZE       0.9f
 #define HASHMAP_CUCKOO_MAX_REHASH_BEFORE_RESIZE 25ull
 
 #define FlagHashMapKeyIsDataTypeFlags           0x100
@@ -198,14 +202,14 @@ namespace BackerLib {
      * @param ... size of element followed by pointer to element
      * @return Hash.
      */
-    extern uint64_t       [[unsequenced]] hashFunctionDefualt(size_t amountOfVars, ...);
+    extern uint64_t       hashFunctionDefualt(size_t amountOfVars, ...);
     /**
      *
      * @param element Pointer to element to hash
      * @param size Size of element to hash
      * @return Hash
      */
-    static inline uint64_t hashFunctionDefualtSingleVar(const void* element, size_t size) {
+    static uint64_t hashFunctionDefualtSingleVar(const void* element, size_t size) {
         return hashFunctionDefualt(1, size, element);
     }
     /**
@@ -215,15 +219,19 @@ namespace BackerLib {
      * @param salt 32-bit paramiter to hash with
      * @return Hash
      */
-    static inline uint64_t hashFunctionDefualtSingleVarWithSalt(const void* element, size_t size, uint32_t salt) {
+    static uint64_t hashFunctionDefualtSingleVarWithSalt(const void* element, size_t size, uint32_t salt) {
         return hashFunctionDefualt(2, sizeof(salt), &salt, size, element);
     }
 
 #define HASHMAP_CUCKOO_SWAPSPACE_CONTAINS_OBJ 0x200
 
     typedef union HashMapCuckoo {
-        DataTypeFlags header;
-        Container     container;
+        struct {
+            DataTypeFlags header;
+        };
+        struct {
+            Container     container;
+        };
         struct {
             UnorderedContainer unorderedContainer;
             uint64_t (*hashFunction)(const void* element, size_t elementSize, uint32_t salt);
