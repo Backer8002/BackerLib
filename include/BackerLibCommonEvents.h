@@ -1,18 +1,19 @@
 #pragma once
 #include "../Event/eventInternalHeader.h"
 
-static const char InfoLogLevel[] = "Info";
-static const char DebugLogLevel[] = "Debug";
-static const char WarningLogLevel[] = "Warning";
-static const char ErrorLogLevel[] = "Error";
-static const char CriticalLogLevel[] = "Critical";
-static const char MemoryGroupId[] = "Memory";
-static const char AllocMemoryGroupId[] = "AllocMem";
-static const char DeallocMemoryGroupId[] = "DeallocMem";
 
-static const char* const LogUnableToAllocMemGroupIds[] = {WarningLogLevel,
+static StringView InfoLogLevel = stringViewInitConstExpr("Info");
+static StringView DebugLogLevel = stringViewInitConstExpr("Debug");
+static StringView WarningLogLevel = stringViewInitConstExpr("Warning");
+static StringView ErrorLogLevel = stringViewInitConstExpr("Error");
+static StringView CriticalLogLevel = stringViewInitConstExpr("Critical");
+static StringView MemoryGroupId = stringViewInitConstExpr("Memory");
+static StringView AllocMemoryGroupId = stringViewInitConstExpr("AllocMem");
+static StringView DeallocMemoryGroupId = stringViewInitConstExpr("DeallocMem");
+
+static StringView LogUnableToAllocMemGroupIds[] = {WarningLogLevel,
                                                           MemoryGroupId};
 static const Event LogUnableToAllocMem = {
-    .id = "Unable to allocate memory",
+    .id = stringViewInitConstExpr("Unable to allocate memory"),
     .amountOfGroups = 2,
     .groupIds = LogUnableToAllocMemGroupIds};

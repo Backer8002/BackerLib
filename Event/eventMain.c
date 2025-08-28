@@ -1,26 +1,25 @@
+#include "ANSIEscapeSequences.h"
 #include "eventInternalHeader.h"
+#include <BackerLibTypes.h>
+#include <stdbool.h>
+#include <stdint.h>
+
+
+#include <BackerLibCommonEvents.h>
 #include <assert.h>
+#include <inttypes.h>
 #include <signal.h>
 #include <threads.h>
-#include <BackerLibCommonEvents.h>
 
-#ifdef _DEBUG
-static HashMap memoryAllocs = {0};
 
-#undef malloc
-#undef calloc
-#undef realloc
-#undef free
-#else
-static int memoryAllocs;
-#endif
-
-static EventHandle* mainEventHandle = NULL;
+static EventHandle* mainEventHandle     = NULL;
+static HashMap      memoryAllocs        = {0};
+static FILE *       debugFileStreams[2] = {NULL, NULL}, *errorFileStreams[2] = {NULL, NULL};
 
 #include <stdlib.h>
 
 int          internal_eventMainLoop(EventHandle* eventHandle);
-EventError_t internal_invokeSubscriber(EventCall* eventCall, const char* subscriberID, EventSubscriber* eventSubscriber);
+EventError_t internal_invokeSubscriber(const EventCall* eventCall, StringView subscriberID, const EventSubscriber* eventSubscriber);
 void         internal_memoryLogCall(const Event* const event, uint32_t line, const char* file, size_t size, size_t address);
 
 EventHandle* eventSystemInit(void) {
@@ -28,31 +27,32 @@ EventHandle* eventSystemInit(void) {
     if (eventHandle == NULL)
         return NULL;
 
-    eventHandle->eventQueue = arrayListCreateStack(0, sizeof(EventCall), ListEventList, false);
-    if (eventHandle->eventQueue.header.dataArrayVarType == ListNone) {
+    eventHandle->eventQueue = arrayListCreateStack(0, sizeof(EventCall), false);
+    if (!isValidObject((DataTypeFlags*) &eventHandle->eventQueue)) {
         free(eventHandle);
         return NULL;
     }
 
-    eventHandle->eventSubscribers = hashMapCuckooCreateStack(1, sizeof(const char*), sizeof(EventSubscriber), ListCString, ListEventList, false, hashFunctionDefualtSingleVarWithSalt);
+    eventHandle->eventSubscribers = hashMapCuckooCreateStack(5, sizeof(StringView), sizeof(EventSubscriber), true, hashFunctionDefualtSingleVarWithSalt);
 
-    if (eventHandle->eventSubscribers.header.dataArrayVarType == ListNone) {
+    if (!isValidObject((DataTypeFlags*) &eventHandle->eventSubscribers)) {
         arrayListDestroy(&(eventHandle->eventQueue));
         free(eventHandle);
         return NULL;
     }
 
-    if (!(eventHandle->eventQueue.header.flags & ObjectFlagMutexExists && eventHandle->eventSubscribers.header.flags & ObjectFlagMutexExists)) {
+    if (mtx_init(&eventHandle->mutexForSubscriber, mtx_plain) != thrd_success) {
         hashMapCuckooDestroy(&(eventHandle->eventSubscribers), NULL, NULL);
         arrayListDestroy(&(eventHandle->eventQueue));
         free(eventHandle);
         return NULL;
     }
-#ifdef _DEBUG
-    memoryAllocs = hashMapCreateStack(1, sizeof(size_t), sizeof(size_t), ListUInt64, ListUInt64, true, hashFunctionDefualtSingleVar);
-    if (memoryAllocs.header.dataArrayVarType == ListNone) {
+#if 1
+    memoryAllocs = hashMapCreateStack(100, sizeof(size_t), sizeof(size_t), false, hashFunctionDefualtSingleVar);
+    if (!isValidObject((DataTypeFlags*) &memoryAllocs)) {
         hashMapCuckooDestroy(&(eventHandle->eventSubscribers), NULL, NULL);
         arrayListDestroy(&(eventHandle->eventQueue));
+        mtx_destroy(&eventHandle->mutexForSubscriber);
         free(eventHandle);
         return NULL;
     }
@@ -62,19 +62,102 @@ EventHandle* eventSystemInit(void) {
     if (thrd_create(&(eventHandle->eventThread), (int (*)(void*)) internal_eventMainLoop, eventHandle) != thrd_success) {
         hashMapCuckooDestroy(&(eventHandle->eventSubscribers), NULL, NULL);
         arrayListDestroy(&(eventHandle->eventQueue));
+        mtx_destroy(&eventHandle->mutexForSubscriber);
         free(eventHandle);
-#ifdef _DEBUG
+#if 1
         hashMapDestroy(&memoryAllocs, NULL, NULL);
 #endif // _DEBUG
 
         return NULL;
     }
-
+    atexit(eventSystemShutdown);
     mainEventHandle = eventHandle;
     return eventHandle;
 }
 
-EventError_t internal_invokeSubscriber(EventCall* eventCall, const char* subscriberID, EventSubscriber* eventSubscriber) {
+static void internal_freeMemAllocsKey(void* key) {
+    fprintf(stderr, "Memory alloc 0x%zx was not freed ", (size_t) key);
+}
+
+static void internal_freeMemAllocsElements(void* element) {
+    fprintf(stderr, "of size %zu\n", (size_t) element);
+}
+
+void eventSystemShutdown(void) {
+    mainEventHandle->shouldQuit = true;
+    thrd_join(mainEventHandle->eventThread, NULL);
+    EventHandle* eventHandleToDestroy = mainEventHandle;
+    mainEventHandle                   = NULL;
+    mtx_destroy(&eventHandleToDestroy->mutexForSubscriber);
+    arrayListDestroy(&eventHandleToDestroy->eventQueue);
+    hashMapCuckooDestroy(&eventHandleToDestroy->eventSubscribers, NULL, NULL);
+
+    if (debugFileStreams[0] && debugFileStreams[0] != stdout)
+        fclose(debugFileStreams[0]);
+    if (debugFileStreams[1])
+        fclose(debugFileStreams[1]);
+    if (errorFileStreams[0] && errorFileStreams[0] != stdout && errorFileStreams[0] != stderr)
+        fclose(errorFileStreams[0]);
+    if (errorFileStreams[1])
+        fclose(errorFileStreams[1]);
+#if 1
+    fflush(stdout);
+    fprintf(stderr, ANSI_TEXT_RED "Memory leaks:" ANSI_TEXT_GREEN "\n");
+    hashMapDestroy(&memoryAllocs, internal_freeMemAllocsKey, internal_freeMemAllocsElements);
+    fprintf(stderr, ANSI_TEXT_YELLOW "End of memory leaks." ANSI_RESET_ATTRIBUTE "\n");
+    fflush(stderr);
+#endif
+    fprintf(stdout, "Bye from event handler.\n");
+    free(eventHandleToDestroy);
+}
+
+
+extern bool eventInitDefualtLog(const char* debugLogFile, bool outputToStdout, const char* errorLogFile, bool outputErrorsToStdErr) {
+    FILE* debugLog = NULL;
+    FILE* errorLog = NULL;
+
+    if (debugLogFile) {
+        debugLog = fopen(debugLogFile, "wt");
+        if (!debugLog)
+            return false;
+    }
+    if (errorLogFile) {
+        errorLog = fopen(errorLogFile, "wt");
+        if (!errorLog) {
+            if (debugLog)
+                fclose(debugLog);
+            fclose(errorLog);
+            return false;
+        }
+    }
+
+    if (outputToStdout) {
+        debugFileStreams[0] = stdout;
+        errorFileStreams[0] = stdout;
+        debugFileStreams[1] = debugLog;
+    } else {
+        debugFileStreams[0] = debugLog;
+    }
+
+    if (outputErrorsToStdErr) {
+        errorFileStreams[0] = stderr;
+        errorFileStreams[1] = errorLog;
+    } else if (outputToStdout) {
+        errorFileStreams[1] = errorLog;
+    } else {
+        errorFileStreams[0] = errorLog;
+    }
+
+    eventRegLogSubToID(mainEventHandle, InfoLogLevel, writeEventToLogLocations, false, (errorLog != NULL) + outputToStdout, debugFileStreams);
+    eventRegLogSubToID(mainEventHandle, DebugLogLevel, writeEventToLogLocations, false, (errorLog != NULL) + outputToStdout, debugFileStreams);
+    eventRegLogSubToID(mainEventHandle, WarningLogLevel, writeEventToLogLocations, false, (errorLog != NULL) + (outputToStdout || outputErrorsToStdErr), errorFileStreams);
+    eventRegLogSubToID(mainEventHandle, ErrorLogLevel, writeEventToLogLocations, false, (errorLog != NULL) + (outputToStdout || outputErrorsToStdErr), errorFileStreams);
+    eventRegLogSubToID(mainEventHandle, CriticalLogLevel, writeEventToLogLocations, false, (errorLog != NULL) + (outputToStdout || outputErrorsToStdErr), errorFileStreams);
+
+    return true;
+}
+
+EventError_t internal_invokeSubscriber(const EventCall* eventCall, StringView subscriberID, const EventSubscriber* eventSubscriber) {
     if (eventSubscriber->eventSubscriberMain.flags & EVENT_FLAG_CREATE_THREAD) {
         assert("Not implemented");
     } else {
@@ -98,10 +181,10 @@ int internal_eventMainLoop(EventHandle* eventHandle) {
         thrd_sleep(&timeToSleep, NULL);
 
         mtx_lock(&eventHandle->eventQueue.mutex);
-        mtx_lock(&eventHandle->eventSubscribers.mutex);
+        mtx_lock(&eventHandle->mutexForSubscriber);
 
-        for (EventCall* currentCall = (EventCall*) eventHandle->eventQueue.list; currentCall < ((EventCall*) eventHandle->eventQueue.list + eventHandle->eventQueue.totalAmountOfElements); currentCall++) {
-            EventSubscriber* mainSubscriber = hashMapCuckooGet(&eventHandle->eventSubscribers, currentCall->eventCallMain.id, ListCString);
+        for (EventCall* currentCall = eventHandle->eventQueue.container.array; currentCall < ((EventCall*) eventHandle->eventQueue.container.array + eventHandle->eventQueue.container.amountOfIndexes); currentCall++) {
+            EventSubscriber* mainSubscriber = hashMapCuckooGet(&eventHandle->eventSubscribers, sizeof(StringView), &currentCall->eventCallMain.id);
             if (mainSubscriber == NULL) {
             } else {
                 if (internal_invokeSubscriber(currentCall, currentCall->eventCallMain.id, mainSubscriber) != EventOperationSuccess)
@@ -109,7 +192,7 @@ int internal_eventMainLoop(EventHandle* eventHandle) {
             }
 
             for (uint32_t groupCallIterator = 0; groupCallIterator < currentCall->eventCallMain.amountOfGroups; groupCallIterator++) {
-                EventSubscriber* groupSubscriber = (EventSubscriber*) hashMapCuckooGet(&eventHandle->eventSubscribers, currentCall->eventCallMain.groupIds[groupCallIterator], ListCString);
+                EventSubscriber* groupSubscriber = hashMapCuckooGet(&eventHandle->eventSubscribers, sizeof(StringView), currentCall->eventCallMain.groupIds + groupCallIterator);
                 if (groupSubscriber == NULL) {
                     continue;
                 }
@@ -118,31 +201,31 @@ int internal_eventMainLoop(EventHandle* eventHandle) {
             }
         }
 
-        eventHandle->eventQueue.amountOfElements = 0;
+        containerDynamicClear(&eventHandle->eventQueue.dynamicContainer);
 
         mtx_unlock(&eventHandle->eventQueue.mutex);
-        mtx_unlock(&eventHandle->eventSubscribers.mutex);
+        mtx_unlock(&eventHandle->mutexForSubscriber);
     }
     return 0;
 }
 
-EventError_t eventRegSubToID(EventHandle* eventHandle, const char* ID, void (*function)(EventCall, const char*), bool shouldRunOnSeperateThread) {
-    mtx_lock(&eventHandle->eventSubscribers.mutex);
+EventError_t eventRegSubToID(EventHandle* eventHandle, const StringView ID, void (*function)(EventCall, StringView), bool shouldRunOnSeperateThread) {
+    mtx_lock(&eventHandle->mutexForSubscriber);
 
     EventSubscriber eventSubscriberToReg = {.eventSubscriberMain = {.eventSubscriberType = EventSubscriberNormal, .function = function, .flags = (shouldRunOnSeperateThread) ? EVENT_FLAG_CREATE_THREAD : 0}};
 
-    if (hashMapCuckooInsert(&eventHandle->eventSubscribers, ID, ListCString, &eventSubscriberToReg, ListEventList) != HashMapOperationSuccsess) {
-        mtx_unlock(&eventHandle->eventSubscribers.mutex);
-        LogCrit();
+    if (hashMapCuckooInsert(&eventHandle->eventSubscribers, sizeof ID, &ID, sizeof eventSubscriberToReg, &eventSubscriberToReg) != ContainerOPSuccessful) {
+        mtx_unlock(&eventHandle->mutexForSubscriber);
+        logCriticalCall("Cannot register id to eventSubscribers", __LINE__, __FILE__);
         return EventCritError;
     }
 
-    mtx_unlock(&eventHandle->eventSubscribers.mutex);
+    mtx_unlock(&eventHandle->mutexForSubscriber);
     return EventOperationSuccess;
 }
 
-EventError_t eventRegLogSubToID(EventHandle* eventHandle, const char* ID, void (*function)(EventCall, const char*, size_t, FILE**), bool shouldRunOnSeperateThread, size_t amountOfOutputs, FILE** outputs) {
-    mtx_lock(&eventHandle->eventSubscribers.mutex);
+EventError_t eventRegLogSubToID(EventHandle* eventHandle, StringView ID, void (*function)(EventCall, StringView, size_t, FILE**), bool shouldRunOnSeperateThread, size_t amountOfOutputs, FILE** outputs) {
+    mtx_lock(&eventHandle->mutexForSubscriber);
 
     EventSubscriber eventSubscriberToReg = {.eventSubscriberLog = {.eventSubscriberType = EventSubscriberLogging,
                                                                    .amountOfOutputFiles = amountOfOutputs,
@@ -150,13 +233,13 @@ EventError_t eventRegLogSubToID(EventHandle* eventHandle, const char* ID, void (
                                                                    .function            = function,
                                                                    .flags               = (shouldRunOnSeperateThread) ? EVENT_FLAG_CREATE_THREAD : 0}};
 
-    if (hashMapCuckooInsert(&eventHandle->eventSubscribers, ID, ListCString, &eventSubscriberToReg, ListEventList) != HashMapOperationSuccsess) {
-        mtx_unlock(&eventHandle->eventSubscribers.mutex);
-        LogCrit();
+    if (hashMapCuckooInsert(&eventHandle->eventSubscribers, sizeof ID, &ID, sizeof eventSubscriberToReg, &eventSubscriberToReg) != ContainerOPSuccessful) {
+        mtx_unlock(&eventHandle->mutexForSubscriber);
+        logCriticalCall("Cannot register id to eventSubscribers", __LINE__, __FILE__);
         return EventCritError;
     }
 
-    mtx_unlock(&eventHandle->eventSubscribers.mutex);
+    mtx_unlock(&eventHandle->mutexForSubscriber);
     return EventOperationSuccess;
 }
 
@@ -168,10 +251,12 @@ void eventCall(const Event* const event, thrd_t currentThread) {
                           .groupIds       = event->groupIds,
                           .amountOfGroups = event->amountOfGroups,
                           .callerThread   = currentThread}};
+    if (!mainEventHandle)
+        return;
 
     mtx_lock(&mainEventHandle->eventQueue.mutex);
 
-    arrayListElementSet(&mainEventHandle->eventQueue, mainEventHandle->eventQueue.amountOfElements, &eventCallToSend, ListEventList);
+    containerDynamicAppend(&mainEventHandle->eventQueue.dynamicContainer, sizeof eventCallToSend, &eventCallToSend);
 
     mtx_unlock(&mainEventHandle->eventQueue.mutex);
 }
@@ -186,42 +271,53 @@ void logCall(const Event* const event, thrd_t currentThread, uint32_t line, cons
                               .groupIds       = event->groupIds,
                               .amountOfGroups = event->amountOfGroups,
                               .callerThread   = currentThread}}};
+    if (!mainEventHandle)
+        return;
 
     mtx_lock(&mainEventHandle->eventQueue.mutex);
 
-    arrayListElementSet(&mainEventHandle->eventQueue, mainEventHandle->eventQueue.amountOfElements, &eventCallToSend, ListEventList);
+    containerDynamicAppend(&mainEventHandle->eventQueue.dynamicContainer, sizeof eventCallToSend, &eventCallToSend);
 
     mtx_unlock(&mainEventHandle->eventQueue.mutex);
 }
 
-const char* freeMemDoesNotExistGroupIds[] = {MemoryGroupId,ErrorLogLevel};
-const char* allocEventsGroupIds[] = {MemoryGroupId,DebugLogLevel,AllocMemoryGroupId};
-const char* freeEventGroupId[] = {DebugLogLevel,MemoryGroupId,DeallocMemoryGroupId};
-const Event freeMemDoesNotExist = {.id = "Unable to free memory since it does not exist", .amountOfGroups = 2, .groupIds = freeMemDoesNotExistGroupIds};
-const Event mallocEvent         = {.id = "Allocated memory via malloc", .amountOfGroups = 3, .groupIds = AllocMemoryGroupId};
-const Event callocEvent         = {.id = "Allocated memory via calloc", .amountOfGroups = 3, .groupIds = AllocMemoryGroupId};
-const Event reallocEvent        = {.id = "Reallocated memory", .amountOfGroups = 3, .groupIds = AllocMemoryGroupId};
-const Event freeEvent           = {.id = "Freed memory", .amountOfGroups = 3, .groupIds = DeallocMemoryGroupId};
+StringView  freeMemDoesNotExistGroupIds[] = {MemoryGroupId, ErrorLogLevel};
+StringView  allocEventsGroupIds[]         = {MemoryGroupId, DebugLogLevel, AllocMemoryGroupId};
+StringView  freeEventGroupId[]            = {DebugLogLevel, MemoryGroupId, DeallocMemoryGroupId};
+const Event freeMemDoesNotExist           = {.id = stringViewInitConstExpr("Unable to free memory since it does not exist"), .amountOfGroups = 2, .groupIds = freeMemDoesNotExistGroupIds};
+const Event mallocEvent                   = {.id = stringViewInitConstExpr("Allocated memory via malloc"), .amountOfGroups = 3, .groupIds = allocEventsGroupIds};
+const Event callocEvent                   = {.id = stringViewInitConstExpr("Allocated memory via calloc"), .amountOfGroups = 3, .groupIds = allocEventsGroupIds};
+const Event reallocEvent                  = {.id = stringViewInitConstExpr("Reallocated memory"), .amountOfGroups = 3, .groupIds = allocEventsGroupIds};
+const Event freeEvent                     = {.id = stringViewInitConstExpr("Freed memory"), .amountOfGroups = 3, .groupIds = freeEventGroupId};
 
-void        internal_memoryLogCall(const Event* const event, uint32_t line, const char* file, size_t size, size_t address) {
+#if 1
+#undef malloc
+#undef calloc
+#undef realloc
+#undef free
+#endif
+
+void internal_memoryLogCall(const Event* const event, uint32_t line, const char* file, size_t size, size_t address) {
 
 
     EventCall eventCallToSend = {
-               .eventCallMemory = {
-                   .allocSize    = size,
-                   .address      = address,
-                   .eventCallLog = {
-                       .line          = line,
-                       .file          = file,
-                       .eventCallMain = {.eventType      = EventMemLogEvent,
-                                         .id             = event->id,
-                                         .groupIds       = event->groupIds,
-                                         .amountOfGroups = event->amountOfGroups,
-                                         .callerThread   = noThread}}}};
+        .eventCallMemory = {
+            .allocSize    = size,
+            .address      = address,
+            .eventCallLog = {
+                .line          = line,
+                .file          = file,
+                .eventCallMain = {.eventType      = EventMemLogEvent,
+                                  .id             = event->id,
+                                  .groupIds       = event->groupIds,
+                                  .amountOfGroups = event->amountOfGroups,
+                                  .callerThread   = noThread}}}};
+    if (!mainEventHandle)
+        return;
 
     mtx_lock(&mainEventHandle->eventQueue.mutex);
 
-    arrayListElementSet(&mainEventHandle->eventQueue, mainEventHandle->eventQueue.amountOfElements, &eventCallToSend, ListEventList) != EventOperationSuccess;
+    containerDynamicAppend(&mainEventHandle->eventQueue.dynamicContainer, sizeof eventCallToSend, &eventCallToSend);
 
     mtx_unlock(&mainEventHandle->eventQueue.mutex);
 }
@@ -233,7 +329,8 @@ void* mallocLogVersion(size_t size, uint32_t line, const char* file) {
         return NULL;
 
     internal_memoryLogCall(&mallocEvent, line, file, size, (size_t) memory);
-    hashMapInsert(&memoryAllocs, &memory, ListUInt64, (size_t*) size, ListUInt64);
+    if (isValidObject((DataTypeFlags*) &memoryAllocs))
+        hashMapInsert(&memoryAllocs, sizeof memory, &memory, sizeof size, &size);
     return memory;
 }
 
@@ -243,7 +340,8 @@ void* callocLogVersion(size_t amount, size_t size, uint32_t line, const char* fi
         return NULL;
 
     internal_memoryLogCall(&callocEvent, line, file, size * amount, (size_t) memory);
-    hashMapInsert(&memoryAllocs, &memory, ListUInt64, (size_t*) (size * amount), ListUInt64);
+    if (isValidObject((DataTypeFlags*) &memoryAllocs))
+        hashMapInsert(&memoryAllocs, sizeof memory, &memory, sizeof size, &size);
     return memory;
 }
 
@@ -256,43 +354,49 @@ void* reallocLogVersion(void* currentPtr, size_t size, uint32_t line, const char
         return NULL;
 
     internal_memoryLogCall(&reallocEvent, line, file, size, (size_t) memory);
-    if (currentPtr == memory)
-        hashMapReplace(&memoryAllocs, &memory, ListUInt64, (size_t*) size, ListUInt64, NULL);
-    else {
-        hashMapRemove(&memoryAllocs, &currentPtr, ListUInt64, NULL, NULL);
-        hashMapInsert(&memoryAllocs, &memory, ListUInt64, (size_t*) size, ListUInt64);
+    if (isValidObject((DataTypeFlags*) &memoryAllocs)) {
+        if (currentPtr == memory)
+            hashMapReplace(&memoryAllocs, sizeof memory, &memory, sizeof size, &size, NULL);
+        else {
+            hashMapRemove(&memoryAllocs, sizeof currentPtr, &currentPtr, NULL, NULL);
+            hashMapInsert(&memoryAllocs, sizeof memory, &memory, sizeof size, &size);
+        }
     }
     return memory;
 }
-
 void freeLogVersion(void* ptr, uint32_t line, const char* file) {
+    if (!isValidObject((DataTypeFlags*) &memoryAllocs)) {
+        free(ptr);
+        return;
+    }
     size_t size = 0;
-    if (hashMapGet(&memoryAllocs, &ptr, ListUInt64, (size_t**) (&size)) == HashMapKeyDoesNotExist) {
+    if (hashMapGet(&memoryAllocs, sizeof ptr, &ptr) == NULL) {
         logCall(&freeMemDoesNotExist, noThread, line, file);
         return;
     }
     internal_memoryLogCall(&freeEvent, line, file, size, (size_t) ptr);
-    hashMapRemove(&memoryAllocs, &ptr, ListUInt64, NULL, NULL);
+    hashMapRemove(&memoryAllocs, sizeof ptr, &ptr, NULL, NULL);
+    free(ptr);
 }
 
-void writeEventToLogLocations(EventCall event, const char* logLevel, size_t amountOfLocations, FILE** locations) {
+void writeEventToLogLocations(EventCall event, StringView logLevel, size_t amountOfLocations, FILE** locations) {
     switch (event.type) {
     case EventNormal:
         for (size_t i = 0; i < amountOfLocations; i++)
-            fprintf(locations[i], "%lli [%s] %s\n", time(NULL), logLevel, event.eventCallMain.id);
+            fprintf(locations[i], ANSI_TEXT_YELLOW "%" PRIi64 ANSI_TEXT_WHITE "[%s]" ANSI_TEXT_MAGENTA "%s" ANSI_RESET_ATTRIBUTE "\n", time(NULL), logLevel.array, event.eventCallMain.id.array);
         break;
     case EventLogEvent:
         for (size_t i = 0; i < amountOfLocations; i++)
-            fprintf(locations[i], "%lli [%s] %s in file: %s at line: %llu\n", time(NULL), logLevel, event.eventCallMain.id, event.eventCallLog.file, event.eventCallLog.line);
+            fprintf(locations[i], ANSI_TEXT_YELLOW "%" PRIi64 ANSI_TEXT_WHITE "[%s] " ANSI_TEXT_MAGENTA "%s " ANSI_RESET_ATTRIBUTE " in file: " ANSI_TEXT_CYAN ANSI_TEXT_BOLD "%s" ANSI_RESET_ATTRIBUTE " at line: " ANSI_TEXT_BLUE "%zu" ANSI_RESET_ATTRIBUTE "\n", time(NULL), logLevel.array, event.eventCallMain.id.array, event.eventCallLog.file, event.eventCallLog.line);
         break;
     case EventMemLogEvent:
         for (size_t i = 0; i < amountOfLocations; i++)
             fprintf(
                 locations[i],
-                "%lli [%s] %s of size: %llu at address: %llu in file: %s at line: %llu\n",
+                ANSI_TEXT_YELLOW "%" PRIi64 ANSI_TEXT_WHITE "[%s]" ANSI_TEXT_MAGENTA "%s" ANSI_RESET_ATTRIBUTE "of size: " ANSI_TEXT_YELLOW "%zu" ANSI_RESET_ATTRIBUTE " at address: " ANSI_TEXT_GREEN "0x%zx" ANSI_RESET_ATTRIBUTE " in file: " ANSI_TEXT_CYAN ANSI_TEXT_BOLD "%s" ANSI_RESET_ATTRIBUTE " at line: " ANSI_TEXT_BLUE "%zu" ANSI_RESET_ATTRIBUTE "\n",
                 time(NULL),
-                logLevel,
-                event.eventCallMain.id,
+                logLevel.array,
+                event.eventCallMain.id.array,
                 event.eventCallMemory.allocSize,
                 event.eventCallMemory.address,
                 event.eventCallLog.file,
@@ -303,17 +407,33 @@ void writeEventToLogLocations(EventCall event, const char* logLevel, size_t amou
     }
 }
 
-void logInfoCall(EventCall* eventCall) {
+static StringView InfoLogGroupIDs[]     = {InfoLogLevel};
+static StringView DebugLogGroupIDs[]    = {DebugLogLevel};
+static StringView WarningLogGroupIDs[]  = {WarningLogLevel};
+static StringView ErrorLogGroupIDs[]    = {ErrorLogLevel};
+static StringView CriticalLogGroupIDs[] = {CriticalLogLevel};
+
+void              logInfoCall(const char* message, uint32_t line, const char* file) {
+    Event event = {.id = stringViewInit(message), .groupIds = InfoLogGroupIDs, .amountOfGroups = 1};
+    logCall(&event, noThread, line, file);
 }
 
-void logDebugCall(EventCall* eventCall) {
+void logDebugCall(const char* message, uint32_t line, const char* file) {
+    Event event = {.id = stringViewInit(message), DebugLogGroupIDs, 1};
+    logCall(&event, noThread, line, file);
 }
 
-void logWarnCall(EventCall* eventCall) {
+void logWarnCall(const char* message, uint32_t line, const char* file) {
+    Event event = {.id = stringViewInit(message), WarningLogGroupIDs, 1};
+    logCall(&event, noThread, line, file);
 }
 
-void logErrorCall(EventCall* eventCall) {
+void logErrorCall(const char* message, uint32_t line, const char* file) {
+    Event event = {.id = stringViewInit(message), ErrorLogGroupIDs, 1};
+    logCall(&event, noThread, line, file);
 }
 
-void logCriticalCall(EventCall* eventCall) {
+void logCriticalCall(const char* message, uint32_t line, const char* file) {
+    Event event = {.id = stringViewInit(message), CriticalLogGroupIDs, 1};
+    logCall(&event, noThread, line, file);
 }
