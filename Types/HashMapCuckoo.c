@@ -40,7 +40,7 @@ static void internal_hashMapCuckooInit(HashMapCuckoo* hashMap, size_t initialSiz
     hashMap->keySize           = keySize;
     hashMap->salt1             = rand();
     hashMap->salt2             = rand();
-    hashMap->unorderedContainer.bitset[0] |= 0x80;
+    hashMap->unorderedContainer.bitset[0] |= UINT64_MAX - (uint64_t)INT64_MAX;
     hashMap->container.amountOfIndexes++;
 }
 

@@ -26,7 +26,7 @@ namespace BackerLib {
         struct {
             Container container;
             size_t    maxSize;
-            uint8_t*  bitset;
+            uint64_t*  bitset;
         };
     } UnorderedContainer;
 
