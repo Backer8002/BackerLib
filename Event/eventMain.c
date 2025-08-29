@@ -13,7 +13,7 @@
 
 
 static EventHandle* mainEventHandle     = NULL;
-static HashMap      memoryAllocs        = {0};
+static HashMapClosed      memoryAllocs        = {0};
 static FILE *       debugFileStreams[2] = {NULL, NULL}, *errorFileStreams[2] = {NULL, NULL};
 
 #include <stdlib.h>
@@ -42,15 +42,15 @@ EventHandle* eventSystemInit(void) {
     }
 
     if (mtx_init(&eventHandle->mutexForSubscriber, mtx_plain) != thrd_success) {
-        hashMapCuckooDestroy(&(eventHandle->eventSubscribers), NULL, NULL);
+        hashMapDestroy(&(eventHandle->eventSubscribers), NULL, NULL);
         arrayListDestroy(&(eventHandle->eventQueue));
         free(eventHandle);
         return NULL;
     }
 #if 1
-    memoryAllocs = hashMapCreateStack(100, sizeof(size_t), sizeof(size_t), false, hashFunctionDefualtSingleVar);
+    memoryAllocs = hashMapClosedCreateStack(100, sizeof(size_t), sizeof(size_t), false, hashFunctionDefualtSingleVar);
     if (!isValidObject((DataTypeFlags*) &memoryAllocs)) {
-        hashMapCuckooDestroy(&(eventHandle->eventSubscribers), NULL, NULL);
+        hashMapDestroy(&(eventHandle->eventSubscribers), NULL, NULL);
         arrayListDestroy(&(eventHandle->eventQueue));
         mtx_destroy(&eventHandle->mutexForSubscriber);
         free(eventHandle);
@@ -60,7 +60,7 @@ EventHandle* eventSystemInit(void) {
 
 
     if (thrd_create(&(eventHandle->eventThread), (int (*)(void*)) internal_eventMainLoop, eventHandle) != thrd_success) {
-        hashMapCuckooDestroy(&(eventHandle->eventSubscribers), NULL, NULL);
+        hashMapDestroy(&(eventHandle->eventSubscribers), NULL, NULL);
         arrayListDestroy(&(eventHandle->eventQueue));
         mtx_destroy(&eventHandle->mutexForSubscriber);
         free(eventHandle);
@@ -90,7 +90,7 @@ void eventSystemShutdown(void) {
     mainEventHandle                   = NULL;
     mtx_destroy(&eventHandleToDestroy->mutexForSubscriber);
     arrayListDestroy(&eventHandleToDestroy->eventQueue);
-    hashMapCuckooDestroy(&eventHandleToDestroy->eventSubscribers, NULL, NULL);
+    hashMapDestroy(&eventHandleToDestroy->eventSubscribers, NULL, NULL);
 
     if (debugFileStreams[0] && debugFileStreams[0] != stdout)
         fclose(debugFileStreams[0]);
@@ -184,7 +184,7 @@ int internal_eventMainLoop(EventHandle* eventHandle) {
         mtx_lock(&eventHandle->mutexForSubscriber);
 
         for (EventCall* currentCall = eventHandle->eventQueue.container.array; currentCall < ((EventCall*) eventHandle->eventQueue.container.array + eventHandle->eventQueue.container.amountOfIndexes); currentCall++) {
-            EventSubscriber* mainSubscriber = hashMapCuckooGet(&eventHandle->eventSubscribers, sizeof(StringView), &currentCall->eventCallMain.id);
+            EventSubscriber* mainSubscriber = hashMapGet(&eventHandle->eventSubscribers, sizeof(StringView), &currentCall->eventCallMain.id);
             if (mainSubscriber == NULL) {
             } else {
                 if (internal_invokeSubscriber(currentCall, currentCall->eventCallMain.id, mainSubscriber) != EventOperationSuccess)
@@ -192,7 +192,7 @@ int internal_eventMainLoop(EventHandle* eventHandle) {
             }
 
             for (uint32_t groupCallIterator = 0; groupCallIterator < currentCall->eventCallMain.amountOfGroups; groupCallIterator++) {
-                EventSubscriber* groupSubscriber = hashMapCuckooGet(&eventHandle->eventSubscribers, sizeof(StringView), currentCall->eventCallMain.groupIds + groupCallIterator);
+                EventSubscriber* groupSubscriber = hashMapGet(&eventHandle->eventSubscribers, sizeof(StringView), currentCall->eventCallMain.groupIds + groupCallIterator);
                 if (groupSubscriber == NULL) {
                     continue;
                 }
@@ -214,7 +214,7 @@ EventError_t eventRegSubToID(EventHandle* eventHandle, const StringView ID, void
 
     EventSubscriber eventSubscriberToReg = {.eventSubscriberMain = {.eventSubscriberType = EventSubscriberNormal, .function = function, .flags = (shouldRunOnSeperateThread) ? EVENT_FLAG_CREATE_THREAD : 0}};
 
-    if (hashMapCuckooInsert(&eventHandle->eventSubscribers, sizeof ID, &ID, sizeof eventSubscriberToReg, &eventSubscriberToReg) != ContainerOPSuccessful) {
+    if (hashMapInsert(&eventHandle->eventSubscribers, sizeof ID, &ID, sizeof eventSubscriberToReg, &eventSubscriberToReg) != ContainerOPSuccessful) {
         mtx_unlock(&eventHandle->mutexForSubscriber);
         logCriticalCall("Cannot register id to eventSubscribers", __LINE__, __FILE__);
         return EventCritError;
@@ -233,7 +233,7 @@ EventError_t eventRegLogSubToID(EventHandle* eventHandle, StringView ID, void (*
                                                                    .function            = function,
                                                                    .flags               = (shouldRunOnSeperateThread) ? EVENT_FLAG_CREATE_THREAD : 0}};
 
-    if (hashMapCuckooInsert(&eventHandle->eventSubscribers, sizeof ID, &ID, sizeof eventSubscriberToReg, &eventSubscriberToReg) != ContainerOPSuccessful) {
+    if (hashMapInsert(&eventHandle->eventSubscribers, sizeof ID, &ID, sizeof eventSubscriberToReg, &eventSubscriberToReg) != ContainerOPSuccessful) {
         mtx_unlock(&eventHandle->mutexForSubscriber);
         logCriticalCall("Cannot register id to eventSubscribers", __LINE__, __FILE__);
         return EventCritError;

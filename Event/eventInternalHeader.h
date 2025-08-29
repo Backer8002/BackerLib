@@ -93,7 +93,7 @@ typedef struct {
     HashMapCuckoo eventSubscribers;
     thrd_t        eventThread;
     mtx_t         mutexForSubscriber;
-    _Atomic(bool)  shouldQuit;
+    int           shouldQuit;
 } EventHandle;
 
 extern EventHandle* eventSystemInit(void);

@@ -12,7 +12,7 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -pedantic")
 include_directories(BackerLibTypes INTERFACE "${PROJECT_SOURCE_DIR}/../include")
 add_library(BackerLibTypes STATIC
         Bitsets.c
-        HashMap.c
+        HashMapClosed.c
         HashMapCuckoo.c
         Queue.c
         BackerStrings.c
@@ -21,5 +21,9 @@ add_library(BackerLibTypes STATIC
         UnorderedContainer.c
         Heap.c
         Trie.c
-        Trie.h)
+        Trie.h
+        HashMap_internal.h
+        HashMapEncapsulatedFunctions.c
+        HashMapInternalShared.c
+        HashMapPublicShared.c)
 

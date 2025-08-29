@@ -88,12 +88,12 @@ namespace BackerLib {
      */
     extern BitSet         bitSetCreate(size_t amountOfElements, bool objectIsHeapAllocated);
 
-    typedef union HashMap {
+    typedef union HashMapClosed {
         struct {
             DataTypeFlags header;
         };
         struct {
-            Container     container;
+            Container container;
         };
         struct {
             UnorderedContainer unorderedContainer;
@@ -103,14 +103,7 @@ namespace BackerLib {
             size_t  keySize;
             size_t  elementOffset;
         };
-    } HashMap;
-
-#define HASHMAP_MAX_DEPTH                       UINT32_MAX
-#define HASHMAP_MAX_LOADFACTOR                  0.75f
-#define HASHMAP_CUCKOO_MAX_CUCKOO_OF_SIZE       0.9f
-#define HASHMAP_CUCKOO_MAX_REHASH_BEFORE_RESIZE 25ull
-
-#define FlagHashMapKeyIsDataTypeFlags           0x100
+    } HashMapClosed;
 
     /**
      * @brief Creates an HashMap on the stack. Use isValidObject to check validity.
@@ -121,8 +114,8 @@ namespace BackerLib {
      * @param hashFunction Callback to hash a key
      * @return HashMap on the stack.
      */
-    extern HashMap         hashMapCreateStack(size_t initialSize, size_t keySize, size_t elementSize, bool keyIsDataTypeFlags,
-                                              uint64_t (*hashFunction)(const void* element, size_t elementSize));
+    extern HashMapClosed  hashMapClosedCreateStack(size_t initialSize, size_t keySize, size_t elementSize, bool keyIsDataTypeFlags,
+                                                   uint64_t (*hashFunction)(const void* element, size_t elementSize));
 
     /**
      * @brief Creates an HashMap on the heap.
@@ -133,68 +126,8 @@ namespace BackerLib {
      * @param hashFunction Callback to hash a key
      * @return NULL if allocation failed.
      */
-    extern HashMap*        hashMapCreateHeap(size_t initialSize, size_t keySize, size_t elementSize, bool keyIsDataTypeFlags,
-                                             uint64_t (*hashFunction)(const void* element, size_t elementSize));
-
-    /**
-     * @brief Inserts element into hashMap using key.
-     * @param hashMap Pointer to valid HashMap
-     * @param sizeOfKey Size of key
-     * @param key Key to insert with
-     * @param sizeOfElement Size of element to insert
-     * @param element Element to insert
-     * @return ContainerInvalidSize if key has different size than the size of a key in the hashMap
-     * or if elementSize is larger than the size of a singel element in the hashMap.
-     * @return ContainerOPUnsuccessful if key already is associated with an element in the hashMap.
-     * @return ContainerAllocFailure if hashMap could not grow.
-     */
-    extern ContainerError  hashMapInsert(HashMap* hashMap, size_t sizeOfKey, const void* key, size_t sizeOfElement, void* element);
-    /**
-     *
-     * @param hashMap Pointer to valid HashMap
-     * @param sizeOfKey Size of key
-     * @param key Key to locate element with
-     * @return NULL if key does not exist in hashMap or if key does not match the size of a key in the hashMap, else pointer to element.
-     */
-    extern void*           hashMapGet(const HashMap* hashMap, size_t sizeOfKey, const void* key);
-    /**
-     *
-     * @param hashMap Pointer to valid HashMap
-     * @param sizeOfKey Size of key
-     * @param key Key
-     * @return true if Key does exist in hashMap.
-     */
-    extern bool            hashMapContainsKey(const HashMap* hashMap, size_t sizeOfKey, const void* key);
-    /**
-     * @brief Removes element from hashMap.
-     * @param hashMap Pointer to valid HashMap
-     * @param sizeOfKey Size of key
-     * @param key Key
-     * @param keyDestructor Optional destructor of key
-     * @param elementDestructor Optional destructor of element
-     * @return ContainerInvalidSize if size of key was different than the size of a key in the hashMap.
-     * @return ContainerOPUnsuccessful if key did not exist in hashMap.
-     */
-    extern ContainerError  hashMapRemove(HashMap* hashMap, size_t sizeOfKey, const void* key, void (*keyDestructor)(void* element), void (*elementDestructor)(void* element));
-    /**
-     * @brief Replaces element at key.
-     * @param hashMap Pointer to valid HashMap
-     * @param sizeOfKey Size of key
-     * @param key Key
-     * @param sizeOfElement Size of element to insert
-     * @param element Element to insert
-     * @param elementDestructor Optional destructor of element
-     * @return ContainerInvalidSize if size of key was different than the size of a key in the hashMap.
-     * @return ContainerOPUnsuccessful if key did not exist in hashMap.
-     */
-    extern ContainerError  hashMapReplace(HashMap* hashMap, size_t sizeOfKey, const void* key, size_t sizeOfElement, void* element, void (*elementDestructor)(void* element));
-    /**
-     * @brief Destroys HashMap if applicable
-     * @param hashMap Pointer to HashMap
-     * @param keyDestructor Optional key destructor
-     * @param elementDestructor Optional element destructor
-     */
-    extern void            hashMapDestroy(HashMap* hashMap, void (*keyDestructor)(void* key), void (*elementDestructor)(void* element));
+    extern HashMapClosed* hashMapClosedCreateHeap(size_t initialSize, size_t keySize, size_t elementSize, bool keyIsDataTypeFlags,
+                                                  uint64_t (*hashFunction)(const void* element, size_t elementSize));
 
     /**
      * @brief Hash function. Defualt for the HashMap implementations.
@@ -209,7 +142,7 @@ namespace BackerLib {
      * @param size Size of element to hash
      * @return Hash
      */
-    static uint64_t hashFunctionDefualtSingleVar(const void* element, size_t size) {
+    static uint64_t       hashFunctionDefualtSingleVar(const void* element, size_t size) {
         return hashFunctionDefualt(1, size, element);
     }
     /**
@@ -223,14 +156,12 @@ namespace BackerLib {
         return hashFunctionDefualt(2, sizeof(salt), &salt, size, element);
     }
 
-#define HASHMAP_CUCKOO_SWAPSPACE_CONTAINS_OBJ 0x200
-
     typedef union HashMapCuckoo {
         struct {
             DataTypeFlags header;
         };
         struct {
-            Container     container;
+            Container container;
         };
         struct {
             UnorderedContainer unorderedContainer;
@@ -266,19 +197,21 @@ namespace BackerLib {
      */
     extern HashMapCuckoo* hashMapCuckooCreateHeap(size_t initialSize, size_t keySize, size_t elementSize, bool keyIsDataTypeFlags,
                                                   uint64_t (*hashFunction)(const void* element, size_t elementSize, uint32_t salt));
+
+
     /**
      * @brief Inserts element into hashMap using key.
-     * @param hashMap Pointer to valid HashMapCuckoo
+     * @param hashMap Pointer to valid HashMap
      * @param keySize Size of key
      * @param key Key to insert with
      * @param elementSize Size of element to insert
      * @param element Element to insert
      * @return ContainerInvalidSize if key has different size than the size of a key in the hashMap
-     * or if elementSize is larger than the size of a singel element in the hashMap.
+     * or if elementSize is larger than the size of a single element in the hashMap.
      * @return ContainerOPUnsuccessful if key already is associated with an element in the hashMap.
-
+     * @return ContainerAllocFailure if hashMap could not grow.
      */
-    extern ContainerError hashMapCuckooInsert(HashMapCuckoo* hashMap, size_t keySize, const void* key, size_t elementSize, const void* element);
+    extern inline ContainerError hashMapInsert(void* hashMap, size_t keySize, const void* key, size_t elementSize, void* element);
     /**
      *
      * @param hashMap Pointer to valid HashMapCuckoo
@@ -286,7 +219,16 @@ namespace BackerLib {
      * @param key Key to locate element with
      * @return NULL if key does not exist in hashMap, if key does not match the size of a key in the hashMap, or if hashMap could not grow, else pointer to element.
      */
-    extern void*          hashMapCuckooGet(HashMapCuckoo* hashMap, size_t keySize, const void* key);
+    extern inline void*          hashMapGet(void* hashMap, size_t keySize, const void* key);
+    /**
+     *
+     * @param hashMap Pointer to valid HashMap
+     * @param keySize Size of key
+     * @param key Key
+     * @return true if Key does exist in hashMap.
+     * @return false if allocation has failed, keySize was invalid or if element does not exist.
+     */
+    extern inline bool           hashMapContainsKey(void* hashMap, size_t keySize, const void* key);
     /**
      * @brief Removes element from hashMap.
      * @param hashMap Pointer to valid HashMapCuckoo
@@ -296,17 +238,29 @@ namespace BackerLib {
      * @param elementDestructor Optional destructor of element
      * @return ContainerInvalidSize if size of key was different from the size of a key in the hashMap.
      * @return ContainerOPUnsuccessful if key did not exist in hashMap.
-     * @return ContainerAllocFailure if hashMap could not grow for a element in the previously could not be inserted.
+     * @return ContainerAllocFailure if hashMap could not grow if needed.
      */
-    extern ContainerError hashMapCuckooRemove(HashMapCuckoo* hashMap, size_t keySize, const void* key, void (*keyDestructor)(void* object), void (*elementDestructor)(void* object));
+    extern inline ContainerError hashMapRemove(void* hashMap, size_t keySize, const void* key, void (*keyDestructor)(void* object), void (*elementDestructor)(void* object));
+    /**
+     * @brief Replaces element at key.
+     * @param hashMap Pointer to valid HashMap
+     * @param keySize Size of key
+     * @param key Key
+     * @param elementSize Size of element to insert
+     * @param element Element to insert
+     * @param elementDestructor Optional destructor of element
+     * @return ContainerAllocFailure if hashMap could not grow if needed.
+     * @return ContainerInvalidSize if size of key was different than the size of a key in the hashMap.
+     * @return ContainerOPUnsuccessful if key did not exist in hashMap.
+     */
+    extern inline ContainerError hashMapReplace(void* hashMap, size_t keySize, const void* key, size_t elementSize, void* element, void (*elementDestructor)(void* object));
     /**
      * @brief Destroys hashMap if applicable
      * @param hashMap Pointer to HashMap
      * @param keyDestructor Optional key destructor
      * @param elementDestructor Optional element destructor
      */
-    extern void           hashMapCuckooDestroy(HashMapCuckoo* hashMap, void (*keyDestructor)(void* object), void (*elementDestructor)(void* object));
-
+    extern inline void           hashMapDestroy(void* hashMap, void (*keyDestructor)(void* object), void (*elementDestructor)(void* object));
 #ifdef __cplusplus
     }
 };
