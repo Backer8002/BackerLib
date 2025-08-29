@@ -15,13 +15,20 @@ add_library(BackerLibTypes STATIC
         HashMapClosed.c
         HashMapCuckoo.c
         Queue.c
+        Queue.h
         BackerStrings.c
+        BackerStrings.h
         Container.c
+        Container.h
         DynamicContainer.c
+        DynamicContainer.h
         UnorderedContainer.c
+        UnorderedContainer.h
         Heap.c
+        Heap.h
         Trie.c
         Trie.h
+        HashMap.h
         HashMap_internal.h
         HashMapEncapsulatedFunctions.c
         HashMapInternalShared.c

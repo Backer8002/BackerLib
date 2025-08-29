@@ -46,7 +46,7 @@ static inline void internal_hashMapInit(
     hashMap->lengthOfHashArray = initialSize;
     hashMap->keySize           = keySize;
     hashMap->header |= (keyIsDataTypeFlags ? FlagHashMapKeyIsDataTypeFlags : 0);
-    hashMap->unorderedContainer.bitset[0] |= 0x80;
+    hashMap->unorderedContainer.bitset[0] |= UINT64_MAX - (uint64_t)INT64_MAX;
     hashMap->container.amountOfIndexes++; // Use 0 as invalid index
 }
 
