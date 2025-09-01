@@ -33,7 +33,7 @@ EventHandle* eventSystemInit(void) {
         return NULL;
     }
 
-    eventHandle->eventSubscribers = hashMapCreateStack(5, sizeof(StringView), sizeof(EventSubscriber), true, hashFunctionDefualtSingleVarWithSalt);
+    eventHandle->eventSubscribers = hashMapCreateStack(5, sizeof(StringView), sizeof(EventSubscriber), true, NULL);
 
     if (!isValidObject((DataTypeFlags*) &eventHandle->eventSubscribers)) {
         arrayListDestroy(&(eventHandle->eventQueue));
