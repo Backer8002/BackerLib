@@ -13,7 +13,6 @@ include_directories(BackerLibTypes INTERFACE "${PROJECT_SOURCE_DIR}/../include")
 add_library(BackerLibTypes STATIC
         Bitsets.c
         HashMapClosed.c
-        HashMapCuckoo.c
         Queue.c
         Queue.h
         BackerStrings.c
@@ -29,8 +28,5 @@ add_library(BackerLibTypes STATIC
         Trie.c
         Trie.h
         HashMap.h
-        HashMap_internal.h
-        HashMapEncapsulatedFunctions.c
-        HashMapInternalShared.c
         HashMapPublicShared.c)
 

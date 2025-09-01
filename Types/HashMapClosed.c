@@ -1,6 +1,5 @@
 #include "HashMap.h"
 
-#include "HashMap_internal.h"
 #include "TypesMain.h"
 #include "UnorderedContainer.h"
 
@@ -18,10 +17,33 @@ typedef struct HashArrayNode {
     Byte data[];
 } HashArrayNode;
 
+static bool internal_memCmpKey(size_t keySize, const void* key, const void* otherKey, bool isDataTypeFlagsQualified);
 
+static bool internal_memCmpKey(size_t keySize, const void* key, const void* otherKey, bool isDataTypeFlagsQualified) {
+    if (!otherKey || !key)
+        return false;
+    if (isDataTypeFlagsQualified) {
+        if ((DataTypeFlags*) key != (DataTypeFlags*) otherKey)
+            return false;
+        if ((*(DataTypeFlags*) key & ObjectFlagIsContainer) && (*(DataTypeFlags*) key & ObjectFlagIsNotContinuous) == 0) {
+            if (((Container*) key)->amountOfIndexes != ((Container*) otherKey)->amountOfIndexes || ((Container*) key)->byteSizeOfSingleElement != ((Container*) otherKey)->byteSizeOfSingleElement)
+                return false;
+            for (size_t i = 0; i < ((Container*) key)->amountOfIndexes; i++) {
+                if (memcmp((Bytes) ((Container*) key)->array + ((Container*) key)->byteSizeOfSingleElement,
+                           (Bytes) ((Container*) otherKey)->array + ((Container*) key)->byteSizeOfSingleElement,
+                           ((Container*) key)->byteSizeOfSingleElement) != 0)
+                    return false;
+            }
+            return true;
+        }
+    }
+    if (memcmp(key, otherKey, keySize) != 0)
+        return false;
+    return true;
+}
 
 static inline void internal_hashMapInit(
-    HashMapClosed* hashMap,
+    HashMap* hashMap,
     size_t initialSize, size_t keySize, size_t elementSize, bool keyIsDataTypeFlags,
     uint64_t (*hashFunction)(const void* element, size_t elementSize)) {
 
@@ -50,16 +72,16 @@ static inline void internal_hashMapInit(
     hashMap->container.amountOfIndexes++; // Use 0 as invalid index
 }
 
-HashMapClosed hashMapClosedCreateStack(size_t initialSize, size_t keySize, size_t elementSize, bool keyIsDataTypeFlags,
+HashMap hashMapCreateStack(size_t initialSize, size_t keySize, size_t elementSize, bool keyIsDataTypeFlags,
                            uint64_t (*hashFunction)(const void* element, size_t elementSize)) {
-    HashMapClosed hashMap;
+    HashMap hashMap;
     internal_hashMapInit(&hashMap, initialSize, keySize, elementSize, keyIsDataTypeFlags, hashFunction);
     return hashMap;
 }
 
-HashMapClosed* hashMapClosedCreateHeap(size_t initialSize, size_t keySize, size_t elementSize, bool keyIsDataTypeFlags,
+HashMap* hashMapCreateHeap(size_t initialSize, size_t keySize, size_t elementSize, bool keyIsDataTypeFlags,
                            uint64_t (*hashFunction)(const void* element, size_t elementSize)) {
-    HashMapClosed* hashMap = malloc(sizeof(*hashMap));
+    HashMap* hashMap = malloc(sizeof(*hashMap));
     if (hashMap == NULL)
         return NULL;
     internal_hashMapInit(hashMap, initialSize, keySize, elementSize, keyIsDataTypeFlags, hashFunction);
@@ -78,7 +100,7 @@ static uint64_t internal_hashMapHashSingelVar(size_t elementSize, const void* el
     return hashFunction(element, elementSize);
 }
 
-static ContainerError internal_rehash(HashMapClosed* hashMap, size_t newSize) {
+static ContainerError internal_rehash(HashMap* hashMap, size_t newSize) {
     size_t* newHashArray = calloc(newSize, sizeof *newHashArray);
     if (newHashArray == NULL)
         return ContainerAllocFailure;
@@ -105,7 +127,7 @@ static ContainerError internal_rehash(HashMapClosed* hashMap, size_t newSize) {
     return ContainerOPSuccessful;
 }
 
-ContainerError hashMapClosedInsert(HashMapClosed* hashMap, size_t sizeOfKey, const void* key, size_t sizeOfElement, void* element) {
+ContainerError hashMapInsert(HashMap* hashMap, size_t sizeOfKey, const void* key, size_t sizeOfElement, void* element) {
     if (sizeOfElement > hashMap->container.byteSizeOfSingleElement - hashMap->elementOffset || sizeOfKey != hashMap->keySize)
         return ContainerInvalidSize;
     uint64_t hash = internal_hashMapHashSingelVar(sizeOfKey,
@@ -144,7 +166,7 @@ ContainerError hashMapClosedInsert(HashMapClosed* hashMap, size_t sizeOfKey, con
     return ContainerOPSuccessful;
 }
 
-static HashArrayNode* internal_hashArrayGetFromKey(const HashMapClosed* hashMap, const void* key) {
+static HashArrayNode* internal_hashArrayGetFromKey(const HashMap* hashMap, const void* key) {
     uint64_t hash = internal_hashMapHashSingelVar(hashMap->keySize,
                                                   key,
                                                   (hashMap->header & FlagHashMapKeyIsDataTypeFlags) ? true : false,
@@ -164,7 +186,7 @@ static HashArrayNode* internal_hashArrayGetFromKey(const HashMapClosed* hashMap,
     return NULL;
 }
 
-void* hashMapClosedGet(const HashMapClosed* hashMap, size_t sizeOfKey, const void* key) {
+void* hashMapGet(const HashMap* hashMap, size_t sizeOfKey, const void* key) {
     if (sizeOfKey != hashMap->keySize)
         return NULL;
     HashArrayNode* hashArrayNode = internal_hashArrayGetFromKey(hashMap, key);
@@ -173,7 +195,7 @@ void* hashMapClosedGet(const HashMapClosed* hashMap, size_t sizeOfKey, const voi
     return (Bytes) hashArrayNode + hashMap->elementOffset;
 }
 
-ContainerError hashMapClosedRemove(HashMapClosed* hashMap, size_t sizeOfKey, const void* key, void (*keyDestructor)(void* element), void (*elementDestructor)(void* element)) {
+ContainerError hashMapRemove(HashMap* hashMap, size_t sizeOfKey, const void* key, void (*keyDestructor)(void* element), void (*elementDestructor)(void* element)) {
     if (sizeOfKey != hashMap->keySize)
         return ContainerInvalidSize;
 
@@ -208,7 +230,7 @@ HashMapRemoveHandleDestruct:
     return ContainerOPSuccessful;
 }
 
-ContainerError hashMapClosedReplace(HashMapClosed* hashMap, size_t sizeOfKey, const void* key, size_t sizeOfElement, void* element, void (*elementDestructor)(void* element)) {
+ContainerError hashMapReplace(HashMap* hashMap, size_t sizeOfKey, const void* key, size_t sizeOfElement, void* element, void (*elementDestructor)(void* element)) {
     if (sizeOfKey != hashMap->keySize || sizeOfElement > hashMap->container.byteSizeOfSingleElement - hashMap->elementOffset)
         return ContainerInvalidSize;
 
@@ -222,11 +244,11 @@ ContainerError hashMapClosedReplace(HashMapClosed* hashMap, size_t sizeOfKey, co
     return ContainerOPSuccessful;
 }
 
-void hashMapClosedDestroy(HashMapClosed* hashMap, void (*keyDestructor)(void* key), void (*elementDestructor)(void* element)) {
+void hashMapDestroy(HashMap* hashMap, void (*keyDestructor)(void* key), void (*elementDestructor)(void* element)) {
     if (!(DataTypeFlags*) hashMap)
         return;
     for (size_t i = 1; i < hashMap->container.amountOfIndexes; i++) {
-        if ((hashMap->unorderedContainer.bitset[i / 8] & (0x80 >> (i % 8))) == 0)
+        if (unorderedContainerGet((UnorderedContainer*)hashMap,i).resultCode == ContainerOPUnsuccessful)
             continue;
         if (keyDestructor)
             keyDestructor(&((HashArrayNode*) ((Bytes) hashMap->container.array + hashMap->container.byteSizeOfSingleElement * i))->data);

@@ -39,14 +39,16 @@ UnorderedContainerPutResult unorderedContainerPut(UnorderedContainer* container,
 
         container->container.array = newArr;
 
-        uint64_t* newBitSet         = realloc(container->bitset, (container->maxSize * 2 + 8) / (8 * sizeof *container->bitset)); // Ceiling division used ((container->maxSize * 2 + 1) + 7) / 8
+        uint64_t* newBitSet         = realloc(container->bitset, sizeof *container->bitset * (container->maxSize * 2 + 8 * sizeof*container->bitset) / (8 * sizeof *container->bitset)); // Ceiling division used ((container->maxSize * 2 + 1) + 7) / 8
         if (!newBitSet) {
             result.resultCode = ContainerAllocFailure;
             return result;
         }
 
         container->bitset = newBitSet;
-        memset(container->bitset + (container->maxSize + 8 * sizeof *container->bitset - 1) / (8 * sizeof *container->bitset), 0, (container->maxSize * 2 + 8 * sizeof *container->bitset) / (8 * sizeof *container->bitset) - (container->maxSize + 8 * sizeof *container->bitset - 1) / (8 * sizeof * container->bitset));
+        memset(container->bitset + (container->maxSize + 8 * sizeof *container->bitset - 1) / (8 * sizeof *container->bitset),
+            0,
+            sizeof *container->bitset * ((container->maxSize * 2 + 8 * sizeof *container->bitset) / (8 * sizeof *container->bitset) - (container->maxSize + 8 * sizeof *container->bitset - 1) / (8 * sizeof * container->bitset)));
         container->maxSize += container->maxSize + 1;
     }
 
@@ -62,7 +64,7 @@ UnorderedContainerPutResult unorderedContainerPut(UnorderedContainer* container,
         if (((container->bitset[bytesIterator] >> (56 - bitIterator)) & UINT8_MAX)== UINT8_MAX)
             bitIterator += 8;
         for (unsigned i = bitIterator; i < bitIterator + 8; i++) {
-            if (internal_bitsetGet(container->bitset, bytesIterator * 8 * sizeof *container->bitset + i) == 0) {
+            if (!internal_bitsetGet(container->bitset, bytesIterator * 8 * sizeof *container->bitset + i)) {
                 internal_bitsetAdd(container->bitset, bytesIterator * 8 * sizeof *container->bitset + i);
                 availableIndex = bytesIterator * 8 * sizeof *container->bitset + i;
                 break;
@@ -107,7 +109,7 @@ UnorderedContainerGetResult unorderedContainerGet(const UnorderedContainer* cont
         result.resultCode = ContainerInvalidIndex;
         return result;
     }
-    if (internal_bitsetGet(container->bitset, index) == 0) {
+    if (!internal_bitsetGet(container->bitset, index)) {
         result.resultCode = ContainerOPUnsuccessful;
         return result;
     }
@@ -120,7 +122,7 @@ UnorderedContainerGetResult unorderedContainerGet(const UnorderedContainer* cont
 ContainerError unorderedContainerRemove(UnorderedContainer* container, size_t index, void (*destructor)(void* element)) {
     if (index >= container->container.amountOfIndexes)
         return ContainerInvalidIndex;
-    if (internal_bitsetGet(container->bitset, index) == 0)
+    if (!internal_bitsetGet(container->bitset, index))
         return ContainerOPUnsuccessful;
     if (destructor)
         destructor((container->header & ObjectFlagElementsArePointers)
