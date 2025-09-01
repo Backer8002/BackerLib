@@ -1,4 +1,5 @@
 #include "HashMap.h"
+
 #include "TypesMain.h"
 #include "UnorderedContainer.h"
 
@@ -16,23 +17,30 @@ typedef struct HashArrayNode {
     Byte data[];
 } HashArrayNode;
 
-uint64_t hashFunctionDefualt(size_t amountOfVars, ...) {
-    if (amountOfVars == 0)
-        return 0;
-    va_list argsToHash;
-    va_start(argsToHash, amountOfVars);
-    uint64_t hash = 0;
-    for (size_t j = 0; j < amountOfVars; j++) {
-        size_t amountOfBytes = va_arg(argsToHash, size_t);
-        Byte*  valuesToHash  = va_arg(argsToHash, Byte*);
-        hash ^= (uint64_t) valuesToHash[0] ^ ~(amountOfBytes << 10);
-        for (size_t i = 0; i < amountOfBytes; i++)
-            hash ^= (((uint64_t) valuesToHash[i] + hash) * (hash + (hash << 5)));
-    }
-    va_end(argsToHash);
-    return hash;
-}
+static bool internal_memCmpKey(size_t keySize, const void* key, const void* otherKey, bool isDataTypeFlagsQualified);
 
+static bool internal_memCmpKey(size_t keySize, const void* key, const void* otherKey, bool isDataTypeFlagsQualified) {
+    if (!otherKey || !key)
+        return false;
+    if (isDataTypeFlagsQualified) {
+        if ((DataTypeFlags*) key != (DataTypeFlags*) otherKey)
+            return false;
+        if ((*(DataTypeFlags*) key & ObjectFlagIsContainer) && (*(DataTypeFlags*) key & ObjectFlagIsNotContinuous) == 0) {
+            if (((Container*) key)->amountOfIndexes != ((Container*) otherKey)->amountOfIndexes || ((Container*) key)->byteSizeOfSingleElement != ((Container*) otherKey)->byteSizeOfSingleElement)
+                return false;
+            for (size_t i = 0; i < ((Container*) key)->amountOfIndexes; i++) {
+                if (memcmp((Bytes) ((Container*) key)->array + ((Container*) key)->byteSizeOfSingleElement,
+                           (Bytes) ((Container*) otherKey)->array + ((Container*) key)->byteSizeOfSingleElement,
+                           ((Container*) key)->byteSizeOfSingleElement) != 0)
+                    return false;
+            }
+            return true;
+        }
+    }
+    if (memcmp(key, otherKey, keySize) != 0)
+        return false;
+    return true;
+}
 
 static inline void internal_hashMapInit(
     HashMap* hashMap,
@@ -60,7 +68,7 @@ static inline void internal_hashMapInit(
     hashMap->lengthOfHashArray = initialSize;
     hashMap->keySize           = keySize;
     hashMap->header |= (keyIsDataTypeFlags ? FlagHashMapKeyIsDataTypeFlags : 0);
-    hashMap->unorderedContainer.bitset[0] |= 0x80;
+    hashMap->unorderedContainer.bitset[0] |= UINT64_MAX - (uint64_t)INT64_MAX;
     hashMap->container.amountOfIndexes++; // Use 0 as invalid index
 }
 
@@ -90,29 +98,6 @@ static uint64_t internal_hashMapHashSingelVar(size_t elementSize, const void* el
         return hashFunction(((Container*) element)->array, ((Container*) element)->byteSizeOfSingleElement * ((Container*) element)->amountOfIndexes);
 
     return hashFunction(element, elementSize);
-}
-
-static bool internal_memCmpKey(size_t keySize, const void* key, const void* hashArrayElement, bool isDataTypeFlagsQualified) {
-    if (!hashArrayElement || !key)
-        return false;
-    if (isDataTypeFlagsQualified) {
-        if ((DataTypeFlags*) key != (DataTypeFlags*) hashArrayElement)
-            return false;
-        if ((*(DataTypeFlags*) key & ObjectFlagIsContainer) && (*(DataTypeFlags*) key & ObjectFlagIsNotContinuous) == 0) {
-            if (((Container*) key)->amountOfIndexes != ((Container*) hashArrayElement)->amountOfIndexes || ((Container*) key)->byteSizeOfSingleElement != ((Container*) hashArrayElement)->byteSizeOfSingleElement)
-                return false;
-            for (size_t i = 0; i < ((Container*) key)->amountOfIndexes; i++) {
-                if (memcmp((Bytes) ((Container*) key)->array + ((Container*) key)->byteSizeOfSingleElement,
-                           (Bytes) ((Container*) hashArrayElement)->array + ((Container*) key)->byteSizeOfSingleElement,
-                           ((Container*) key)->byteSizeOfSingleElement) != 0)
-                    return false;
-            }
-            return true;
-        }
-    }
-    if (memcmp(key, hashArrayElement, keySize) != 0)
-        return false;
-    return true;
 }
 
 static ContainerError internal_rehash(HashMap* hashMap, size_t newSize) {
@@ -210,12 +195,6 @@ void* hashMapGet(const HashMap* hashMap, size_t sizeOfKey, const void* key) {
     return (Bytes) hashArrayNode + hashMap->elementOffset;
 }
 
-bool hashMapContainsKey(const HashMap* hashMap, size_t sizeOfKey, const void* key) {
-    if (sizeOfKey == hashMap->keySize)
-        return internal_hashArrayGetFromKey(hashMap, key) != NULL ? true : false;
-    return false;
-}
-
 ContainerError hashMapRemove(HashMap* hashMap, size_t sizeOfKey, const void* key, void (*keyDestructor)(void* element), void (*elementDestructor)(void* element)) {
     if (sizeOfKey != hashMap->keySize)
         return ContainerInvalidSize;
@@ -269,7 +248,7 @@ void hashMapDestroy(HashMap* hashMap, void (*keyDestructor)(void* key), void (*e
     if (!(DataTypeFlags*) hashMap)
         return;
     for (size_t i = 1; i < hashMap->container.amountOfIndexes; i++) {
-        if ((hashMap->unorderedContainer.bitset[i / 8] & (0x80 >> (i % 8))) == 0)
+        if (unorderedContainerGet((UnorderedContainer*)hashMap,i).resultCode == ContainerOPUnsuccessful)
             continue;
         if (keyDestructor)
             keyDestructor(&((HashArrayNode*) ((Bytes) hashMap->container.array + hashMap->container.byteSizeOfSingleElement * i))->data);

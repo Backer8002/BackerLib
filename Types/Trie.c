@@ -17,7 +17,7 @@ static inline void internal_trieInit(Trie* trie, size_t amountOfCharsToStore, si
         return;
     trie->amountOfChars      = amountOfCharsToStore;
     trie->composeCharToIndex = composeCharToIndex;
-    trie->unorderedContainer.bitset[0] |= 0x80;
+    trie->unorderedContainer.bitset[0] |= (uint64_t)INT64_MIN;
     trie->container.amountOfIndexes++;
     memset(trie->container.array, 0, trie->container.byteSizeOfSingleElement);
 }
