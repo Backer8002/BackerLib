@@ -13,7 +13,7 @@
 
 
 static EventHandle* mainEventHandle     = NULL;
-static HashMapClosed      memoryAllocs        = {0};
+static HashMap      memoryAllocs        = {0};
 static FILE *       debugFileStreams[2] = {NULL, NULL}, *errorFileStreams[2] = {NULL, NULL};
 
 #include <stdlib.h>
@@ -33,7 +33,7 @@ EventHandle* eventSystemInit(void) {
         return NULL;
     }
 
-    eventHandle->eventSubscribers = hashMapCuckooCreateStack(5, sizeof(StringView), sizeof(EventSubscriber), true, hashFunctionDefualtSingleVarWithSalt);
+    eventHandle->eventSubscribers = hashMapCreateStack(5, sizeof(StringView), sizeof(EventSubscriber), true, hashFunctionDefualtSingleVarWithSalt);
 
     if (!isValidObject((DataTypeFlags*) &eventHandle->eventSubscribers)) {
         arrayListDestroy(&(eventHandle->eventQueue));
@@ -48,7 +48,7 @@ EventHandle* eventSystemInit(void) {
         return NULL;
     }
 #if 1
-    memoryAllocs = hashMapClosedCreateStack(100, sizeof(size_t), sizeof(size_t), false, hashFunctionDefualtSingleVar);
+    memoryAllocs = hashMapCreateStack(100, sizeof(size_t), sizeof(size_t), false, hashFunctionDefualtSingleVar);
     if (!isValidObject((DataTypeFlags*) &memoryAllocs)) {
         hashMapDestroy(&(eventHandle->eventSubscribers), NULL, NULL);
         arrayListDestroy(&(eventHandle->eventQueue));
