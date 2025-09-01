@@ -90,7 +90,7 @@ typedef union {
 
 typedef struct {
     ArrayList     eventQueue;
-    HashMapCuckoo eventSubscribers;
+    HashMap eventSubscribers;
     thrd_t        eventThread;
     mtx_t         mutexForSubscriber;
     int           shouldQuit;
