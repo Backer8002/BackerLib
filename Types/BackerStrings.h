@@ -6,6 +6,7 @@
 #include "DynamicContainer.h"
 #include <stddef.h>
 #include <string.h>
+#include <wchar.h>
 
 #ifdef __cplusplus
 namespace BackerLib {
@@ -16,6 +17,7 @@ namespace BackerLib {
      * @brief String should be treated as a DynamicContainer with element size of a char. There are no runtime checks that it is complied with and the trust is on the programmer. All library function adhere to this definition. String is a valid DynamicContainer.
      */
     typedef DynamicContainer     String;
+    typedef DynamicContainer     StringW;
     /**
      * @brief Creates a String that contains a copy of string param. If string is a CString it is not length checked with, strlen instead function will copy length bytes.
      * @param string Valid char array or CString
@@ -83,6 +85,17 @@ namespace BackerLib {
      * @return ContainerInvalidIndex if index was larger than the length of destString.
      */
     extern ContainerError        stringReplace(String* destString, const String* stringToReplaceWith, size_t firstIndex);
+    /**
+     * @brief Creates a StringW that contains a copy of str param. If str is a CString it is not length checked with strlen, instead function will copy len indecies.
+     * @param str Valid wchar_t array or Wide C-String
+     * @param len Length of array or string
+     * @return StringW that contains a copy of string up to length chars.
+     * @return Invalid object if alloc failed.
+     */
+    extern StringW               stringWCreate(const wchar_t* str, size_t len);
+
+
+
 
     /**
      * A non owning constant string. Existing so that it can be appended to a string or have read operations that must know the length of it.
@@ -96,12 +109,27 @@ namespace BackerLib {
         };
         Container container;
     } StringView;
+    /**
+     * A non owning constant string. Existing so that it can be appended to a string or have read operations that must know the length of it.
+     */
+    typedef const union StringViewW {
+        struct {
+            DataTypeFlags  header;
+            const uint32_t byteSizeOfSingleElement;
+            const size_t   amountOfIndexes;
+            const wchar_t* array;
+        };
+        Container container;
+    } StringViewW;
 
     /**
-     * @param cString Any valid constexpr char[]
+     * @param cString Any valid constexpr char[] or literal
      */
-#define stringViewInitConstExpr(cString) {.amountOfIndexes = sizeof(cString), .array = cString, .byteSizeOfSingleElement = 1, .header = ObjectFlagIsValid | ObjectFlagIsContainer}
-
+#define stringViewInitConstExpr(cString)     {.amountOfIndexes = sizeof(cString), .array = cString, .byteSizeOfSingleElement = 1, .header = ObjectFlagIsValid | ObjectFlagIsContainer}
+    /**
+     * @param wideString Any valid constexpr wchar_t[] or literal
+     */
+#define stringViewWInitConstExpr(wideString) {.amountOfIndexes = sizeof(wideString), .array = wideString, .byteSizeOfSingleElement = sizeof(wchar_t), .header = ObjectFlagIsValid | ObjectFlagIsContainer}
 
     /**
      *
@@ -109,12 +137,23 @@ namespace BackerLib {
      * @return StringView Object with len counted.
      */
     static inline StringView stringViewInit(const char* str) {
-        StringView stringView = {
+        return (StringView) {
             .amountOfIndexes         = strlen(str),
             .array                   = str,
             .byteSizeOfSingleElement = 1,
             .header                  = ObjectFlagIsValid | ObjectFlagIsContainer};
-        return stringView;
+    }
+    /**
+     *
+     * @param str Any valid Wide C-string
+     * @return StringViewW Object with len counted.
+     */
+    static inline StringViewW stringViewWInit(const wchar_t* str) {
+        return (StringViewW) {
+            .amountOfIndexes         = wcslen(str),
+            .array                   = str,
+            .byteSizeOfSingleElement = sizeof(wchar_t),
+            .header                  = ObjectFlagIsValid | ObjectFlagIsContainer};
     }
 #ifdef __cplusplus
     }

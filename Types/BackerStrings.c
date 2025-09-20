@@ -42,7 +42,14 @@ String stringStrip(const String* string, char charToStrip, bool stripFromBack, u
     if (!isValidObject(&returnString.header))
         return returnString;
 
-    size_t amountStripped = 0;
+    size_t amountStripped = 0;    String allocatedString = containerDynamicCreateStack(length, sizeof(char), false);
+
+    if (!isValidObject(&allocatedString.header))
+        return allocatedString;
+
+    memcpy(allocatedString.container.array, string, length);
+    allocatedString.container.amountOfIndexes = length;
+    return allocatedString;
     for (size_t iterator = 0; iterator < string->container.amountOfIndexes; iterator++) {
         char* currentChar = stringGetChar(string, (stripFromBack ? string->container.amountOfIndexes - 1 - iterator : iterator));
         if ((*currentChar != charToStrip) || (amountToStrip && (amountStripped >= amountToStrip)))
@@ -127,4 +134,15 @@ ContainerError stringReplace(String* destString, const String* stringToReplaceWi
     for (size_t i = 0; i < stringToReplaceWith->container.amountOfIndexes; i++)
         containerSet((Container*) destString, i + firstIndex, sizeof(char), containerGet((const Container*) stringToReplaceWith, i));
     return ContainerOPSuccessful;
+}
+
+StringW stringWCreate(const wchar_t* str, size_t len) {
+    StringW allocatedString = containerDynamicCreateStack(len, sizeof(wchar_t), false);
+
+    if (!isValidObject(&allocatedString.header))
+        return allocatedString;
+
+    memcpy(allocatedString.container.array, str, len * sizeof(wchar_t));
+    allocatedString.container.amountOfIndexes = len;
+    return allocatedString;
 }

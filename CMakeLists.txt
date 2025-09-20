@@ -19,5 +19,5 @@ add_subdirectory(Types)
 add_subdirectory(Math)
 add_subdirectory(Event)
 add_subdirectory(Concurrency)
-
+add_subdirectory(Parsing)
 
