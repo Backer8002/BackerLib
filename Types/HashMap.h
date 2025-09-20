@@ -10,7 +10,6 @@
 namespace BackerLib {
     extern "C" {
 #endif // __cplusplus
-#include <threads.h>
 
     typedef struct {
         DataTypeFlags header;

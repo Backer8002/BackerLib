@@ -56,7 +56,7 @@ static void internal_bubbleUp(Container* container, size_t currentIndex, bool (*
 }
 
 ContainerError heapInsert(Heap* heap, size_t sizeOfElement, const void* element) {
-    if (sizeOfElement != heap->container.byteSizeOfSingleElement)
+    if (sizeOfElement > heap->container.byteSizeOfSingleElement)
         return ContainerInvalidSize;
 
     ContainerError errorCode = containerDynamicAppend((DynamicContainer*) heap, sizeOfElement, element);

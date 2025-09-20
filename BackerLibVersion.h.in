@@ -1,3 +1,3 @@
 #pragma once
-#define BackerLib_Version_Major @BackerLib_Version_Major
-#define BackerLib_version_Minor @BackerLib_version_Minor
+#define BackerLib_Version_Major @BackerLib_Version_Major@
+#define BackerLib_version_Minor @BackerLib_Version_Minor@
