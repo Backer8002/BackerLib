@@ -1,20 +1,13 @@
 #pragma once
 
 #include <BackerLibTypes.h>
-#include <stdatomic.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <threads.h>
+#include <BackerLibConcurrency.h>
 
 #define EVENT_FLAG_CREATE_THREAD 0x2
-
-#ifdef _WIN32
-static const thrd_t noThread = {0};
-#else
-#define noThread 0
-#endif
 
 
 typedef enum {
@@ -39,7 +32,7 @@ typedef struct {
     EventType    eventType;
     StringView  id;
     StringView* groupIds;
-    thrd_t       callerThread;
+    Thread       callerThread;
     uint32_t     amountOfGroups;
 } EventCallMain;
 
@@ -90,10 +83,10 @@ typedef union {
 
 typedef struct {
     ArrayList     eventQueue;
-    HashMapCuckoo eventSubscribers;
-    thrd_t        eventThread;
-    mtx_t         mutexForSubscriber;
-    _Atomic(bool)  shouldQuit;
+    HashMap eventSubscribers;
+    Thread        eventThread;
+    Mutex        mutexForSubscriber;
+    bool           shouldQuit;
 } EventHandle;
 
 extern EventHandle* eventSystemInit(void);
@@ -106,9 +99,9 @@ extern EventError_t eventRegSubToID(EventHandle* eventHandle, StringView ID, voi
 extern EventError_t eventRegLogSubToID(EventHandle* eventHandle, StringView ID, void (*function)(EventCall, StringView, size_t, FILE**), bool shouldRunOnSeperateThread, size_t amountOfOutputs, FILE** outputs);
 
 // Puts event in the event queue given currentThread as the caller
-extern void         eventCall(const Event* const event, thrd_t currentThread);
+extern void         eventCall(const Event* const event);
 
-extern void         logCall(const Event* const event, thrd_t currentThread, uint32_t line, const char* file);
+extern void         logCall(const Event* const event, uint32_t line, const char* file);
 
 
 #if 1

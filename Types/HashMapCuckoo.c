@@ -6,8 +6,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <stddef.h>
-#include <stdalign.h>
 
 static uint64_t internal_hashMapHashSingelVarWithSalt(size_t elementSize, const void* element, bool elementIsDataTypeFlags, uint32_t salt, uint64_t (*hashFunction)(const void* element, size_t elementSize, uint32_t salt)) {
     if (elementIsDataTypeFlags && (*(DataTypeFlags*) element & ObjectFlagIsContainer) && (*(DataTypeFlags*) element & ObjectFlagIsNotContinuous) == 0)
@@ -20,7 +18,7 @@ static bool internal_memCmpKey(size_t keySize, const void* key, const void* hash
     if (!hashArrayElement || !key)
         return false;
     if (isDataTypeFlagsQualified) {
-        if (*(DataTypeFlags*) key != *(DataTypeFlags*) hashArrayElement)
+        if ((DataTypeFlags*) key != (DataTypeFlags*) hashArrayElement)
             return false;
         if ((*(DataTypeFlags*) key & ObjectFlagIsContainer) && (*(DataTypeFlags*) key & ObjectFlagIsNotContinuous) == 0) {
             if (((Container*) key)->amountOfIndexes != ((Container*) hashArrayElement)->amountOfIndexes || ((Container*) key)->byteSizeOfSingleElement != ((Container*) hashArrayElement)->byteSizeOfSingleElement)
@@ -55,7 +53,7 @@ static void internal_hashMapCuckooInit(HashMapCuckoo* hashMap, size_t initialSiz
         free(hashMap->hashArray);
         return;
     }
-    hashMap->header            |= (keyIsDataTypeFlags ? FlagHashMapKeyIsDataTypeFlags : 0);
+    hashMap->header            = (keyIsDataTypeFlags ? FlagHashMapKeyIsDataTypeFlags : 0);
     hashMap->lengthOfHashArray = initialSize;
     hashMap->keySize           = keySize;
     hashMap->salt1             = rand();
@@ -100,242 +98,3 @@ rehashNoNewAlloc:
         size_t elementToInsert = hashMap->hashArray[i];
         if (!elementToInsert)
             continue;
-
-        size_t count = 0;
-        while (1) {
-            uint64_t hash1 = internal_hashMapHashSingelVarWithSalt(hashMap->keySize,
-                                                                   unorderedContainerGet((UnorderedContainer*) hashMap, elementToInsert).element,
-                                                                   (hashMap->header & FlagHashMapKeyIsDataTypeFlags) ? true : false,
-                                                                   newSalt1,
-                                                                   hashMap->hashFunction) %
-                             newLengthOfHashArray;
-            if (!newHashArray[hash1]) {
-                newHashArray[hash1] = elementToInsert;
-                break;
-            }
-
-            size_t swapSpace    = newHashArray[hash1];
-            newHashArray[hash1] = elementToInsert;
-            uint64_t hash2      = (internal_hashMapHashSingelVarWithSalt(hashMap->keySize,
-                                                                         unorderedContainerGet((UnorderedContainer*) hashMap, swapSpace).element,
-                                                                    (hashMap->header & FlagHashMapKeyIsDataTypeFlags) ? true : false,
-                                                                         newSalt2,
-                                                                         hashMap->hashFunction) %
-                              newLengthOfHashArray) +
-                             newLengthOfHashArray;
-            if (!newHashArray[hash2]) {
-                newHashArray[hash2] = swapSpace;
-                break;
-            }
-
-            elementToInsert     = newHashArray[hash2];
-            newHashArray[hash2] = swapSpace;
-            if ((float) (++count) >= (float) hashMap->lengthOfHashArray * HASHMAP_CUCKOO_MAX_CUCKOO_OF_SIZE) {
-                if (++rehashCount >= HASHMAP_CUCKOO_MAX_REHASH_BEFORE_RESIZE) {
-                    newLengthOfHashArray *= 2;
-                    free(newHashArray);
-                    goto rehashNewAlloc;
-                }
-                memset(newHashArray, 0, newLengthOfHashArray * 2);
-                goto rehashNoNewAlloc;
-            }
-        }
-    }
-    free(hashMap->hashArray);
-    hashMap->hashArray         = newHashArray;
-    hashMap->lengthOfHashArray = newLengthOfHashArray;
-    hashMap->salt1             = newSalt1;
-    hashMap->salt2             = newSalt2;
-    return true;
-}
-
-static bool internal_insertKeyValuePair(HashMapCuckoo* hashMap, size_t keyValuePairToInsert) {
-    size_t count       = 0;
-    size_t rehashCount = 0;
-    while (1) {
-        uint64_t hash1 = internal_hashMapHashSingelVarWithSalt(hashMap->keySize,
-                                                               unorderedContainerGet((UnorderedContainer*) hashMap, keyValuePairToInsert).element,
-                                                               (hashMap->header & FlagHashMapKeyIsDataTypeFlags) ? true : false,
-                                                               hashMap->salt1,
-                                                               hashMap->hashFunction) %
-                         hashMap->lengthOfHashArray;
-        if (!hashMap->hashArray[hash1]) {
-            hashMap->hashArray[hash1] = keyValuePairToInsert;
-            return true;
-        }
-
-        size_t swapSpace          = hashMap->hashArray[hash1];
-        hashMap->hashArray[hash1] = keyValuePairToInsert;
-        uint64_t hash2            = internal_hashMapHashSingelVarWithSalt(hashMap->keySize,
-                                                                          unorderedContainerGet((UnorderedContainer*) hashMap, swapSpace).element,
-                                                               (hashMap->header & FlagHashMapKeyIsDataTypeFlags) ? true : false,
-                                                                          hashMap->salt2,
-                                                                          hashMap->hashFunction) %
-                             hashMap->lengthOfHashArray +
-                         hashMap->lengthOfHashArray;
-        if (!hashMap->hashArray[hash2]) {
-            hashMap->hashArray[hash2] = swapSpace;
-            return true;
-        }
-
-        keyValuePairToInsert      = hashMap->hashArray[hash2];
-        hashMap->hashArray[hash2] = swapSpace;
-        if ((float) (++count) >= (float) hashMap->lengthOfHashArray * HASHMAP_CUCKOO_MAX_CUCKOO_OF_SIZE) {
-            if (++rehashCount > HASHMAP_CUCKOO_MAX_REHASH_BEFORE_RESIZE) {
-                if (!internal_rehash(hashMap, true)) {
-                    hashMap->swapspace = keyValuePairToInsert;
-                    hashMap->header |= HASHMAP_CUCKOO_SWAPSPACE_CONTAINS_OBJ;
-                    return false;
-                }
-                rehashCount = 0;
-            } else {
-                if (!internal_rehash(hashMap, false)) {
-                    hashMap->swapspace = keyValuePairToInsert;
-                    hashMap->header |= HASHMAP_CUCKOO_SWAPSPACE_CONTAINS_OBJ;
-                    return false;
-                }
-            }
-            count = 0;
-        }
-    }
-}
-
-ContainerError hashMapCuckooInsert(HashMapCuckoo* hashMap, size_t keySize, const void* key, size_t elementSize, const void* element) {
-    if (hashMap->keySize != keySize || hashMap->container.byteSizeOfSingleElement - hashMap->elementOffset < elementSize)
-        return ContainerInvalidSize;
-
-    if (hashMap->header & HASHMAP_CUCKOO_SWAPSPACE_CONTAINS_OBJ && hashMap->container.array != key) {
-        if (!internal_insertKeyValuePair(hashMap, hashMap->swapspace))
-            return ContainerAllocFailure;
-        hashMap->header &= ~HASHMAP_CUCKOO_SWAPSPACE_CONTAINS_OBJ;
-    }
-
-    uint64_t hash1 = internal_hashMapHashSingelVarWithSalt(hashMap->keySize,
-                                                           key,
-                                                           (hashMap->header & FlagHashMapKeyIsDataTypeFlags) ? true : false,
-                                                           hashMap->salt1,
-                                                           hashMap->hashFunction) %
-                     hashMap->lengthOfHashArray;
-    uint64_t hash2 = internal_hashMapHashSingelVarWithSalt(hashMap->keySize,
-                                                           key,
-                                                           (hashMap->header & FlagHashMapKeyIsDataTypeFlags) ? true : false,
-                                                           hashMap->salt2,
-                                                           hashMap->hashFunction) %
-                         hashMap->lengthOfHashArray +
-                     hashMap->lengthOfHashArray;
-    if (hashMap->hashArray[hash1] && internal_memCmpKey(keySize, key, unorderedContainerGet((UnorderedContainer*) hashMap, hashMap->hashArray[hash1]).element, (hashMap->header & FlagHashMapKeyIsDataTypeFlags) ? true : false))
-        return ContainerOPUnsuccessful;
-    if (hashMap->hashArray[hash2] && internal_memCmpKey(keySize, key, unorderedContainerGet((UnorderedContainer*) hashMap, hashMap->hashArray[hash2]).element, (hashMap->header & FlagHashMapKeyIsDataTypeFlags) ? true : false))
-        return ContainerOPUnsuccessful;
-
-    UnorderedContainerPutResult result = unorderedContainerPut((UnorderedContainer*) hashMap, keySize, key);
-    if (result.resultCode != ContainerOPSuccessful)
-        return ContainerAllocFailure;
-    memcpy((Bytes) unorderedContainerGet((UnorderedContainer*) hashMap, result.locationOfElement).element + hashMap->elementOffset, element, elementSize);
-    internal_insertKeyValuePair(hashMap, result.locationOfElement);
-
-    return ContainerOPSuccessful;
-}
-
-void* hashMapCuckooGet(HashMapCuckoo* hashMap, size_t keySize, const void* key) {
-    if (keySize != hashMap->keySize)
-        return NULL;
-
-    if (hashMap->header & HASHMAP_CUCKOO_SWAPSPACE_CONTAINS_OBJ && hashMap->container.array != key) {
-        if (!internal_insertKeyValuePair(hashMap, hashMap->swapspace))
-            return NULL;
-        hashMap->header &= ~HASHMAP_CUCKOO_SWAPSPACE_CONTAINS_OBJ;
-    }
-    uint64_t hash1 = internal_hashMapHashSingelVarWithSalt(hashMap->keySize,
-                                                           key,
-                                                           (hashMap->header & FlagHashMapKeyIsDataTypeFlags) ? true : false,
-                                                           hashMap->salt1,
-                                                           hashMap->hashFunction) %
-                     hashMap->lengthOfHashArray;
-
-    if (hashMap->hashArray[hash1] && internal_memCmpKey(hashMap->keySize,
-                                                        key,
-                                                        unorderedContainerGet((UnorderedContainer*) hashMap, hashMap->hashArray[hash1]).element,
-                                                        (hashMap->header & FlagHashMapKeyIsDataTypeFlags) ? true : false))
-        return (Bytes) unorderedContainerGet((UnorderedContainer*) hashMap, hashMap->hashArray[hash1]).element + hashMap->elementOffset;
-
-    uint64_t hash2 = internal_hashMapHashSingelVarWithSalt(hashMap->keySize,
-                                                           key,
-                                                           (hashMap->header & FlagHashMapKeyIsDataTypeFlags) ? true : false,
-                                                           hashMap->salt2,
-                                                           hashMap->hashFunction) %
-                         hashMap->lengthOfHashArray +
-                     hashMap->lengthOfHashArray;
-    if (hashMap->hashArray[hash2] && internal_memCmpKey(hashMap->keySize,
-                                                        key,
-                                                        unorderedContainerGet((UnorderedContainer*) hashMap, hashMap->hashArray[hash2]).element,
-                                                        (hashMap->header & FlagHashMapKeyIsDataTypeFlags) ? true : false))
-        return (Bytes) unorderedContainerGet((UnorderedContainer*) hashMap, hashMap->hashArray[hash2]).element + hashMap->elementOffset;
-
-    return NULL;
-}
-
-ContainerError hashMapCuckooRemove(HashMapCuckoo* hashMap, size_t keySize, const void* key, void (*keyDestructor)(void* object), void (*elementDestructor)(void* object)) {
-    if (keySize != hashMap->keySize)
-        return ContainerInvalidSize;
-
-    if (hashMap->header & HASHMAP_CUCKOO_SWAPSPACE_CONTAINS_OBJ && hashMap->container.array != key) {
-        if (!internal_insertKeyValuePair(hashMap, hashMap->swapspace))
-            return ContainerAllocFailure;
-        hashMap->header &= ~HASHMAP_CUCKOO_SWAPSPACE_CONTAINS_OBJ;
-    }
-
-    void*    thingToFree;
-
-    uint64_t hash1 = internal_hashMapHashSingelVarWithSalt(hashMap->keySize,
-                                                           key,
-                                                           (hashMap->header & FlagHashMapKeyIsDataTypeFlags) ? true : false,
-                                                           hashMap->salt1,
-                                                           hashMap->hashFunction) %
-                     hashMap->lengthOfHashArray;
-
-    if (hashMap->hashArray[hash1] && internal_memCmpKey(hashMap->keySize,
-                                                        key,
-                                                        unorderedContainerGet((UnorderedContainer*) hashMap, hashMap->hashArray[hash1]).element,
-                                                        (hashMap->header & FlagHashMapKeyIsDataTypeFlags) ? true : false))
-        thingToFree = unorderedContainerGet((UnorderedContainer*) hashMap, hashMap->hashArray[hash1]).element;
-
-    else {
-        uint64_t hash2 = internal_hashMapHashSingelVarWithSalt(hashMap->keySize,
-                                                               key,
-                                                               (hashMap->header & FlagHashMapKeyIsDataTypeFlags) ? true : false,
-                                                               hashMap->salt2,
-                                                               hashMap->hashFunction) %
-                             hashMap->lengthOfHashArray +
-                         hashMap->lengthOfHashArray;
-        if (hashMap->hashArray[hash2] && internal_memCmpKey(hashMap->keySize,
-                                                            key,
-                                                            unorderedContainerGet((UnorderedContainer*) hashMap, hashMap->hashArray[hash2]).element,
-                                                            (hashMap->header & FlagHashMapKeyIsDataTypeFlags) ? true : false))
-            thingToFree = unorderedContainerGet((UnorderedContainer*) hashMap, hashMap->hashArray[hash2]).element;
-        else
-            return ContainerOPUnsuccessful;
-    }
-
-    if (keyDestructor)
-        keyDestructor(thingToFree);
-    if (elementDestructor)
-        elementDestructor((Bytes) thingToFree + hashMap->elementOffset);
-
-    return ContainerOPSuccessful;
-}
-
-void hashMapCuckooDestroy(HashMapCuckoo* hashMap, void (*keyDestructor)(void* object), void (*elementDestructor)(void* object)) {
-    if (!isValidObject((DataTypeFlags*)hashMap))
-        return;
-    for (size_t i = (hashMap->header & HASHMAP_CUCKOO_SWAPSPACE_CONTAINS_OBJ) ? 0 : 1; i < hashMap->container.amountOfIndexes; i++) {
-        if ((hashMap->unorderedContainer.bitset[i / 8] & (0x80 >> (i % 8))) == 0)
-            continue;
-        if (keyDestructor)
-            keyDestructor((Bytes) hashMap->container.array + hashMap->container.byteSizeOfSingleElement * i);
-        if (elementDestructor)
-            elementDestructor((Bytes) hashMap->container.array + hashMap->container.byteSizeOfSingleElement * i + hashMap->elementOffset);
-    }
-    free(hashMap->hashArray);
-    unorderedContainerDestroy(hashMap);
-}

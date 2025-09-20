@@ -12,13 +12,6 @@ namespace BackerLib {
 
     typedef uint32_t      DataTypeFlags;
 
-    typedef struct Iterator {
-        DataTypeFlags* dataStruct;
-        void*          currentDataEntry;
-        uint64_t       extraData[2];
-    } Iterator;
-
-
     typedef struct Container {
         DataTypeFlags header;
         uint32_t      byteSizeOfSingleElement;
@@ -27,16 +20,20 @@ namespace BackerLib {
     } Container;
 
     typedef union UnorderedContainer {
-        DataTypeFlags header;
+        struct {
+            DataTypeFlags header;
+        };
         struct {
             Container container;
             size_t    maxSize;
-            uint8_t*  bitset;
+            uint64_t*  bitset;
         };
     } UnorderedContainer;
 
     typedef union DynamicContainer {
-        DataTypeFlags header;
+        struct {
+            DataTypeFlags header;
+        };
         struct {
             Container container;
             size_t    containerMaxSize;

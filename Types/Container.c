@@ -27,8 +27,8 @@ void* containerGet(const Container* container, size_t index) {
 
 static void internal_containerInit(Container* container, size_t size, size_t elementSize, bool elementsArePointers) {
     container->header = 0;
-    container->array  = calloc(size, elementSize);
-    if (!container->array)
+    container->array  = size ? calloc(size, elementSize) : NULL;
+    if (!container->array && size)
         return;
     container->byteSizeOfSingleElement = elementsArePointers ? sizeof(void*) : elementSize;
     container->amountOfIndexes         = size;
@@ -96,7 +96,7 @@ Container* containerCreateHeap(size_t size, size_t elementSize, bool elementsAre
 
 void containerDestroy(void* container) {
     if (isValidObject(container)) {
-        if (((Container*) container)->array)
+        if (((Container*)container)->amountOfIndexes)
             free(((Container*) container)->array);
         if ((*(DataTypeFlags*) container) & ObjectFlagIsOnHeap)
             free(container);

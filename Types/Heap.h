@@ -1,5 +1,6 @@
 #ifndef HEAP_H
 #define HEAP_H
+#include "Container.h"
 #include "DynamicContainer.h"
 
 #ifdef __cplusplus
@@ -8,8 +9,12 @@ namespace BackerLib {
 #endif
 
     typedef union Heap {
-        DataTypeFlags header;
-        Container     container;
+        struct {
+            DataTypeFlags header;
+        };
+        struct {
+            Container     container;
+        };
         struct {
             DynamicContainer dynamicContainer;
             bool (*compare)(const void*, const void*);
@@ -20,7 +25,7 @@ namespace BackerLib {
      * @param heap Pointer to valid Heap
      * @return Pointer to array (the top of the heap) if there is any element in the heap otherwise returns NULL.
      */
-    extern void*          heapTop(const Heap* heap);
+    extern const void*    heapTop(const Heap* heap);
     /**
      * @brief Removes the topmost element from the heap.
      * @param heap Pointer to valid heap
@@ -29,9 +34,9 @@ namespace BackerLib {
     /**
      * @brief Inserts a new element into the heap.
      * @param heap Pointer to valid heap
-     * @param sizeOfElement Size of element to insert. Must be the same size as an element in heap
+     * @param sizeOfElement Size of element to insert
      * @param element Pointer to element
-     * @return ContainerInvalidSize if sizeOfElement was invalid.
+     * @return ContainerInvalidSize if sizeOfElement was greater than the largest element in the heap.
      * @return ContainerAllocFailure if the heap's array could not grow.
      */
     extern ContainerError heapInsert(Heap* heap, size_t sizeOfElement, const void* element);
@@ -55,6 +60,25 @@ namespace BackerLib {
      * @return NULL if object could not be allocated.
      */
     extern Heap*          heapCreateHeap(size_t elementSize, bool (*compare)(const void*, const void*));
+
+/**
+     * @brief Reinterperates container as a Heap. No insertion operations are performed
+     * @param container DynamicContainer
+     * @param compare Compare function
+     * @return Returns Heap reinterpretation of container
+     */
+    static inline Heap containerDynamicToHeapReinterperate(DynamicContainer container,bool(*compare)(const void*, const void*)) {
+        container.header |= ObjectFlagIsNotContinuousCustomTracking | ObjectFlagArrayNoSort;
+        return (Heap){.dynamicContainer = container, .compare = compare};
+    }
+
+    /**
+     * @brief Destroys heap if necessary
+     * @param heap Pointer to Heap
+     */
+    static inline void    heapDestroy(void* heap) {
+        containerDestroy(heap);
+    }
 
 #ifdef __cplusplus
     }
