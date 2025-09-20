@@ -96,8 +96,7 @@ Container* containerCreateHeap(size_t size, size_t elementSize, bool elementsAre
 
 void containerDestroy(void* container) {
     if (isValidObject(container)) {
-        if (((Container*)container)->amountOfIndexes)
-            free(((Container*) container)->array);
+        free(((Container*) container)->array);
         if ((*(DataTypeFlags*) container) & ObjectFlagIsOnHeap)
             free(container);
         else

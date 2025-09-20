@@ -31,7 +31,7 @@ ContainerError containerDynamicSizeCheckRemove(DynamicContainer* container) {
                 return ContainerAllocFailure;
         } else {
             free(container->container.array);
-            newPointer = container->container.array;
+            newPointer = NULL;
         }
         container->container.array  = newPointer;
         container->containerMaxSize = container->container.amountOfIndexes;

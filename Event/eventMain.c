@@ -28,7 +28,7 @@ EventHandle* eventSystemInit(void) {
     EventHandle* eventHandle = malloc(sizeof(EventHandle));
     if (eventHandle == NULL)
         return NULL;
-
+    eventHandle->shouldQuit = false;
     eventHandle->eventQueue = arrayListCreateStack(0, sizeof(EventCall), false);
     if (!isValidObject((DataTypeFlags*) &eventHandle->eventQueue)) {
         free(eventHandle);
