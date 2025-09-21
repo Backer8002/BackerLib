@@ -58,9 +58,16 @@ namespace BackerLib {
          * @return NULL if alloc failed
          */
         extern Container* containerCreateHeap(size_t size, size_t elementSize, bool elementsArePointers);
-
         /**
-         * @brief Destroys and frees object if applicable. Sets object state to invalid. Will not free container if amountOfIndexes is set to 0.
+         * @brief Checks if container is empty.
+         * @param container Pointer to valid Container
+         * @return true if container does not contain any elements, else false.
+         */
+        static inline bool containerIsEmpty(const Container* container) {
+            return container->amountOfIndexes == 0;
+        }
+        /**
+         * @brief Destroys and frees object if applicable. Sets object state to invalid.
          * @param container Container to destroy
          */
         extern void containerDestroy(void* container);

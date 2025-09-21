@@ -2,6 +2,7 @@
 #define JSONPARSER_H
 
 #include <BackerLibConcurrency.h>
+#include <BackerLibEvent.h>
 #include <BackerLibTypes.h>
 #include <stdint.h>
 
@@ -55,7 +56,33 @@ namespace BackerLib {
         bool   spaceWithinAngelBracket;
     } JsonFormat;
 
+    typedef enum JsonTokenType {
+        JsonTokenInvalid = 0,
+        JsonTokenOpenCurlyBracket,
+        JsonTokenOpenBracket,
+        JsonTokenCloseBracket,
+        JsonTokenCloseCurlyBracket,
+        JsonTokenColon,
+        JsonTokenComma,
+        JsonTokenBool,
+        JsonTokenNumber,
+        JsonTokenString,
+        JsonTokenNull
+    } JsonTokenType;
+
+        typedef struct JsonToken {
+            JsonTokenType tokenType;
+            JsonObjectMemberValue additionalData;
+        } JsonToken;
+
+    static const Event JsonFileIllFormated = {
+        .id             = (StringView) stringViewInitConstExpr("JsonFileIllFormated"),
+        .groupIds       = &ErrorLogLevel,
+        .amountOfGroups = 1};
+
     typedef Future(JsonObject) FutureJsonObject;
+
+    extern DynamicContainer jsonTokenizeFile(FILE* file);
 
     extern JsonObject       jsonReadFile(FILE* file);
 
@@ -66,6 +93,8 @@ namespace BackerLib {
     extern FutureVoid       jsonWriteFileAsync(ThreadPool* threadPool, FILE* file, JsonObject* object, JsonFormat format);
 
     extern void             jsonWriteConsoleStyle(FILE* file, JsonObjectMember* object);
+
+    extern void             jsonObjectDestroy(void* jsonObject);
 
 #ifdef __cplusplus
     }

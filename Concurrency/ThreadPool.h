@@ -184,4 +184,4 @@ static inline bool futureAwaitFor(void* future, const struct timespec* duration)
 }
 };
 #endif
-#endif // CONTAINERTESTS_THREADPOOL_H
+#endif // THREADPOOL_H
