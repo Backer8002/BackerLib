@@ -9,95 +9,97 @@
 #ifdef __cplusplus
 namespace BackerLib {
     extern "C" {
+
 #endif
 
-    typedef DynamicContainer JsonObject;
-    typedef DynamicContainer JsonArray;
-    typedef enum JsonObjectMemberType {
-        JsonTypeInvalid,
-        JsonTypeNull,
-        JsonTypeBoolean,
-        JsonTypeNumber,
-        JsonTypeString,
-        JsonTypeObject,
-        JsonTypeArray
-    } JsonObjectMemberType;
+typedef DynamicContainer JsonObject;
+typedef DynamicContainer JsonArray;
 
-    typedef union JsonObjectMemberValue {
-        bool       boolean;
-        double     number;
-        StringW    string;
-        JsonObject object;
-        JsonArray  array;
-    } JsonObjectMemberValue;
+typedef enum JsonObjectMemberType {
+    JsonTypeInvalid,
+    JsonTypeNull,
+    JsonTypeBoolean,
+    JsonTypeNumber,
+    JsonTypeString,
+    JsonTypeObject,
+    JsonTypeArray
+} JsonObjectMemberType;
 
-    typedef struct JsonObjectMember {
-        StringW               identifier;
-        JsonObjectMemberValue value;
-        JsonObjectMemberType  valueType;
-    } JsonObjectMember;
+typedef union JsonObjectMemberValue {
+    bool       boolean;
+    double     number;
+    StringUTF8 string;
+    JsonObject object;
+    JsonArray  array;
+} JsonObjectMemberValue;
 
-    typedef struct JsonArrayMember {
-        JsonObjectMemberType  valueType;
-        JsonObjectMemberValue value;
-    } JsonArrayMember;
+typedef struct JsonObjectMember {
+    StringUTF8            identifier;
+    JsonObjectMemberValue value;
+    JsonObjectMemberType  valueType;
+} JsonObjectMember;
 
-    typedef struct JsonFormat {
-        size_t amountOfSpacesForIndentation;
-        bool   indentWithTabs;
-        bool   breakBeforeCurlyBracket;
-        bool   breakAfterCurlyBracket;
-        bool   breakBeforeAngleBracket;
-        bool   breakAfterAngleBracket;
-        bool   breakBeforeComma;
-        bool   breakAfterComma;
-        bool   spaceBeforeComma;
-        bool   spaceAfterComma;
-        bool   spaceWithinAngelBracket;
-    } JsonFormat;
+typedef struct JsonArrayMember {
+    JsonObjectMemberType  valueType;
+    JsonObjectMemberValue value;
+} JsonArrayMember;
 
-    typedef enum JsonTokenType {
-        JsonTokenInvalid = 0,
-        JsonTokenOpenCurlyBracket,
-        JsonTokenOpenBracket,
-        JsonTokenCloseBracket,
-        JsonTokenCloseCurlyBracket,
-        JsonTokenColon,
-        JsonTokenComma,
-        JsonTokenBool,
-        JsonTokenNumber,
-        JsonTokenString,
-        JsonTokenNull
-    } JsonTokenType;
+typedef struct JsonFormat {
+    size_t amountOfSpacesForIndentation;
+    bool   indentWithTabs;
+    bool   breakBeforeCurlyBracket;
+    bool   breakAfterCurlyBracket;
+    bool   breakBeforeAngleBracket;
+    bool   breakAfterAngleBracket;
+    bool   breakBeforeComma;
+    bool   breakAfterComma;
+    bool   spaceBeforeComma;
+    bool   spaceAfterComma;
+    bool   spaceWithinAngelBracket;
+} JsonFormat;
 
-        typedef struct JsonToken {
-            JsonTokenType tokenType;
-            JsonObjectMemberValue additionalData;
-        } JsonToken;
+typedef enum JsonTokenType {
+    JsonTokenInvalid = 0,
+    JsonTokenOpenCurlyBracket,
+    JsonTokenOpenBracket,
+    JsonTokenCloseBracket,
+    JsonTokenCloseCurlyBracket,
+    JsonTokenColon,
+    JsonTokenComma,
+    JsonTokenBool,
+    JsonTokenNumber,
+    JsonTokenString,
+    JsonTokenNull
+} JsonTokenType;
 
-    static const Event JsonFileIllFormated = {
-        .id             = (StringView) stringViewInitConstExpr("JsonFileIllFormated"),
-        .groupIds       = &ErrorLogLevel,
-        .amountOfGroups = 1};
+typedef struct JsonToken {
+    JsonTokenType         tokenType;
+    JsonObjectMemberValue additionalData;
+} JsonToken;
 
-    typedef Future(JsonObject) FutureJsonObject;
+static const Event JsonFileIllFormated = {
+    .id = (StringView) stringViewInitConstExpr("JsonFileIllFormated"),
+    .groupIds = &ErrorLogLevel,
+    .amountOfGroups = 1};
 
-    extern DynamicContainer jsonTokenizeFile(FILE* file);
+typedef Future(JsonObject) FutureJsonObject;
 
-    extern JsonObject       jsonReadFile(FILE* file);
+extern DynamicContainer jsonTokenizeFile(FILE* file);
 
-    extern FutureJsonObject jsonReadFileAsync(ThreadPool* threadPool, FILE* file);
+extern JsonObject jsonReadFile(FILE* file);
 
-    extern void             jsonWriteFile(FILE* file, JsonObject* object, JsonFormat format);
+extern FutureJsonObject jsonReadFileAsync(ThreadPool* threadPool, FILE* file);
 
-    extern FutureVoid       jsonWriteFileAsync(ThreadPool* threadPool, FILE* file, JsonObject* object, JsonFormat format);
+extern void jsonWriteFile(FILE* file, JsonObject* object, JsonFormat format);
 
-    extern void             jsonWriteConsoleStyle(FILE* file, JsonObjectMember* object);
+extern FutureVoid jsonWriteFileAsync(ThreadPool* threadPool, FILE* file, JsonObject* object, JsonFormat format);
 
-    extern void             jsonObjectDestroy(void* jsonObject);
+extern void jsonWriteConsoleStyle(FILE* file, JsonObjectMember* object);
+
+extern void jsonObjectDestroy(void* jsonObject);
 
 #ifdef __cplusplus
-    }
+}
 };
 #endif
 #endif // JSONPARSER_H

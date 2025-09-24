@@ -2,8 +2,9 @@
 #include "TypesMain.h"
 #include <stdbool.h>
 #include <stdint.h>
-#include <stdio.h>
 #include <stdlib.h>
+#include <wchar.h>
+#include <uchar.h>
 #include <string.h>
 
 String stringCreate(const char* string, size_t length) {
@@ -34,7 +35,7 @@ inline ContainerError stringAppendString(String* destString, const String* strin
 }
 
 String stringStrip(const String* string, char charToStrip, bool stripFromBack, uint64_t amountToStrip) {
-    if (string->container.byteSizeOfSingleElement != sizeof(charToStrip)) {
+    if (string->container.byteSizeOfSingleElement != sizeof charToStrip) {
         String returnString = {0};
         return returnString;
     }
@@ -42,14 +43,7 @@ String stringStrip(const String* string, char charToStrip, bool stripFromBack, u
     if (!isValidObject(&returnString.header))
         return returnString;
 
-    size_t amountStripped = 0;    String allocatedString = containerDynamicCreateStack(length, sizeof(char), false);
-
-    if (!isValidObject(&allocatedString.header))
-        return allocatedString;
-
-    memcpy(allocatedString.container.array, string, length);
-    allocatedString.container.amountOfIndexes = length;
-    return allocatedString;
+    size_t amountStripped = 0;
     for (size_t iterator = 0; iterator < string->container.amountOfIndexes; iterator++) {
         char* currentChar = stringGetChar(string, (stripFromBack ? string->container.amountOfIndexes - 1 - iterator : iterator));
         if ((*currentChar != charToStrip) || (amountToStrip && (amountStripped >= amountToStrip)))
@@ -143,6 +137,17 @@ StringW stringWCreate(const wchar_t* str, size_t len) {
         return allocatedString;
 
     memcpy(allocatedString.container.array, str, len * sizeof(wchar_t));
+    allocatedString.container.amountOfIndexes = len;
+    return allocatedString;
+}
+
+StringUTF8 stringUTF8Create(const char32_t* str, size_t len) {
+    StringUTF8 allocatedString = containerDynamicCreateStack(len, sizeof *str, false);
+
+    if (!isValidObject(&allocatedString.header))
+        return allocatedString;
+
+    memcpy(allocatedString.container.array, str, len * sizeof *str);
     allocatedString.container.amountOfIndexes = len;
     return allocatedString;
 }
