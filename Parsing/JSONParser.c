@@ -1,31 +1,27 @@
 #include "JSONParser.h"
 #include <BackerLibEvent.h>
 #include <ctype.h>
-#include <inttypes.h>
 #include <math.h>
 #include <stdbool.h>
 #include <stdio.h>
-#include <uchar.h>
-#include <wchar.h>
-#include <wctype.h>
 
-static inline void internal_tokenStorageDestructor(void* element) {
+static void internal_tokenStorageDestructor(void* element) {
     JsonToken* jsonElement = element;
     if (jsonElement->tokenType == JsonTokenString)
         containerDestroy(&jsonElement->additionalData);
 }
 
-static inline double internal_parseNumber(const double firstDigit, FILE* file) {
+static double internal_parseNumber(const double firstDigit, FILE* file) {
     double parsedNum       = firstDigit == INFINITY ? 0 : firstDigit;
     double parsedExponent  = 0;
     bool   hitDecimalPoint = false, hitE = false, exponentIsNegative = false;
     size_t decimalDepth = 1;
     while (1) {
-        wint_t currentChar = fgetwc(file);
-        if (currentChar == WEOF)
+        int currentChar = fgetc(file);
+        if (feof(file))
             return NAN;
 
-        if (currentChar == L'}' || currentChar == L']' || currentChar == L',') {
+        if (currentChar == '}' || currentChar == ']' || currentChar == ',') {
             if (firstDigit == INFINITY)
                 parsedNum *= -1.0f;
 
@@ -35,55 +31,55 @@ static inline double internal_parseNumber(const double firstDigit, FILE* file) {
             parsedNum = pow(parsedNum, parsedExponent);
             if (fseek(file, -1L, SEEK_CUR) == -1)
                 return NAN;
-            return currentChar;
+            return parsedNum;
         }
 
-        if (currentChar == L'e' || currentChar == L'E') {
+        if (currentChar == 'e' || currentChar == 'E') {
             if (hitE)
                 return NAN;
             hitE        = true;
-            currentChar = fgetwc(file);
+            currentChar = fgetc(file);
 
-            if (!iswdigit(currentChar) && currentChar != L'-' && currentChar != L'+')
+            if (!isdigit(currentChar) && currentChar != '-' && currentChar != '+')
                 return NAN;
 
-            if (iswdigit(currentChar))
-                parsedExponent = currentChar - L'0';
-            else if (currentChar == L'-')
+            if (isdigit(currentChar))
+                parsedExponent = currentChar - '0';
+            else if (currentChar == '-')
                 exponentIsNegative = true;
             hitDecimalPoint = false;
             decimalDepth    = 1;
             continue;
         }
 
-        if (currentChar == L'.') {
+        if (currentChar == '.') {
             if (hitDecimalPoint)
                 return NAN;
             hitDecimalPoint = true;
             continue;
         }
-        if (!iswdigit(currentChar))
+        if (!isdigit(currentChar))
             return NAN;
 
         if (hitDecimalPoint) {
             if (hitE)
-                parsedExponent += (currentChar - L'0') / pow(10, (double)decimalDepth);
+                parsedExponent += (currentChar - '0') / pow(10, (double)decimalDepth);
             else
-                parsedNum += (currentChar - L'0') / pow(10, (double)decimalDepth);
+                parsedNum += (currentChar - '0') / pow(10, (double)decimalDepth);
             decimalDepth++;
         } else {
             if (hitE) {
                 parsedExponent *= 10.0;
-                parsedExponent += currentChar - L'0';
+                parsedExponent += currentChar - '0';
             } else {
                 parsedNum *= 10.0;
-                parsedNum += currentChar - L'0';
+                parsedNum += currentChar - '0';
             }
         }
     }
 }
 
-static inline String internal_parseUTF8String(FILE* file) {
+static String internal_parseUTF8String(FILE* file) {
     String string = containerDynamicCreateStack(0, sizeof(char), false);
     if (!isValidObject(&string.header))
         return string;
@@ -95,8 +91,11 @@ static inline String internal_parseUTF8String(FILE* file) {
             return string;
         }
 
-        if (currentChar == '\"')
+        if (currentChar == '\"') {
+            if (containerDynamicAppend(&string,sizeof(Byte),&(Byte){'\0'}) != ContainerOPSuccessful)
+                containerDestroy(&string);
             return string;
+        }
 
         if (currentChar == '\\') {
             int escapedChar = fgetc(file);
@@ -122,11 +121,10 @@ static inline String internal_parseUTF8String(FILE* file) {
             else if (escapedChar == '\\')
                 insertionError = containerDynamicAppend(&string, sizeof(Byte), &(Byte) {'\\'});
             else if (escapedChar == 'u') {
-                int firstChar, secondChar, thirdChar, fourthChar;
-                firstChar  = fgetc(file);
-                secondChar = fgetc(file);
-                thirdChar  = fgetc(file);
-                fourthChar = fgetc(file);
+                int firstChar = fgetc(file);
+                int secondChar = fgetc(file);
+                int thirdChar  = fgetc(file);
+                int fourthChar = fgetc(file);
                 if (feof(file)) {
                     containerDestroy(&string);
                     return string;
@@ -159,53 +157,56 @@ static inline String internal_parseUTF8String(FILE* file) {
     }
 }
 
-DynamicContainer JsonTokenizeFile(FILE* file) {
+DynamicContainer jsonTokenizeFile(FILE* file) {
     DynamicContainer tokenStorage = containerDynamicCreateStack(0, sizeof(JsonToken), false);
     if (!isValidObject(&tokenStorage.header))
         return tokenStorage;
     size_t depthCount = 0;
 
     while (1) {
-        wint_t currentChar = fgetwc(file);
-        if (currentChar == WEOF)
+        Byte currentChar = (Byte)fgetc(file);
+        if (feof(file))
             goto ErrorExit;
 
-        if (iswspace(currentChar))
+        if (isspace(currentChar))
             continue;
 
-        if (currentChar == L',') {
+        if (currentChar == ',') {
             if (containerDynamicAppend(&tokenStorage, sizeof(JsonTokenType), &(JsonTokenType) {JsonTokenComma}) != ContainerOPSuccessful)
                 goto ErrorExit;
             continue;
         }
-        if (currentChar == L':') {
+        if (currentChar == ':') {
             if (containerDynamicAppend(&tokenStorage, sizeof(JsonTokenType), &(JsonTokenType) {JsonTokenColon}) != ContainerOPSuccessful)
                 goto ErrorExit;
             continue;
         }
-        if (currentChar == L'{') {
+        if (currentChar == '{') {
             if (containerDynamicAppend(&tokenStorage, sizeof(JsonTokenType), &(JsonTokenType) {JsonTokenOpenCurlyBracket}) != ContainerOPSuccessful)
                 goto ErrorExit;
+            depthCount++;
             continue;
         }
-        if (currentChar == L'[') {
+        if (currentChar == '[') {
             if (containerDynamicAppend(&tokenStorage, sizeof(JsonTokenType), &(JsonTokenType) {JsonTokenOpenBracket}) != ContainerOPSuccessful)
                 goto ErrorExit;
             continue;
         }
-        if (currentChar == L']') {
+        if (currentChar == ']') {
             if (containerDynamicAppend(&tokenStorage, sizeof(JsonTokenType), &(JsonTokenType) {JsonTokenCloseBracket}) != ContainerOPSuccessful)
                 goto ErrorExit;
             continue;
         }
-        if (currentChar == L'}') {
+        if (currentChar == '}') {
             if (containerDynamicAppend(&tokenStorage, sizeof(JsonTokenType), &(JsonTokenType) {JsonTokenCloseCurlyBracket}) != ContainerOPSuccessful)
                 goto ErrorExit;
+            if (--depthCount == 0)
+                return tokenStorage;
             continue;
         }
 
-        if (iswdigit(currentChar) || currentChar == L'-') {
-            double number = internal_parseNumber(currentChar == L'-' ? INFINITY : currentChar - L'0', file);
+        if (isdigit(currentChar) || currentChar == '-') {
+            double number = internal_parseNumber(currentChar == '-' ? INFINITY : (double)(currentChar - '0'), file);
             if (number == NAN)
                 goto ErrorExit;
             if (containerDynamicAppend(&tokenStorage,
@@ -216,46 +217,53 @@ DynamicContainer JsonTokenizeFile(FILE* file) {
             continue;
         }
 
-        if (currentChar == L'"') {
+        if (currentChar == '\"') {
             String string = internal_parseUTF8String(file);
+            if (!isValidObject(&string.header))
+                goto ErrorExit;
+            if (containerDynamicAppend(&tokenStorage,
+                           sizeof(JsonToken),
+                           &(JsonToken) {.tokenType      = JsonTokenNumber,
+                                         .additionalData = (JsonObjectMemberValue) {.string = string}}))
+                goto ErrorExit;
+            continue;
         }
 
-        if (currentChar == L'f') {
-            if (L'a' != fgetwc(file))
+        if (currentChar == 'f') {
+            if ('a' != fgetwc(file))
                 goto ErrorExit;
-            if (L'l' != fgetwc(file))
+            if ('l' != fgetwc(file))
                 goto ErrorExit;
-            if (L's' != fgetwc(file))
+            if ('s' != fgetwc(file))
                 goto ErrorExit;
-            if (L'e' != fgetwc(file))
+            if ('e' != fgetwc(file))
                 goto ErrorExit;
             if (containerDynamicAppend(&tokenStorage,
                                        sizeof(JsonToken),
                                        &(JsonToken) {.tokenType = JsonTokenBool, .additionalData = (JsonObjectMemberValue) {.boolean = false}}) != ContainerOPSuccessful)
                 goto ErrorExit;
-        } else if (currentChar == L't') {
-            if (L'r' != fgetwc(file))
+        } else if (currentChar == 't') {
+            if ('r' != fgetwc(file))
                 goto ErrorExit;
-            if (L'u' != fgetwc(file))
+            if ('u' != fgetwc(file))
                 goto ErrorExit;
-            if (L'e' != fgetwc(file))
+            if ('e' != fgetwc(file))
                 goto ErrorExit;
             if (containerDynamicAppend(&tokenStorage,
                                        sizeof(JsonToken),
                                        &(JsonToken) {.tokenType = JsonTokenBool, .additionalData = (JsonObjectMemberValue) {.boolean = true}}) != ContainerOPSuccessful)
                 goto ErrorExit;
-        } else if (currentChar == L'n') {
-            if (L'u' != fgetwc(file))
+        } else if (currentChar == 'n') {
+            if ('u' != fgetwc(file))
                 goto ErrorExit;
-            if (L'l' != fgetwc(file))
+            if ('l' != fgetwc(file))
                 goto ErrorExit;
-            if (L'l' != fgetwc(file))
+            if ('l' != fgetwc(file))
                 goto ErrorExit;
             if (containerDynamicAppend(&tokenStorage, sizeof(JsonTokenType), &(JsonTokenType) {JsonTokenNull}) != ContainerOPSuccessful)
                 goto ErrorExit;
-        } else {
+        } else
             goto ErrorExit;
-        }
     }
 
 
@@ -269,6 +277,6 @@ JsonObject jsonReadFile(FILE* file) {
         bool              isArrayScope;
         DynamicContainer* scope;
     } JsonStackEntry;
-
     DynamicContainer tokens = jsonTokenizeFile(file);
+    return (JsonObject){0};
 }

@@ -35,11 +35,11 @@ namespace BackerLib {
      * @brief Will insert sequence into Trie.
      * @param trie Pointer to valid Trie
      * @param sequence Sequence to insert
-     * @param dataToStore Data to store at node
+     * @param data Data to store at node
      * @return ContainerInvalidIndex if data is 0.
      * @return ContainerAllocFailure if allocation could not happen.
      */
-    extern ContainerError trieInsert(Trie* trie, const wchar_t* sequence, uintptr_t dataToStore);
+    extern ContainerError trieInsert(Trie* trie, const wchar_t* sequence, uintptr_t data);
     /**
      * @brief Looks if there is any sequence that begins in CString.
      * @param trie Pointer to valid Trie

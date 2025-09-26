@@ -8,9 +8,9 @@ set(CMAKE_C_STANDARD 17)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 
 if (MSVC)
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /Wall /JMC /experimental:c11atomics")
+    add_compile_options(/Wall /JMC /experimental:c11atomics)
 else ()
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wextra -Wpedantic")
+    add_compile_options(-Wall -Wextra -Wpedantic)
 endif ()
 
 include_directories(BEFORE PUBLIC ${CMAKE_BINARY_DIR} "${PROJECT_SOURCE_DIR}/include")

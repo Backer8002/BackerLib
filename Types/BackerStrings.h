@@ -136,17 +136,6 @@ typedef const union StringViewW {
     Container container;
 } StringViewW;
 
-typedef const union StringViewUTF8 {
-    struct {
-        DataTypeFlags   header;
-        const uint32_t  byteSizeOfSingleElement;
-        const size_t    amountOfIndexes;
-        const char32_t* array;
-    };
-
-    Container container;
-} StringViewUTF8;
-
 /**
  * @param cString Any valid constexpr char[] or literal
  */

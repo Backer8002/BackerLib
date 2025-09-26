@@ -4,6 +4,9 @@
 #include <BackerLibConcurrency.h>
 #include <BackerLibEvent.h>
 #include <BackerLibTypes.h>
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdio.h>
 
 #ifdef __cplusplus
 namespace BackerLib {

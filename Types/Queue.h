@@ -135,11 +135,11 @@ namespace BackerLib {
     extern ContainerError     dequeueDequeueBack(Dequeue* dequeue, size_t elementSize, void* element);
     /**
      * @brief Returns pointer to offset element from head element. 0 is head element.
-     * @param queue Pointer to valid Dequeue
+     * @param dequeue Pointer to valid Dequeue
      * @param offset Offset from head element
      * @return NULL if offset is results in an out-of-bounds access.
      */
-    extern inline const void* dequeuePeakFront(const Dequeue* queue, size_t offset);
+    extern inline const void* dequeuePeakFront(const Dequeue* dequeue, size_t offset);
 
     /**
      * @brief Returns pointer to offset element from tail element backwards in queue. 0 is tail element.
