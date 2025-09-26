@@ -4,7 +4,6 @@
 #include <BackerLibConcurrency.h>
 #include <BackerLibEvent.h>
 #include <BackerLibTypes.h>
-#include <stdint.h>
 
 #ifdef __cplusplus
 namespace BackerLib {
@@ -28,13 +27,13 @@ typedef enum JsonObjectMemberType {
 typedef union JsonObjectMemberValue {
     bool       boolean;
     double     number;
-    StringUTF8 string;
+    String string;
     JsonObject object;
     JsonArray  array;
 } JsonObjectMemberValue;
 
 typedef struct JsonObjectMember {
-    StringUTF8            identifier;
+    String           identifier;
     JsonObjectMemberValue value;
     JsonObjectMemberType  valueType;
 } JsonObjectMember;

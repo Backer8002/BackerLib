@@ -1,5 +1,6 @@
 #include "JSONParser.h"
 #include <BackerLibEvent.h>
+#include <ctype.h>
 #include <inttypes.h>
 #include <math.h>
 #include <stdbool.h>
@@ -65,38 +66,34 @@ static inline double internal_parseNumber(const double firstDigit, FILE* file) {
             return NAN;
 
         if (hitDecimalPoint) {
-            hitE ? parsedExponent : parsedNum += (currentChar - L'0') / pow(10, decimalDepth);
+            if (hitE)
+                parsedExponent += (currentChar - L'0') / pow(10, (double)decimalDepth);
+            else
+                parsedNum += (currentChar - L'0') / pow(10, (double)decimalDepth);
             decimalDepth++;
         } else {
-            hitE ? parsedExponent : parsedNum *= 10.0;
-            hitE ? parsedExponent : parsedNum += currentChar - L'0';
+            if (hitE) {
+                parsedExponent *= 10.0;
+                parsedExponent += currentChar - L'0';
+            } else {
+                parsedNum *= 10.0;
+                parsedNum += currentChar - L'0';
+            }
         }
     }
 }
 
-static inline StringUTF8 internal_parseUTF8String(FILE* file) {
-    StringUTF8 string = stringUTF8Create(&(char32_t) {0}, 0);
+static inline String internal_parseUTF8String(FILE* file) {
+    String string = containerDynamicCreateStack(0, sizeof(char), false);
     if (!isValidObject(&string.header))
         return string;
-    char32_t currentChar              = 0;
-    int      remainingCharsInSequence = 0;
+
     while (1) {
-        int currentInCharInScope = fgetc(file);
+        int currentChar = fgetc(file);
         if (feof(file)) {
             containerDestroy(&string);
             return string;
         }
-
-        if (remainingCharsInSequence == 0) {
-            while ((0x80 >> (remainingCharsInSequence + 1)) & remainingCharsInSequence)
-                remainingCharsInSequence++;
-            currentChar = (char32_t) currentInCharInScope << ((3 - remainingCharsInSequence) * 8);
-        } else {
-            currentChar |= (char32_t) currentInCharInScope << ((3 - remainingCharsInSequence) * 8);
-            remainingCharsInSequence--;
-        }
-        if (remainingCharsInSequence != 0)
-            continue;
 
         if (currentChar == '\"')
             return string;
@@ -109,33 +106,41 @@ static inline StringUTF8 internal_parseUTF8String(FILE* file) {
             }
             ContainerError insertionError = ContainerOPSuccessful;
             if (escapedChar == 'r')
-                insertionError = containerDynamicAppend(&string, sizeof(char), &(char){'\r'});
+                insertionError = containerDynamicAppend(&string, sizeof(Byte), &(Byte) {'\r'});
             else if (escapedChar == 'n')
-                insertionError = containerDynamicAppend(&string, sizeof(char), &(char){'\n'});
+                insertionError = containerDynamicAppend(&string, sizeof(Byte), &(Byte) {'\n'});
             else if (escapedChar == '\"')
-                insertionError = containerDynamicAppend(&string, sizeof(char), &(char){'\"'});
+                insertionError = containerDynamicAppend(&string, sizeof(Byte), &(Byte) {'\"'});
             else if (escapedChar == '/')
-                insertionError = containerDynamicAppend(&string, sizeof(char), &(char){'/'});
+                insertionError = containerDynamicAppend(&string, sizeof(Byte), &(Byte) {'/'});
             else if (escapedChar == 'b')
-                insertionError = containerDynamicAppend(&string, sizeof(char), &(char){'\b'});
+                insertionError = containerDynamicAppend(&string, sizeof(Byte), &(Byte) {'\b'});
             else if (escapedChar == 't')
-                insertionError = containerDynamicAppend(&string, sizeof(char), &(char){'\t'});
+                insertionError = containerDynamicAppend(&string, sizeof(Byte), &(Byte) {'\t'});
             else if (escapedChar == 'f')
-                insertionError = containerDynamicAppend(&string, sizeof(char), &(char){'\f'});
+                insertionError = containerDynamicAppend(&string, sizeof(Byte), &(Byte) {'\f'});
             else if (escapedChar == '\\')
-                insertionError = containerDynamicAppend(&string, sizeof(char), &(char){'\\'});
+                insertionError = containerDynamicAppend(&string, sizeof(Byte), &(Byte) {'\\'});
             else if (escapedChar == 'u') {
                 int firstChar, secondChar, thirdChar, fourthChar;
-                firstChar = fgetc(file);
+                firstChar  = fgetc(file);
                 secondChar = fgetc(file);
-                thirdChar = fgetc(file);
+                thirdChar  = fgetc(file);
                 fourthChar = fgetc(file);
                 if (feof(file)) {
                     containerDestroy(&string);
                     return string;
                 }
+                if (!isxdigit(firstChar) || !isxdigit(secondChar) || !isxdigit(thirdChar) || !isxdigit(fourthChar)) {
+                    containerDestroy(&string);
+                    return string;
+                }
 
+                Byte utf8Sequence[2];
 
+                utf8Sequence[0] = strtoul((char[3]) {(char) firstChar, (char) secondChar, '\0'}, NULL, 16);
+                utf8Sequence[1] = strtoul((char[3]) {(char) thirdChar, (char) fourthChar, '\0'}, NULL, 16);
+                insertionError  = containerDynamicInsert(&string, containerSize(&string.container), 2, sizeof(Byte), &utf8Sequence);
             } else {
                 containerDestroy(&string);
                 return string;
@@ -147,7 +152,7 @@ static inline StringUTF8 internal_parseUTF8String(FILE* file) {
             }
         }
 
-        if (containerDynamicAppend(&string,sizeof currentChar,&currentChar) != ContainerOPSuccessful) {
+        if (containerDynamicAppend(&string, sizeof(Byte), &(Byte) {currentChar}) != ContainerOPSuccessful) {
             containerDestroy(&string);
             return string;
         }
@@ -212,7 +217,7 @@ DynamicContainer JsonTokenizeFile(FILE* file) {
         }
 
         if (currentChar == L'"') {
-            StringUTF8 string =
+            String string = internal_parseUTF8String(file);
         }
 
         if (currentChar == L'f') {

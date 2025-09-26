@@ -67,6 +67,14 @@ namespace BackerLib {
             return container->amountOfIndexes == 0;
         }
         /**
+         * @param container Pointer to valid Container
+         * @return Size of current container.
+         */
+        static inline size_t containerSize(const Container* container) {
+            return container->amountOfIndexes;
+        }
+
+        /**
          * @brief Destroys and frees object if applicable. Sets object state to invalid.
          * @param container Container to destroy
          */

@@ -22,7 +22,6 @@ namespace BackerLib {
  */
 typedef DynamicContainer String;
 typedef DynamicContainer StringW;
-typedef DynamicContainer StringUTF8;
 /**
  * @brief Creates a String that contains a copy of string param. If string is a CString it is not length checked with, strlen instead function will copy length bytes.
  * @param string Valid char array or CString
@@ -108,15 +107,6 @@ extern ContainerError stringReplace(String* destString, const String* stringToRe
 extern StringW stringWCreate(const wchar_t* str, size_t len);
 
 
-/**
- * @brief Creates a StringUTF8 that contains a copy of str param. If str is a CString it is not length checked with strlen, instead function will copy len indicies.
- * @param str Valid char32_t array or C-String
- * @param len Length of array or string
- * @return StringUTF8 that contains a copy of string up to length chars.
- * @return Invalid object if alloc failed.
- */
-extern StringUTF8 stringUTF8Create(const char32_t* str, size_t len);
-
 
 /**
  * A non owning constant string. Existing so that it can be appended to a string or have read operations that must know the length of it.
@@ -165,11 +155,6 @@ typedef const union StringViewUTF8 {
  * @param wideString Any valid constexpr wchar_t[] or literal
  */
 #define stringViewWInitConstExpr(wideString) {.amountOfIndexes = sizeof(wideString), .array = wideString, .byteSizeOfSingleElement = sizeof(wchar_t), .header = ObjectFlagIsValid | ObjectFlagIsContainer}
-/**
- * @param wideString Any valid constexpr char32_t[] or literal
- */
-#define stringViewWInitConstExpr(UTF8String) {.amountOfIndexes = sizeof(UTF8String), .array = UTF8String, .byteSizeOfSingleElement = sizeof(char32_t), .header = ObjectFlagIsValid | ObjectFlagIsContainer}
-
 
 /**
  *
@@ -197,23 +182,6 @@ static inline StringViewW stringViewWInit(const wchar_t* str) {
         .header = ObjectFlagIsValid | ObjectFlagIsContainer};
 }
 
-/**
- *
- * @param str Any valid UTF8 C-string
- * @return StringViewW Object with len counted.
- */
-static inline StringViewUTF8 stringViewUTF8Init(const char32_t* str) {
-    size_t          strLength   = 0;
-    const char32_t* strIterator = str;
-    while (*++strIterator)
-        strLength++;
-
-    return (StringViewUTF8){
-        .amountOfIndexes = strLength,
-        .array = str,
-        .byteSizeOfSingleElement = sizeof(wchar_t),
-        .header = ObjectFlagIsValid | ObjectFlagIsContainer};
-}
 
 #ifdef __cplusplus
 }

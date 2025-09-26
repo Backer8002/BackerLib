@@ -140,14 +140,3 @@ StringW stringWCreate(const wchar_t* str, size_t len) {
     allocatedString.container.amountOfIndexes = len;
     return allocatedString;
 }
-
-StringUTF8 stringUTF8Create(const char32_t* str, size_t len) {
-    StringUTF8 allocatedString = containerDynamicCreateStack(len, sizeof *str, false);
-
-    if (!isValidObject(&allocatedString.header))
-        return allocatedString;
-
-    memcpy(allocatedString.container.array, str, len * sizeof *str);
-    allocatedString.container.amountOfIndexes = len;
-    return allocatedString;
-}
