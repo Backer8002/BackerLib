@@ -13,4 +13,9 @@ add_library(BackerLibParsing STATIC
 
 target_include_directories(BackerLibParsing INTERFACE "${PROJECT_SOURCE_DIR}/../include")
 add_dependencies(BackerLibParsing BackerLibTypes)
-target_link_libraries(BackerLibParsing LINK_PUBLIC BackerLibTypes)
+find_library(MATH_LIB m)
+if(MATH_LIB)
+    target_link_libraries(BackerLibParsing LINK_PUBLIC ${MATH_LIB} BackerLibTypes)
+else ()
+    target_link_libraries(BackerLibParsing LINK_PUBLIC BackerLibTypes)
+endif ()
