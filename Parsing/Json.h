@@ -92,19 +92,46 @@ namespace BackerLib {
 
     typedef Future(JsonObject) FutureJsonObject;
 
-    extern JsonTokenStore   jsonTokenizeFile(FILE* file);
+    extern JsonTokenStore    jsonTokenizeFile(FILE* file);
 
-    extern JsonObject       jsonReadFile(FILE* file);
+    extern JsonObject        jsonReadFile(FILE* file);
 
-    extern FutureJsonObject jsonReadFileAsync(ThreadPool* threadPool, FILE* file);
+    extern FutureJsonObject  jsonReadFileAsync(ThreadPool* threadPool, FILE* file);
 
-    extern void             jsonWriteFile(FILE* file, const JsonObject* object, const JsonFormat* format);
+    extern void              jsonWriteFile(FILE* file, const JsonObject* object, const JsonFormat* format);
 
-    extern FutureVoid       jsonWriteFileAsync(ThreadPool* threadPool, FILE* file, JsonObject* object, const JsonFormat* format);
+    extern FutureVoid        jsonWriteFileAsync(ThreadPool* threadPool, FILE* file, JsonObject* object, const JsonFormat* format);
 
-    extern void             jsonWriteTreeStyle(FILE* file, JsonObjectMember* object);
+    extern void              jsonWriteTreeStyle(FILE* file, JsonObjectMember* object);
 
-    extern void             jsonObjectDestroy(void* jsonObject);
+    static inline JsonObject jsonObjectCreate(void) {
+        return containerDynamicCreateStack(0, sizeof(JsonObjectMember), false);
+    }
+
+    static inline JsonArray jsonArrayCreate(void) {
+        return containerDynamicCreateStack(0, sizeof(JsonArrayMember), false);
+    }
+
+    static inline JsonObjectMember* jsonObjectMemberGetByIndex(const JsonObject* jsonObject, size_t index) {
+        return containerGet((Container*) jsonObject, index);
+    }
+    static inline JsonArrayMember* jsonArrayMemberGet(const JsonArray* jsonArray, size_t index) {
+        return containerGet((Container*) jsonArray, index);
+    }
+
+    extern JsonObjectMember* jsonObjectMemberGetByIdentifier(const JsonObject* jsonObject, const String* identifier);
+
+    extern ContainerError    jsonObjectAdd(JsonObject* jsonObject, const String* identifier, JsonObjectMemberType valueType, const JsonObjectMemberValue* value);
+
+    extern ContainerError    jsonArrayAdd(JsonArray* jsonArray, JsonObjectMemberType valueType, const JsonObjectMemberValue* value);
+
+    extern bool              jsonObjectRemove(JsonObject* jsonObject, size_t index);
+
+    extern bool              jsonArrayRemove(JsonArray* jsonArray, size_t index);
+
+    extern void              jsonArrayDestroy(void* jsonArray);
+
+    extern void              jsonObjectDestroy(void* jsonObject);
 
 #ifdef __cplusplus
     }

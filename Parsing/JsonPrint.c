@@ -1,4 +1,4 @@
-#include "JsonParser.h"
+#include "Json.h"
 #include <BackerLibEvent.h>
 #include <BackerLibTypes.h>
 #include <stdio.h>
@@ -9,8 +9,11 @@ static void internal_printIndentation(FILE* file, size_t indentation) {
 }
 
 static void internal_printJsonString(FILE* file, const String* string) {
-    for (const Byte* currentChar = containerDynamicFront(string); currentChar < (const Byte*) containerDynamicBack(string); currentChar++) { // Back not end since we don't want to write null terminator,
+    fputc('\"',file);
+    for (const Byte* currentChar = containerDynamicFront(string); currentChar < (const Byte*) containerDynamicEnd(string); currentChar++) {
         switch (*currentChar) {
+        case '\0':
+            break;
         case '\n':
             fprintf(file, "\\n");
             break;
@@ -39,6 +42,7 @@ static void internal_printJsonString(FILE* file, const String* string) {
             fputc(*currentChar, file);
         }
     }
+    fputc('\"',file);
 }
 
 static void jsonWriteObject(FILE* file, const JsonObject* object, const JsonFormat* format, size_t indentation, bool isFirstInArrayScope);
@@ -49,6 +53,8 @@ static void jsonWriteArray(FILE* file, const JsonArray* array, const JsonFormat*
         internal_printIndentation(file, indentation);
     }
     fputc('[', file);
+    if (format->spaceWithinAngelBracket)
+        fputc(' ',file);
     if (format->breakAfterOpeningAngleBracket) {
         fputc('\n', file);
         internal_printIndentation(file, indentation + format->amountOfSpacesForIndentation);
@@ -57,7 +63,7 @@ static void jsonWriteArray(FILE* file, const JsonArray* array, const JsonFormat*
     for (JsonArrayMember* currentMember = containerDynamicFront(array); currentMember < (JsonArrayMember*) containerDynamicEnd(array); currentMember++) {
         switch (currentMember->valueType) {
         case JsonTypeArray:
-            jsonWriteArray(file, &currentMember->value.array, format, indentation + format->amountOfSpacesForIndentation,currentMember == containerDynamicFront(array));
+            jsonWriteArray(file, &currentMember->value.array, format, indentation + format->amountOfSpacesForIndentation, currentMember == containerDynamicFront(array));
             break;
         case JsonTypeObject:
             jsonWriteObject(file, &currentMember->value.object, format, indentation + format->amountOfSpacesForIndentation, currentMember == containerDynamicFront(array));
@@ -90,6 +96,8 @@ static void jsonWriteArray(FILE* file, const JsonArray* array, const JsonFormat*
             }
         }
     }
+    if (format->spaceWithinAngelBracket)
+        fputc(' ',file);
     if (format->breakBeforeAngleBracket) {
         fputc('\n', file);
         internal_printIndentation(file, indentation);
@@ -118,10 +126,10 @@ static void jsonWriteObject(FILE* file, const JsonObject* object, const JsonForm
 
         switch (currentMember->valueType) {
         case JsonTypeArray:
-            jsonWriteArray(file, &currentMember->value.array, format, indentation + format->amountOfSpacesForIndentation,false);
+            jsonWriteArray(file, &currentMember->value.array, format, indentation + format->amountOfSpacesForIndentation, false);
             break;
         case JsonTypeObject:
-            jsonWriteObject(file, &currentMember->value.object, format, indentation + format->amountOfSpacesForIndentation,false);
+            jsonWriteObject(file, &currentMember->value.object, format, indentation + format->amountOfSpacesForIndentation, false);
             break;
         case JsonTypeNull:
             fprintf(file, "null");
@@ -136,8 +144,8 @@ static void jsonWriteObject(FILE* file, const JsonObject* object, const JsonForm
             internal_printJsonString(file, &currentMember->value.string);
             break;
         default:
-            LogError("Uninitialized JSON found. Stopped printing scope.");
-            return;
+            LogError("Uninitialized JSON found.");
+            break;
         }
         if (currentMember != containerDynamicBack(object)) {
             if (format->spaceBeforeComma)
@@ -159,6 +167,6 @@ static void jsonWriteObject(FILE* file, const JsonObject* object, const JsonForm
 }
 
 void jsonWriteFile(FILE* file, const JsonObject* object, const JsonFormat* format) {
-    jsonWriteObject(file, object, format, 0,true); // it is first in the global scope, no need for newline in the begining
+    jsonWriteObject(file, object, format, 0, true); // it is first in the global scope, no need for newline in the begining
     fputc('\n', file);
 }

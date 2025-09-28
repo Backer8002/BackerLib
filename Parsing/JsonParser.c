@@ -1,4 +1,4 @@
-#include "JsonParser.h"
+#include "Json.h"
 #include <BackerLibEvent.h>
 #include <ctype.h>
 #include <math.h>
@@ -548,33 +548,3 @@ ErrorExit:
     return (JsonObject) {0};
 }
 
-
-static void jsonArrayDestroy(JsonArray* jsonArray) {
-    if (!isValidObject((DataTypeFlags*) jsonArray))
-        return;
-    for (JsonArrayMember* currentMember = containerDynamicFront(jsonArray); currentMember < (JsonArrayMember*) containerDynamicEnd(jsonArray); currentMember++) {
-        if (currentMember->valueType == JsonTypeString)
-            containerDestroy(&currentMember->value.string);
-        else if (currentMember->valueType == JsonTypeArray)
-            jsonArrayDestroy(&currentMember->value.array);
-        else if (currentMember->valueType == JsonTypeObject)
-            jsonObjectDestroy(&currentMember->value.object);
-    }
-    containerDestroy(jsonArray);
-}
-
-void jsonObjectDestroy(void* jsonObject) {
-    if (!isValidObject(jsonObject))
-        return;
-    JsonObject* jsonObj = jsonObject;
-    for (JsonObjectMember* currentMember = containerDynamicFront(jsonObj); currentMember < (JsonObjectMember*) containerDynamicEnd(jsonObj); currentMember++) {
-        containerDestroy(&currentMember->identifier);
-        if (currentMember->valueType == JsonTypeString)
-            containerDestroy(&currentMember->value.string);
-        else if (currentMember->valueType == JsonTypeArray)
-            jsonArrayDestroy(&currentMember->value.array);
-        else if (currentMember->valueType == JsonTypeObject)
-            jsonObjectDestroy(&currentMember->value.object);
-    }
-    containerDestroy(jsonObject);
-}

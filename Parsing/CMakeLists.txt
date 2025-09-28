@@ -7,7 +7,7 @@ set(CMAKE_C_STANDARD_REQUIRED ON)
 
 
 add_library(BackerLibParsing STATIC
-        JsonParser.h
+        Json.h
         JsonParser.c
         ${PROJECT_SOURCE_DIR}/../include/BackerLibParsing.h
         JsonPrint.c
