@@ -191,7 +191,7 @@ static String internal_parseUTF8String(FILE* file) {
 
         if (currentChar == '\\') {
             int escapedChar = fgetc(file);
-            if (feof(file) || escapedChar > 127) {
+            if (feof(file)) {
                 containerDestroy(&string);
                 return string;
             }
@@ -449,9 +449,16 @@ JsonObject jsonReadFile(FILE* file) {
             else
                 expectingIdentifier = true;
             break;
-        case JsonTokenCloseBracket:
         case JsonTokenCloseCurlyBracket:
-            if (expectingValue || expectingIdentifier || expectingColon || !stackPointer)
+            if (expectingValue || expectingIdentifier || expectingColon || !stackPointer || currentScope.isArrayScope)
+                goto ErrorExit;
+            stackPointer--;
+            if (stackPointer)
+                heapSort((Container*)currentScope.scope,stringCompareDecending);
+                currentScope = *(JsonStackEntry*) containerGet(&jsonObjectStack, stackPointer - 1);
+            break;
+        case JsonTokenCloseBracket:
+            if (expectingValue || expectingIdentifier || expectingColon || !stackPointer || !currentScope.isArrayScope)
                 goto ErrorExit;
             stackPointer--;
             if (stackPointer)

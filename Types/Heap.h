@@ -41,7 +41,7 @@ namespace BackerLib {
      */
     extern ContainerError heapInsert(Heap* heap, size_t sizeOfElement, const void* element);
     /**
-     * @brief Uses heap sort to inplace sort the array with a given compare function. compare should return true if elements were in correct order. Will do nothing to Containers with NoSortFlag
+     * @brief Uses heap sort to inplace sort the array with a given compare function. compare should return true if elements were in incorrect order. Will do nothing to Containers with NoSortFlag
      * @param container Pointer to valid Container
      * @param compare Pointer to valid compare function
      */
@@ -49,14 +49,14 @@ namespace BackerLib {
     /**
      * @brief Creates a Heap on the stack. Use isValidObject to check validity.
      * @param elementSize Size of element in Heap
-     * @param compare Pointer to valid compare function. Should return true if elements were in correct order
+     * @param compare Pointer to valid compare function. Should return true if elements were in correct order. first param is higher up the heap
      * @return Heap
      */
     extern Heap           heapCreateStack(size_t elementSize, bool (*compare)(const void*, const void*));
     /**
      * @brief Creates a Heap on the heap.
      * @param elementSize Size of element in Heap
-     * @param compare Pointer to valid compare function. Should return true if elements were in correct order
+     * @param compare Pointer to valid compare function. Should return true if elements were in correct order. first param is higher up the heap
      * @return NULL if object could not be allocated.
      */
     extern Heap*          heapCreateHeap(size_t elementSize, bool (*compare)(const void*, const void*));
