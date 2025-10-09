@@ -17,6 +17,12 @@ static JsonObjectMemberValue jsonCopyValue(const JsonObjectMemberValue* value, J
     }
 }
 
+static bool jsonCopyValueHasFailed(const JsonObjectMemberValue* value, JsonObjectMemberType valueType) {
+    if ((valueType == JsonTypeString || valueType == JsonTypeArray || valueType == JsonTypeObject) && !isValidObject((DataTypeFlags*) value))
+        return true;
+    return false;
+}
+
 JsonObjectMember* jsonObjectMemberGetByIdentifier(const JsonObject* jsonObject, const String* string) {
     size_t begin = 0;
     size_t end   = containerSize((const Container*) jsonObject);
@@ -27,24 +33,60 @@ JsonObjectMember* jsonObjectMemberGetByIdentifier(const JsonObject* jsonObject, 
         else
             begin = mid;
     }
+    if (begin == end)
+        return NULL;
+
     if (stringEqual(containerGet((const Container*) jsonObject, begin), string))
         return containerGet((const Container*) jsonObject, begin);
-    if (stringEqual(containerGet((const Container*) jsonObject, end), string))
+    if (containerSize((Container*) jsonObject) > 1 && stringEqual(containerGet((const Container*) jsonObject, end), string))
         return containerGet((const Container*) jsonObject, end);
     return NULL;
 }
 
 ContainerError jsonObjectAdd(JsonObject* jsonObject, StringView* string, JsonObjectMemberType valueType, const JsonObjectMemberValue* value) {
+    String stringToUse = containerConvertToDynamicStack(
+        containerGetSubArray((const Container*) string,
+                             0,
+                             containerSize((const Container*) string) - 1,
+                             false));
+    if (!isValidObject((DataTypeFlags*) &stringToUse))
+        return ContainerAllocFailure;
+    JsonObjectMemberValue valueToUse = jsonCopyValue(value, valueType);
+    if (jsonCopyValueHasFailed(&valueToUse, valueType)) {
+        containerDestroy(&stringToUse);
+        return ContainerAllocFailure;
+    }
+
+    if (containerDynamicAppend(jsonObject, sizeof(JsonObjectMember), &(JsonObjectMember) {.identifier = stringToUse, .value = valueToUse, .valueType = valueType}) != ContainerOPSuccessful) {
+        containerDestroy(&stringToUse);
+        switch (valueType) {
+        case JsonTypeArray:
+            jsonArrayDestroy(&valueToUse);
+            break;
+        case JsonTypeObject:
+            jsonObjectDestroy(&valueToUse);
+            break;
+        case JsonTypeString:
+            containerDestroy(&valueToUse);
+            break;
+        default:
+            break;
+        }
+        return ContainerAllocFailure;
+    }
+    heapSort((Container*)&jsonObject,stringCompareAcending);
+    return ContainerOPSuccessful;
 }
 
 ContainerError jsonArrayAdd(JsonArray* jsonArray, JsonObjectMemberType valueType, const JsonObjectMemberValue* value) {
-    JsonObjectMemberValue valueToUse = jsonCopyValue(value, valueType);
-    if ((valueType == JsonTypeString || valueType == JsonTypeArray || valueType == JsonTypeObject) && !isValidObject((DataTypeFlags*)&valueToUse))
-        return ContainerAllocFailure;
-    return containerDynamicAppend(jsonArray, sizeof(JsonArrayMember),&(JsonArrayMember){.valueType = valueType, .value = valueToUse});
+    return jsonArrayAddAtIndex(jsonArray, containerSize((Container*) jsonArray), valueType, value);
 }
 
-ContainerError jsonArrayAddAtIndex(JsonArray* jsonArray, size_t index, JsonObjectMemberType valueType, const JsonObjectMemberType* value) {
+ContainerError jsonArrayAddAtIndex(JsonArray* jsonArray, size_t index, JsonObjectMemberType valueType, const JsonObjectMemberValue* value) {
+    JsonObjectMemberValue valueToUse = jsonCopyValue(value, valueType);
+    if (jsonCopyValueHasFailed(&valueToUse, valueType))
+        return ContainerAllocFailure;
+    return containerDynamicInsert(jsonArray, index, 1, sizeof(JsonArrayMember), &(JsonArrayMember) {.valueType = valueType, .value = valueToUse});
 }
 
 bool jsonObjectRemove(JsonObject* jsonObject, size_t index) {
@@ -97,7 +139,6 @@ bool jsonArrayRemove(JsonArray* jsonArray, size_t index) {
     return true;
 }
 
-
 JsonArray jsonArrayCopy(const JsonArray* jsonArray) {
     JsonArray newArray = containerConvertToDynamicStack(
         containerGetSubArray((const Container*) jsonArray,
@@ -109,8 +150,7 @@ JsonArray jsonArrayCopy(const JsonArray* jsonArray) {
     JsonArrayMember* jsonArrayMember = NULL;
     for (jsonArrayMember = containerDynamicFront(&newArray); jsonArrayMember < containerDynamicEnd(&newArray); jsonArrayMember++) {
         jsonArrayMember->value = jsonCopyValue(&jsonArrayMember->value, jsonArrayMember->valueType);
-        if ((jsonArrayMember->valueType == JsonTypeString || jsonArrayMember->valueType == JsonTypeArray || jsonArrayMember->valueType == JsonTypeObject)
-                && !isValidObject((DataTypeFlags*) &jsonArrayMember->value))
+        if (jsonCopyValueHasFailed(&jsonArrayMember->value, jsonArrayMember->valueType))
             goto jsonArrayCopyErrorExit;
     }
     return newArray;
@@ -128,6 +168,7 @@ jsonArrayCopyErrorExit:
             jsonObjectDestroy(&member->value);
             break;
         default:
+            break;
         }
     }
     containerDestroy(&newArray);
@@ -150,8 +191,7 @@ JsonObject jsonObjectCopy(const JsonObject* jsonObject) {
 
         jsonObjectMember->value = jsonCopyValue(&jsonObjectMember->value, jsonObjectMember->valueType);
 
-        if ((jsonObjectMember->valueType == JsonTypeString || jsonObjectMember->valueType == JsonTypeArray || jsonObjectMember->valueType == JsonTypeObject)
-                && !isValidObject((DataTypeFlags*) &jsonObjectMember->value)) {
+        if (jsonCopyValueHasFailed(&jsonObjectMember->value, jsonObjectMember->valueType)) {
             containerDestroy(&jsonObjectMember->identifier);
             goto jsonObjectCopyErrorExit;
         }
@@ -173,6 +213,7 @@ jsonObjectCopyErrorExit:
             jsonObjectDestroy(&member->value);
             break;
         default:
+            break;
         }
     }
     containerDestroy(&newObject);

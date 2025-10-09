@@ -453,8 +453,8 @@ JsonObject jsonReadFile(FILE* file) {
             if (expectingValue || expectingIdentifier || expectingColon || !stackPointer || currentScope.isArrayScope)
                 goto ErrorExit;
             stackPointer--;
+            heapSort((Container*)currentScope.scope,stringCompareAcending);
             if (stackPointer)
-                heapSort((Container*)currentScope.scope,stringCompareDecending);
                 currentScope = *(JsonStackEntry*) containerGet(&jsonObjectStack, stackPointer - 1);
             break;
         case JsonTokenCloseBracket:

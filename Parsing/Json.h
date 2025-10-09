@@ -118,7 +118,7 @@ namespace BackerLib {
 
     extern ContainerError           jsonArrayAdd(JsonArray* jsonArray, JsonObjectMemberType valueType, const JsonObjectMemberValue* value);
 
-    extern ContainerError           jsonArrayAddAtIndex(JsonArray* jsonArray, size_t index, JsonObjectMemberType valueType, const JsonObjectMemberType* value);
+    extern ContainerError           jsonArrayAddAtIndex(JsonArray* jsonArray, size_t index, JsonObjectMemberType valueType, const JsonObjectMemberValue* value);
 
     extern bool                     jsonObjectRemove(JsonObject* jsonObject, size_t index);
 

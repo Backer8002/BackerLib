@@ -8,7 +8,7 @@ struct JobInformation {
 };
 
 static bool jobCompare(const void* first, const void* second) {
-    return (*(struct JobInformation**) first)->priority >= (*(struct JobInformation**) second)->priority;
+    return (*(struct JobInformation**) first)->priority <= (*(struct JobInformation**) second)->priority;
 }
 
 static int threadWorkerFunction(void* sharedState) {

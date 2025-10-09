@@ -1,11 +1,13 @@
 #include "BackerStrings.h"
 #include "TypesMain.h"
+
+#include <ctype.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdlib.h>
-#include <wchar.h>
-#include <uchar.h>
 #include <string.h>
+#include <uchar.h>
+#include <wchar.h>
 
 String stringCreate(const char* string, size_t length) {
     String allocatedString = containerDynamicCreateStack(length + 1, sizeof(char), false);
@@ -150,12 +152,25 @@ bool stringCompareAcending(const void* first, const void* second) {
     for (size_t i = 0; i < stringLength(firstString); i++) {
         if (i>=stringLength(secondString))
             return false;
+        bool firstIsUpper = false;
+        bool secondIsUpper = false;
         char firstStringChar = *stringGetChar(firstString, i);
         char secondStringChar = *stringGetChar(secondString, i);
-        if (firstStringChar < secondStringChar)
-            return true;
+        if (isupper(firstStringChar))
+            firstIsUpper = true;
+        if (isupper(secondStringChar))
+            secondIsUpper = true;
+        firstStringChar = tolower(firstStringChar);
+        secondStringChar = tolower(secondStringChar);
         if (firstStringChar > secondStringChar)
             return false;
+        if (firstStringChar < secondStringChar)
+            return true;
+        if (firstIsUpper ^ secondIsUpper) {
+            if (firstIsUpper)
+                return true;
+            return false;
+        }
     }
     return true;
 }
@@ -167,12 +182,25 @@ bool stringCompareDecending(const void* first, const void* second) {
     for (size_t i = 0; i < stringLength(firstString); i++) {
         if (i>=stringLength(secondString))
             return true;
+        bool firstIsUpper = false;
+        bool secondIsUpper = false;
         char firstStringChar = *stringGetChar(firstString, i);
         char secondStringChar = *stringGetChar(secondString, i);
+        if (isupper(firstStringChar))
+            firstIsUpper = true;
+        if (isupper(secondStringChar))
+            secondIsUpper = true;
+        firstStringChar = tolower(firstStringChar);
+        secondStringChar = tolower(secondStringChar);
         if (firstStringChar > secondStringChar)
             return true;
         if (firstStringChar < secondStringChar)
             return false;
+        if (firstIsUpper ^ secondIsUpper) {
+            if (firstIsUpper)
+                return false;
+            return true;
+        }
     }
     return true;
 }
