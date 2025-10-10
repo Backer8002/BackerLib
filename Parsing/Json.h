@@ -112,7 +112,7 @@ namespace BackerLib {
     static inline JsonObjectMember* jsonObjectMemberGetByIndex(const JsonObject* jsonObject, size_t index) { return containerGet((Container*) jsonObject, index); }
     static inline JsonArrayMember*  jsonArrayMemberGet(const JsonArray* jsonArray, size_t index) { return containerGet((Container*) jsonArray, index); }
 
-    extern JsonObjectMember*        jsonObjectMemberGetByIdentifier(const JsonObject* jsonObject, const String* identifier);
+    extern JsonObjectMember*        jsonObjectMemberGetByIdentifier(const JsonObject* jsonObject, StringView* identifier);
 
     extern ContainerError           jsonObjectAdd(JsonObject* jsonObject, StringView* identifier, JsonObjectMemberType valueType, const JsonObjectMemberValue* value);
 

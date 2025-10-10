@@ -21,7 +21,7 @@ String stringCreate(const char* string, size_t length) {
     return allocatedString;
 }
 
-inline char* stringGetChar(const String* string, size_t index) {
+inline char* stringGetChar(StringView* string, size_t index) {
     return containerGet((const Container*) string, index);
 }
 
@@ -146,8 +146,8 @@ ContainerError stringReplace(String* destString, const String* stringToReplaceWi
 }
 
 bool stringCompareAcending(const void* first, const void* second) {
-    const String* firstString = first;
-    const String* secondString = second;
+    StringView* firstString = first;
+    StringView* secondString = second;
 
     for (size_t i = 0; i < stringLength(firstString); i++) {
         if (i>=stringLength(secondString))
@@ -176,8 +176,8 @@ bool stringCompareAcending(const void* first, const void* second) {
 }
 
 bool stringCompareDecending(const void* first, const void* second) {
-    const String* firstString = first;
-    const String* secondString = second;
+    StringView* firstString = first;
+    StringView* secondString = second;
 
     for (size_t i = 0; i < stringLength(firstString); i++) {
         if (i>=stringLength(secondString))
@@ -206,13 +206,13 @@ bool stringCompareDecending(const void* first, const void* second) {
 }
 
 bool stringEqual(const void* first, const void* second) {
-    const String* firstString = first;
-    const String* secondString = second;
+    StringView* firstString = first;
+    StringView* secondString = second;
 
     if (stringLength(firstString) != stringLength(secondString))
         return false;
 
-    return memcmp(containerDynamicFront(firstString),containerDynamicFront(secondString),stringLength(firstString)) != 0;
+    return memcmp(firstString->array,secondString->array,stringLength(firstString)) == 0;
 }
 
 

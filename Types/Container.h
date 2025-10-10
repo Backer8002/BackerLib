@@ -75,6 +75,18 @@ namespace BackerLib {
         }
 
         /**
+         * @brief Returns a reference index in a container
+         * @param container Pointer to valid container
+         * @param reference Pointer to reference within container
+         * @return reference's index in container
+         * @note It is undefined behavoir to use a reference to outside the container.
+         * @note Reference may point to any part of member object.
+         */
+        static inline size_t containerIndexFromReference(const Container* container, const void* const reference) {
+            return ((uintptr_t)reference - (uintptr_t)container->array)/container->byteSizeOfSingleElement;
+        }
+
+        /**
          * @brief Destroys and frees object if applicable. Sets object state to invalid.
          * @param container Container to destroy
          */

@@ -22,6 +22,33 @@ namespace BackerLib {
      */
     typedef DynamicContainer String;
     typedef DynamicContainer StringW;
+
+        /**
+         * A non owning constant string. Existing so that it can be appended to a string or have read operations that must know the length of it.
+         */
+        typedef const union StringView {
+            struct {
+                DataTypeFlags  header;
+                const uint32_t byteSizeOfSingleElement;
+                const size_t   amountOfIndexes;
+                const char*    array;
+            };
+            Container container;
+        } StringView;
+
+        /**
+         * A non owning constant string. Existing so that it can be appended to a string or have read operations that must know the length of it.
+         */
+        typedef const union StringViewW {
+            struct {
+                DataTypeFlags  header;
+                const uint32_t byteSizeOfSingleElement;
+                const size_t   amountOfIndexes;
+                const wchar_t* array;
+            };
+            Container container;
+        } StringViewW;
+
     /**
      * @brief Creates a String that contains a copy of string param.
      * If string is a CString it is not length checked with, strlen instead function will copy length bytes.
@@ -38,7 +65,7 @@ namespace BackerLib {
      * @param string Pointer to valid String
      * @return Size of char array in bytes, excluding the end null terminator.
      */
-    static inline size_t     stringLength(const String* string) {
+    static inline size_t     stringLength(StringView* string) {
         const size_t stringSize = containerSize((Container*) string);
         return stringSize ? stringSize - 1 : 0;
     }
@@ -49,7 +76,7 @@ namespace BackerLib {
      * @param index Index to get char from
      * @return Pointer to char in array. NULL if invalid index.
      */
-    extern inline char*          stringGetChar(const String* string, size_t index);
+    extern inline char*          stringGetChar(StringView* string, size_t index);
 
     /**
      * @brief Appends stringToInsert on to destString.
@@ -138,36 +165,6 @@ namespace BackerLib {
      * @return Invalid object if alloc failed.
      */
     extern StringW               stringWCreate(const wchar_t* str, size_t len);
-
-
-
-    /**
-     * A non owning constant string. Existing so that it can be appended to a string or have read operations that must know the length of it.
-     */
-    typedef const union StringView {
-        struct {
-            DataTypeFlags  header;
-            const uint32_t byteSizeOfSingleElement;
-            const size_t   amountOfIndexes;
-            const char*    array;
-        };
-
-        Container container;
-    } StringView;
-
-    /**
-     * A non owning constant string. Existing so that it can be appended to a string or have read operations that must know the length of it.
-     */
-    typedef const union StringViewW {
-        struct {
-            DataTypeFlags  header;
-            const uint32_t byteSizeOfSingleElement;
-            const size_t   amountOfIndexes;
-            const wchar_t* array;
-        };
-
-        Container container;
-    } StringViewW;
 
 /**
  * @param cString Any valid constexpr char[] or literal

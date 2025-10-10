@@ -23,15 +23,15 @@ static bool jsonCopyValueHasFailed(const JsonObjectMemberValue* value, JsonObjec
     return false;
 }
 
-JsonObjectMember* jsonObjectMemberGetByIdentifier(const JsonObject* jsonObject, const String* string) {
+JsonObjectMember* jsonObjectMemberGetByIdentifier(const JsonObject* jsonObject, StringView* string) {
     size_t begin = 0;
     size_t end   = containerSize((const Container*) jsonObject);
     while (end - begin > 1) {
         size_t mid = (begin + end) / 2;
         if (stringCompareAcending(containerGet((const Container*) jsonObject, mid), string))
-            end = mid;
-        else
             begin = mid;
+        else
+            end = mid;
     }
     if (begin == end)
         return NULL;
