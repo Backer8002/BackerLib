@@ -26,7 +26,7 @@ namespace BackerLib {
         JsonTypeString,
         JsonTypeObject,
         JsonTypeArray
-    } JsonObjectMemberType;
+    } JsonMemberType;
 
     typedef union JsonObjectMemberValue {
         bool       boolean;
@@ -34,17 +34,17 @@ namespace BackerLib {
         String     string;
         JsonObject object;
         JsonArray  array;
-    } JsonObjectMemberValue;
+    } JsonMemberValue;
 
     typedef struct JsonObjectMember {
         String                identifier;
-        JsonObjectMemberValue value;
-        JsonObjectMemberType  valueType;
+        JsonMemberValue value;
+        JsonMemberType  valueType;
     } JsonObjectMember;
 
     typedef struct JsonArrayMember {
-        JsonObjectMemberType  valueType;
-        JsonObjectMemberValue value;
+        JsonMemberType  valueType;
+        JsonMemberValue value;
     } JsonArrayMember;
 
     typedef struct JsonFormat {
@@ -78,7 +78,7 @@ namespace BackerLib {
 
     typedef struct JsonToken {
         JsonTokenType         tokenType;
-        JsonObjectMemberValue additionalData;
+        JsonMemberValue additionalData;
     } JsonToken;
 
     typedef struct JsonTokenStore {
@@ -114,11 +114,11 @@ namespace BackerLib {
 
     extern JsonObjectMember*        jsonObjectMemberGetByIdentifier(const JsonObject* jsonObject, StringView* identifier);
 
-    extern ContainerError           jsonObjectAdd(JsonObject* jsonObject, StringView* identifier, JsonObjectMemberType valueType, const JsonObjectMemberValue* value);
+    extern ContainerError           jsonObjectAdd(JsonObject* jsonObject, StringView* identifier, JsonMemberType valueType, const JsonMemberValue* value);
 
-    extern ContainerError           jsonArrayAdd(JsonArray* jsonArray, JsonObjectMemberType valueType, const JsonObjectMemberValue* value);
+    extern ContainerError           jsonArrayAdd(JsonArray* jsonArray, JsonMemberType valueType, const JsonMemberValue* value);
 
-    extern ContainerError           jsonArrayAddAtIndex(JsonArray* jsonArray, size_t index, JsonObjectMemberType valueType, const JsonObjectMemberValue* value);
+    extern ContainerError           jsonArrayAddAtIndex(JsonArray* jsonArray, size_t index, JsonMemberType valueType, const JsonMemberValue* value);
 
     extern bool                     jsonObjectRemove(JsonObject* jsonObject, size_t index);
 

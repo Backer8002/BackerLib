@@ -300,7 +300,7 @@ JsonTokenStore jsonTokenizeFile(FILE* file) {
             if (containerDynamicAppend(&tokenStorage.dynamicContainer,
                                        sizeof(JsonToken),
                                        &(JsonToken) {.tokenType      = JsonTokenString,
-                                                     .additionalData = (JsonObjectMemberValue) {.string = string}}))
+                                                     .additionalData = (JsonMemberValue) {.string = string}}))
                 goto ErrorExit;
             continue;
         }
@@ -312,7 +312,7 @@ JsonTokenStore jsonTokenizeFile(FILE* file) {
             if (containerDynamicAppend(&tokenStorage.dynamicContainer,
                                        sizeof(JsonToken),
                                        &(JsonToken) {.tokenType      = JsonTokenNumber,
-                                                     .additionalData = (JsonObjectMemberValue) {.number = number}}))
+                                                     .additionalData = (JsonMemberValue) {.number = number}}))
                 goto ErrorExit;
             continue;
         }
@@ -329,7 +329,7 @@ JsonTokenStore jsonTokenizeFile(FILE* file) {
                 goto ErrorExit;
             if (containerDynamicAppend(&tokenStorage.dynamicContainer,
                                        sizeof(JsonToken),
-                                       &(JsonToken) {.tokenType = JsonTokenBool, .additionalData = (JsonObjectMemberValue) {.boolean = false}}) != ContainerOPSuccessful)
+                                       &(JsonToken) {.tokenType = JsonTokenBool, .additionalData = (JsonMemberValue) {.boolean = false}}) != ContainerOPSuccessful)
                 goto ErrorExit;
         } else if (currentChar == 't') {
             if ('r' != fgetc(file))
@@ -340,7 +340,7 @@ JsonTokenStore jsonTokenizeFile(FILE* file) {
                 goto ErrorExit;
             if (containerDynamicAppend(&tokenStorage.dynamicContainer,
                                        sizeof(JsonToken),
-                                       &(JsonToken) {.tokenType = JsonTokenBool, .additionalData = (JsonObjectMemberValue) {.boolean = true}}) != ContainerOPSuccessful)
+                                       &(JsonToken) {.tokenType = JsonTokenBool, .additionalData = (JsonMemberValue) {.boolean = true}}) != ContainerOPSuccessful)
                 goto ErrorExit;
         } else if (currentChar == 'n') {
             if ('u' != fgetc(file))
@@ -400,7 +400,7 @@ JsonObject jsonReadFile(FILE* file) {
                 if (containerDynamicAppend(currentScope.scope,
                                            sizeof(JsonArrayMember),
                                            &(JsonArrayMember) {.valueType = JsonTypeObject,
-                                                               .value     = (JsonObjectMemberValue) {.object = currentObject}}) != ContainerOPSuccessful)
+                                                               .value     = (JsonMemberValue) {.object = currentObject}}) != ContainerOPSuccessful)
                     goto ErrorExit;
                 currentScope = (JsonStackEntry) {.isArrayScope = false, .scope = &((JsonArrayMember*) containerDynamicBack(currentScope.scope))->value.object};
             } else {
@@ -421,7 +421,7 @@ JsonObject jsonReadFile(FILE* file) {
                 if (containerDynamicAppend(currentScope.scope,
                                            sizeof(JsonArrayMember),
                                            &(JsonArrayMember) {.valueType = JsonTypeArray,
-                                                               .value     = (JsonObjectMemberValue) {.array = newArray}}) != ContainerOPSuccessful)
+                                                               .value     = (JsonMemberValue) {.array = newArray}}) != ContainerOPSuccessful)
                     goto ErrorExit;
                 currentScope = (JsonStackEntry) {.isArrayScope = true, .scope = &((JsonArrayMember*) containerDynamicBack(currentScope.scope))->value.array};
             } else {

@@ -1,23 +1,23 @@
 #include "Json.h"
 #include <BackerLibTypes.h>
 
-static JsonObjectMemberValue jsonCopyValue(const JsonObjectMemberValue* value, JsonObjectMemberType valueType) {
+static JsonMemberValue jsonCopyValue(const JsonMemberValue* value, JsonMemberType valueType) {
     switch (valueType) {
     case JsonTypeString:
-        return (JsonObjectMemberValue) {.string = stringCreate(containerDynamicFront(&value->string), stringLength(&value->string))};
+        return (JsonMemberValue) {.string = stringCreate(containerDynamicFront(&value->string), stringLength(&value->string))};
         break;
     case JsonTypeArray:
-        return (JsonObjectMemberValue) {.array = jsonArrayCopy(&value->array)};
+        return (JsonMemberValue) {.array = jsonArrayCopy(&value->array)};
         break;
     case JsonTypeObject:
-        return (JsonObjectMemberValue) {.object = jsonObjectCopy(&value->object)};
+        return (JsonMemberValue) {.object = jsonObjectCopy(&value->object)};
         break;
     default:
         return *value;
     }
 }
 
-static bool jsonCopyValueHasFailed(const JsonObjectMemberValue* value, JsonObjectMemberType valueType) {
+static bool jsonCopyValueHasFailed(const JsonMemberValue* value, JsonMemberType valueType) {
     if ((valueType == JsonTypeString || valueType == JsonTypeArray || valueType == JsonTypeObject) && !isValidObject((DataTypeFlags*) value))
         return true;
     return false;
@@ -43,7 +43,7 @@ JsonObjectMember* jsonObjectMemberGetByIdentifier(const JsonObject* jsonObject, 
     return NULL;
 }
 
-ContainerError jsonObjectAdd(JsonObject* jsonObject, StringView* string, JsonObjectMemberType valueType, const JsonObjectMemberValue* value) {
+ContainerError jsonObjectAdd(JsonObject* jsonObject, StringView* string, JsonMemberType valueType, const JsonMemberValue* value) {
     String stringToUse = containerConvertToDynamicStack(
         containerGetSubArray((const Container*) string,
                              0,
@@ -51,7 +51,7 @@ ContainerError jsonObjectAdd(JsonObject* jsonObject, StringView* string, JsonObj
                              false));
     if (!isValidObject((DataTypeFlags*) &stringToUse))
         return ContainerAllocFailure;
-    JsonObjectMemberValue valueToUse = jsonCopyValue(value, valueType);
+    JsonMemberValue valueToUse = jsonCopyValue(value, valueType);
     if (jsonCopyValueHasFailed(&valueToUse, valueType)) {
         containerDestroy(&stringToUse);
         return ContainerAllocFailure;
@@ -78,12 +78,12 @@ ContainerError jsonObjectAdd(JsonObject* jsonObject, StringView* string, JsonObj
     return ContainerOPSuccessful;
 }
 
-ContainerError jsonArrayAdd(JsonArray* jsonArray, JsonObjectMemberType valueType, const JsonObjectMemberValue* value) {
+ContainerError jsonArrayAdd(JsonArray* jsonArray, JsonMemberType valueType, const JsonMemberValue* value) {
     return jsonArrayAddAtIndex(jsonArray, containerSize((Container*) jsonArray), valueType, value);
 }
 
-ContainerError jsonArrayAddAtIndex(JsonArray* jsonArray, size_t index, JsonObjectMemberType valueType, const JsonObjectMemberValue* value) {
-    JsonObjectMemberValue valueToUse = jsonCopyValue(value, valueType);
+ContainerError jsonArrayAddAtIndex(JsonArray* jsonArray, size_t index, JsonMemberType valueType, const JsonMemberValue* value) {
+    JsonMemberValue valueToUse = jsonCopyValue(value, valueType);
     if (jsonCopyValueHasFailed(&valueToUse, valueType))
         return ContainerAllocFailure;
     return containerDynamicInsert(jsonArray, index, 1, sizeof(JsonArrayMember), &(JsonArrayMember) {.valueType = valueType, .value = valueToUse});
