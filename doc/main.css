@@ -1,0 +1,23 @@
+.definition {
+    border: 5px double black;
+    font-family: serif;
+    font-size: large;
+}
+
+main,header {
+    padding-top: 10px;
+    padding-left: 5%;
+    padding-right: 5%;
+
+    font-size: medium;
+    font-family: serif;
+}
+
+.code {
+    font-family: "JetBrains Mono", monospace;
+    font-size: medium;
+}
+
+table, th, tr, td {
+    border: medium double black;
+}
