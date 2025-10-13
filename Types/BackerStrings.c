@@ -26,7 +26,7 @@ inline char* stringGetChar(StringView* string, size_t index) {
 }
 
 inline ContainerError stringAppendCString(String* destString, const char* stringToInsert, size_t length) {
-    return containerDynamicInsert(destString, stringLength(destString), length, sizeof(*stringToInsert), stringToInsert);
+    return containerDynamicInsert(destString, stringLength((StringView*)(Container*)destString), length, sizeof(*stringToInsert), stringToInsert);
 }
 
 ContainerError stringInsertSubCString(String* destString, const char* other, const size_t lenOfOther, const size_t firstIndex) {
@@ -34,7 +34,7 @@ ContainerError stringInsertSubCString(String* destString, const char* other, con
 }
 
 ContainerError stringAppendString(String* destString, const String* stringToInsert) {
-    ContainerError errorCode = containerDynamicInsertContainer(destString, stringLength(destString), (Container*) stringToInsert);
+    ContainerError errorCode = containerDynamicInsertContainer(destString, stringLength((StringView*)(Container*)destString), (Container*) stringToInsert);
     if (errorCode != ContainerOPSuccessful)
         return errorCode;
     containerDynamicPop(destString);
@@ -51,8 +51,8 @@ String stringStrip(const String* string, char charToStrip, bool stripFromBack, u
         return returnString;
 
     size_t amountStripped = 0;
-    for (size_t iterator = 0; iterator < stringLength(string); iterator++) {
-        char* currentChar = stringGetChar(string, (stripFromBack ? stringLength(string) - 1 - iterator : iterator));
+    for (size_t iterator = 0; iterator < stringLength((StringView*)(Container*)string); iterator++) {
+        char* currentChar = stringGetChar((StringView*)(Container*)string, (stripFromBack ? stringLength((StringView*)(Container*)string) - 1 - iterator : iterator));
         if ((*currentChar != charToStrip) || (amountToStrip && (amountStripped >= amountToStrip)))
             containerDynamicAppend(&returnString, sizeof(*currentChar), currentChar);
         else
@@ -71,10 +71,12 @@ DynamicContainer stringSplit(const String* string, char charToSplitOn, bool spli
 
     size_t amountSplit           = 0;
     size_t firstIndexOfSubString = 0;
-    size_t lastIndexOfSubString  = stringLength(string) - 1;
+    size_t lastIndexOfSubString  = stringLength((StringView*)(Container*)string) - 1;
 
-    for (size_t iterator = 0; iterator < stringLength(string); iterator++) {
-        const char* currentChar = stringGetChar(string, splitFromBack ? stringLength(string) - 1 - iterator : iterator);
+    for (size_t iterator = 0; iterator < stringLength((StringView*)(Container*)string); iterator++) {
+        const char* currentChar = stringGetChar((StringView*)(Container*)string, splitFromBack ?
+            stringLength((StringView*)(Container*)string) - 1 - iterator
+            : iterator);
         if (*currentChar != charToSplitOn)
             continue;
         if (amountOfCharsToSplitAt && amountOfCharsToSplitAt <= amountSplit)
@@ -83,7 +85,7 @@ DynamicContainer stringSplit(const String* string, char charToSplitOn, bool spli
         amountSplit++;
 
         if (splitFromBack) {
-            firstIndexOfSubString = stringLength(string) - iterator;
+            firstIndexOfSubString = stringLength((StringView*)(Container*)string) - iterator;
         } else {
             lastIndexOfSubString = iterator - 1;
             if (iterator == 0) {
@@ -101,11 +103,11 @@ DynamicContainer stringSplit(const String* string, char charToSplitOn, bool spli
             if (containerDynamicAppend(&stringArray, sizeof(String), &subString) == ContainerAllocFailure)
                 goto stringSplitErrorExit;
         }
-        if (stringLength(string) - iterator == 1)
+        if (stringLength((StringView*)(Container*)string) - iterator == 1)
             goto stringSplitExit;
 
         if (splitFromBack)
-            lastIndexOfSubString = stringLength(string) - iterator - 2;
+            lastIndexOfSubString = stringLength((StringView*)(Container*)string) - iterator - 2;
         else
             firstIndexOfSubString = iterator + 1;
     }
@@ -132,7 +134,7 @@ stringSplitErrorExit:
 ContainerError stringReplace(String* destString, const String* stringToReplaceWith, size_t firstIndex) {
     if (firstIndex > destString->container.amountOfIndexes)
         return ContainerInvalidIndex;
-    if (*stringGetChar(destString,firstIndex) > 127)
+    if (*stringGetChar((StringView*)(Container*)destString,firstIndex) < 0)
         return ContainerInvalidIndex;
 
     if (stringToReplaceWith->container.amountOfIndexes > destString->container.amountOfIndexes - firstIndex - 1) {

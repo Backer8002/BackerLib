@@ -126,7 +126,6 @@ extern bool eventInitDefualtLog(const char* debugLogFile, bool outputToStdout, c
         if (!errorLog) {
             if (debugLog)
                 fclose(debugLog);
-            fclose(errorLog);
             return false;
         }
     }

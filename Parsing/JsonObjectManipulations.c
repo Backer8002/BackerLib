@@ -4,7 +4,8 @@
 static JsonMemberValue jsonCopyValue(const JsonMemberValue* value, JsonMemberType valueType) {
     switch (valueType) {
     case JsonTypeString:
-        return (JsonMemberValue) {.string = stringCreate(containerDynamicFront(&value->string), stringLength(&value->string))};
+        return (JsonMemberValue) {.string = stringCreate(containerDynamicFront(&value->string),
+            stringLength(stringViewPtrCast(&value->string)))};
         break;
     case JsonTypeArray:
         return (JsonMemberValue) {.array = jsonArrayCopy(&value->array)};
@@ -74,7 +75,7 @@ ContainerError jsonObjectAdd(JsonObject* jsonObject, StringView* string, JsonMem
         }
         return ContainerAllocFailure;
     }
-    heapSort((Container*)&jsonObject,stringCompareAcending);
+    heapSort((Container*)jsonObject,stringCompareAcending);
     return ContainerOPSuccessful;
 }
 
@@ -148,7 +149,7 @@ JsonArray jsonArrayCopy(const JsonArray* jsonArray) {
     if (!isValidObject(&newArray.header))
         return newArray;
     JsonArrayMember* jsonArrayMember = NULL;
-    for (jsonArrayMember = containerDynamicFront(&newArray); jsonArrayMember < containerDynamicEnd(&newArray); jsonArrayMember++) {
+    for (jsonArrayMember = containerDynamicFront(&newArray); jsonArrayMember < (JsonArrayMember*)containerDynamicEnd(&newArray); jsonArrayMember++) {
         jsonArrayMember->value = jsonCopyValue(&jsonArrayMember->value, jsonArrayMember->valueType);
         if (jsonCopyValueHasFailed(&jsonArrayMember->value, jsonArrayMember->valueType))
             goto jsonArrayCopyErrorExit;
@@ -184,8 +185,9 @@ JsonObject jsonObjectCopy(const JsonObject* jsonObject) {
     if (!isValidObject(&newObject.header))
         return newObject;
     JsonObjectMember* jsonObjectMember = NULL;
-    for (jsonObjectMember = containerDynamicFront(&newObject); jsonObjectMember < containerDynamicEnd(&newObject); jsonObjectMember++) {
-        jsonObjectMember->identifier = stringCreate(containerDynamicFront(&jsonObjectMember->identifier), stringLength(&jsonObjectMember->identifier));
+    for (jsonObjectMember = containerDynamicFront(&newObject); jsonObjectMember < (JsonObjectMember*)containerDynamicEnd(&newObject); jsonObjectMember++) {
+        jsonObjectMember->identifier = stringCreate(containerDynamicFront(&jsonObjectMember->identifier),
+            stringLength(stringViewPtrCast(&jsonObjectMember->identifier)));
         if (!isValidObject(&jsonObjectMember->identifier.header))
             goto jsonObjectCopyErrorExit;
 

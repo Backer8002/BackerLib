@@ -201,6 +201,13 @@ namespace BackerLib {
             .header                  = ObjectFlagIsValid | ObjectFlagIsContainer};
     }
 
+static inline StringView stringViewCast(String string) {
+        return (StringView){.container = string.container};
+    }
+
+static inline StringView* stringViewPtrCast(const String* string) {
+        return (StringView*)(Container*)string;
+    }
 
 #ifdef __cplusplus
     }
