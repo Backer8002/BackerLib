@@ -10,7 +10,6 @@
 namespace BackerLib {
     extern "C" {
 #endif // __cplusplus
-#include <threads.h>
 
     typedef struct {
         DataTypeFlags header;
@@ -107,8 +106,6 @@ namespace BackerLib {
 
 #define HASHMAP_MAX_DEPTH                       UINT32_MAX
 #define HASHMAP_MAX_LOADFACTOR                  1.0f
-#define HASHMAP_CUCKOO_MAX_CUCKOO_OF_SIZE       0.75f
-#define HASHMAP_CUCKOO_MAX_REHASH_BEFORE_RESIZE 250ull
 
 #define FlagHashMapKeyIsDataTypeFlags           0x100
 

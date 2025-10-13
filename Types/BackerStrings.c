@@ -1,40 +1,48 @@
 #include "BackerStrings.h"
 #include "TypesMain.h"
+
+#include <ctype.h>
 #include <stdbool.h>
 #include <stdint.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <uchar.h>
+#include <wchar.h>
 
 String stringCreate(const char* string, size_t length) {
-    String allocatedString = containerDynamicCreateStack(length, sizeof(char), false);
+    String allocatedString = containerDynamicCreateStack(length + 1, sizeof(char), false);
 
     if (!isValidObject(&allocatedString.header))
         return allocatedString;
 
     memcpy(allocatedString.container.array, string, length);
     allocatedString.container.amountOfIndexes = length;
+    containerDynamicAppend(&allocatedString, sizeof (char),&(char){'\0'});
     return allocatedString;
 }
 
-inline char* stringGetChar(const String* string, size_t index) {
+inline char* stringGetChar(StringView* string, size_t index) {
     return containerGet((const Container*) string, index);
 }
 
 inline ContainerError stringAppendCString(String* destString, const char* stringToInsert, size_t length) {
-    return containerDynamicInsert(destString, destString->container.amountOfIndexes, length, sizeof(*stringToInsert), stringToInsert);
+    return containerDynamicInsert(destString, stringLength((StringView*)(Container*)destString), length, sizeof(*stringToInsert), stringToInsert);
 }
 
-ContainerError stringInsertSubCString(String* destString, const char* other, size_t lenOfOther, size_t firstIndex) {
+ContainerError stringInsertSubCString(String* destString, const char* other, const size_t lenOfOther, const size_t firstIndex) {
     return containerDynamicInsert(destString, firstIndex, lenOfOther, sizeof(*other), other);
 }
 
-inline ContainerError stringAppendString(String* destString, const String* stringToInsert) {
-    return containerDynamicInsertContainer(destString, destString->container.amountOfIndexes, (Container*) stringToInsert);
+ContainerError stringAppendString(String* destString, const String* stringToInsert) {
+    ContainerError errorCode = containerDynamicInsertContainer(destString, stringLength((StringView*)(Container*)destString), (Container*) stringToInsert);
+    if (errorCode != ContainerOPSuccessful)
+        return errorCode;
+    containerDynamicPop(destString);
+    return ContainerOPSuccessful;
 }
 
 String stringStrip(const String* string, char charToStrip, bool stripFromBack, uint64_t amountToStrip) {
-    if (string->container.byteSizeOfSingleElement != sizeof(charToStrip)) {
+    if (string->container.byteSizeOfSingleElement != sizeof charToStrip) {
         String returnString = {0};
         return returnString;
     }
@@ -43,8 +51,8 @@ String stringStrip(const String* string, char charToStrip, bool stripFromBack, u
         return returnString;
 
     size_t amountStripped = 0;
-    for (size_t iterator = 0; iterator < string->container.amountOfIndexes; iterator++) {
-        char* currentChar = stringGetChar(string, (stripFromBack ? string->container.amountOfIndexes - 1 - iterator : iterator));
+    for (size_t iterator = 0; iterator < stringLength((StringView*)(Container*)string); iterator++) {
+        char* currentChar = stringGetChar((StringView*)(Container*)string, (stripFromBack ? stringLength((StringView*)(Container*)string) - 1 - iterator : iterator));
         if ((*currentChar != charToStrip) || (amountToStrip && (amountStripped >= amountToStrip)))
             containerDynamicAppend(&returnString, sizeof(*currentChar), currentChar);
         else
@@ -52,6 +60,7 @@ String stringStrip(const String* string, char charToStrip, bool stripFromBack, u
     }
     if (stripFromBack)
         containerReverse(&returnString.container);
+    containerDynamicAppend(&returnString,sizeof(char),&(char){'\0'});
     return returnString;
 }
 
@@ -62,10 +71,12 @@ DynamicContainer stringSplit(const String* string, char charToSplitOn, bool spli
 
     size_t amountSplit           = 0;
     size_t firstIndexOfSubString = 0;
-    size_t lastIndexOfSubString  = string->container.amountOfIndexes - 1;
+    size_t lastIndexOfSubString  = stringLength((StringView*)(Container*)string) - 1;
 
-    for (size_t iterator = 0; iterator < string->container.amountOfIndexes; iterator++) {
-        char* currentChar = stringGetChar(string, (splitFromBack ? string->container.amountOfIndexes - 1 - iterator : iterator));
+    for (size_t iterator = 0; iterator < stringLength((StringView*)(Container*)string); iterator++) {
+        const char* currentChar = stringGetChar((StringView*)(Container*)string, splitFromBack ?
+            stringLength((StringView*)(Container*)string) - 1 - iterator
+            : iterator);
         if (*currentChar != charToSplitOn)
             continue;
         if (amountOfCharsToSplitAt && amountOfCharsToSplitAt <= amountSplit)
@@ -74,7 +85,7 @@ DynamicContainer stringSplit(const String* string, char charToSplitOn, bool spli
         amountSplit++;
 
         if (splitFromBack) {
-            firstIndexOfSubString = string->container.amountOfIndexes - iterator;
+            firstIndexOfSubString = stringLength((StringView*)(Container*)string) - iterator;
         } else {
             lastIndexOfSubString = iterator - 1;
             if (iterator == 0) {
@@ -84,15 +95,19 @@ DynamicContainer stringSplit(const String* string, char charToSplitOn, bool spli
         }
 
         if (firstIndexOfSubString <= lastIndexOfSubString) {
-            DynamicContainer subString = containerConvertToDynamicStack(containerGetSubArray((Container*) string, firstIndexOfSubString, lastIndexOfSubString, false));
+            String subString = containerConvertToDynamicStack(containerGetSubArray((Container*) string, firstIndexOfSubString, lastIndexOfSubString, false));
+            if (!isValidObject(&subString.header))
+                goto stringSplitErrorExit;
+            if (stringAppendCString(&subString, "\0",1) != ContainerOPSuccessful)
+                goto stringSplitErrorExit;
             if (containerDynamicAppend(&stringArray, sizeof(String), &subString) == ContainerAllocFailure)
                 goto stringSplitErrorExit;
         }
-        if (string->container.amountOfIndexes - iterator == 1)
+        if (stringLength((StringView*)(Container*)string) - iterator == 1)
             goto stringSplitExit;
 
         if (splitFromBack)
-            lastIndexOfSubString = string->container.amountOfIndexes - iterator - 2;
+            lastIndexOfSubString = stringLength((StringView*)(Container*)string) - iterator - 2;
         else
             firstIndexOfSubString = iterator + 1;
     }
@@ -119,6 +134,9 @@ stringSplitErrorExit:
 ContainerError stringReplace(String* destString, const String* stringToReplaceWith, size_t firstIndex) {
     if (firstIndex > destString->container.amountOfIndexes)
         return ContainerInvalidIndex;
+    if (*stringGetChar((StringView*)(Container*)destString,firstIndex) < 0)
+        return ContainerInvalidIndex;
+
     if (stringToReplaceWith->container.amountOfIndexes > destString->container.amountOfIndexes - firstIndex - 1) {
         if (containerDynamicReserve(destString, stringToReplaceWith->container.amountOfIndexes - destString->container.amountOfIndexes + firstIndex + 1) == ContainerAllocFailure)
             return ContainerAllocFailure;
@@ -127,4 +145,87 @@ ContainerError stringReplace(String* destString, const String* stringToReplaceWi
     for (size_t i = 0; i < stringToReplaceWith->container.amountOfIndexes; i++)
         containerSet((Container*) destString, i + firstIndex, sizeof(char), containerGet((const Container*) stringToReplaceWith, i));
     return ContainerOPSuccessful;
+}
+
+bool stringCompareAcending(const void* first, const void* second) {
+    StringView* firstString = first;
+    StringView* secondString = second;
+
+    for (size_t i = 0; i < stringLength(firstString); i++) {
+        if (i>=stringLength(secondString))
+            return false;
+        bool firstIsUpper = false;
+        bool secondIsUpper = false;
+        char firstStringChar = *stringGetChar(firstString, i);
+        char secondStringChar = *stringGetChar(secondString, i);
+        if (isupper(firstStringChar))
+            firstIsUpper = true;
+        if (isupper(secondStringChar))
+            secondIsUpper = true;
+        firstStringChar = tolower(firstStringChar);
+        secondStringChar = tolower(secondStringChar);
+        if (firstStringChar > secondStringChar)
+            return false;
+        if (firstStringChar < secondStringChar)
+            return true;
+        if (firstIsUpper ^ secondIsUpper) {
+            if (firstIsUpper)
+                return true;
+            return false;
+        }
+    }
+    return true;
+}
+
+bool stringCompareDecending(const void* first, const void* second) {
+    StringView* firstString = first;
+    StringView* secondString = second;
+
+    for (size_t i = 0; i < stringLength(firstString); i++) {
+        if (i>=stringLength(secondString))
+            return true;
+        bool firstIsUpper = false;
+        bool secondIsUpper = false;
+        char firstStringChar = *stringGetChar(firstString, i);
+        char secondStringChar = *stringGetChar(secondString, i);
+        if (isupper(firstStringChar))
+            firstIsUpper = true;
+        if (isupper(secondStringChar))
+            secondIsUpper = true;
+        firstStringChar = tolower(firstStringChar);
+        secondStringChar = tolower(secondStringChar);
+        if (firstStringChar > secondStringChar)
+            return true;
+        if (firstStringChar < secondStringChar)
+            return false;
+        if (firstIsUpper ^ secondIsUpper) {
+            if (firstIsUpper)
+                return false;
+            return true;
+        }
+    }
+    return true;
+}
+
+bool stringEqual(const void* first, const void* second) {
+    StringView* firstString = first;
+    StringView* secondString = second;
+
+    if (stringLength(firstString) != stringLength(secondString))
+        return false;
+
+    return memcmp(firstString->array,secondString->array,stringLength(firstString)) == 0;
+}
+
+
+StringW stringWCreate(const wchar_t* str, size_t len) {
+    StringW allocatedString = containerDynamicCreateStack(len+1, sizeof(wchar_t), false);
+
+    if (!isValidObject(&allocatedString.header))
+        return allocatedString;
+
+    memcpy(allocatedString.container.array, str, len * sizeof(wchar_t));
+    allocatedString.container.amountOfIndexes = len;
+    containerDynamicAppend(&allocatedString, sizeof(wchar_t),&(wchar_t){L'\0'});
+    return allocatedString;
 }

@@ -77,7 +77,7 @@ namespace BackerLib {
          * @return ContainerInvalidSize if the sizeOfElement was larger than the size of a single element in the array.
          * @return ContainerAllocFailure if the array cannot grow for the new element.
          */
-        extern  ContainerError containerDynamicAppend(DynamicContainer* container, size_t sizeOfElement,const void* element);
+        extern  ContainerError containerDynamicAppend(DynamicContainer* container, size_t sizeOfElement, const void* element);
 
         /**
          * @brief Will convert a container to a dynamic one. This will not invalidate the previous container however the old Container shall not be used.
@@ -110,6 +110,30 @@ namespace BackerLib {
          * @param elementDestructor Valid function pointer of type void(*)(void*)
          */
         extern  void             containerDynamicDestroyWithElements(DynamicContainer* container, void(elementDestructor)(void* element));
+        /**
+         * @brief Returns pointer to first index in container. Index may be invalid. (Only if container is empty)
+         * @param container Pointer to valid DynamicContainer
+         * @return Pointer to first index in container.
+         */
+        static inline void* containerDynamicFront(const DynamicContainer* container) {
+            return container->container.array;
+        }
+        /**
+         * @brief Returns pointer to last index in container. Index may be invalid. (Only if container is empty)
+         * @param container Pointer to valid DynamicContainer
+         * @return Pointer to last index in container.
+         */
+        static inline void* containerDynamicBack(const DynamicContainer* container) {
+            return (Bytes)container->container.array + container->container.byteSizeOfSingleElement * (container->container.amountOfIndexes - 1);
+        }
+        /**
+         * @brief Returns pointer to the first invalid index in the container.
+         * @param container Pointer to valid DynamicContainer
+         * @return Pointer to the first invalid index in container.
+         */
+        static inline void* containerDynamicEnd(const DynamicContainer* container) {
+            return (Bytes)container->container.array + container->container.byteSizeOfSingleElement * container->container.amountOfIndexes;
+        }
 
 #ifdef __cplusplus
     }

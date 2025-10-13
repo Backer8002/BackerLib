@@ -34,14 +34,16 @@ namespace BackerLib {
     /**
      * @brief Inserts a new element into the heap.
      * @param heap Pointer to valid heap
-     * @param sizeOfElement Size of element to insert. Must be the same size as an element in heap
+     * @param sizeOfElement Size of element to insert
      * @param element Pointer to element
-     * @return ContainerInvalidSize if sizeOfElement was invalid.
+     * @return ContainerInvalidSize if sizeOfElement was greater than the largest element in the heap.
      * @return ContainerAllocFailure if the heap's array could not grow.
      */
     extern ContainerError heapInsert(Heap* heap, size_t sizeOfElement, const void* element);
     /**
-     * @brief Uses heap sort to inplace sort the array with a given compare function. compare should return true if elements were in correct order. Will do nothing to Containers with NoSortFlag
+     * @brief Uses heap sort to inplace sort the array with a given compare function.
+     * Should return true if elements were in correct order.
+     * Will do nothing to Containers with NoSortFlag
      * @param container Pointer to valid Container
      * @param compare Pointer to valid compare function
      */
@@ -49,17 +51,28 @@ namespace BackerLib {
     /**
      * @brief Creates a Heap on the stack. Use isValidObject to check validity.
      * @param elementSize Size of element in Heap
-     * @param compare Pointer to valid compare function. Should return true if elements were in correct order
+     * @param compare Pointer to valid compare function. Should return true if elements were in correct order. second param is higher up the heap
      * @return Heap
      */
     extern Heap           heapCreateStack(size_t elementSize, bool (*compare)(const void*, const void*));
     /**
      * @brief Creates a Heap on the heap.
      * @param elementSize Size of element in Heap
-     * @param compare Pointer to valid compare function. Should return true if elements were in correct order
+     * @param compare Pointer to valid compare function. Should return true if elements were in correct order. second param is higher up the heap
      * @return NULL if object could not be allocated.
      */
     extern Heap*          heapCreateHeap(size_t elementSize, bool (*compare)(const void*, const void*));
+
+/**
+     * @brief Reinterperates container as a Heap. No insertion operations are performed
+     * @param container DynamicContainer
+     * @param compare Compare function
+     * @return Returns Heap reinterpretation of container
+     */
+    static inline Heap containerDynamicToHeapReinterperate(DynamicContainer container,bool(*compare)(const void*, const void*)) {
+        container.header |= ObjectFlagIsNotContinuousCustomTracking | ObjectFlagArrayNoSort;
+        return (Heap){.dynamicContainer = container, .compare = compare};
+    }
 
     /**
      * @brief Destroys heap if necessary

@@ -149,17 +149,17 @@ static inline void internal_unorderedContainerInit(UnorderedContainer* container
     container->header = (elementsArePointers ? ObjectFlagElementsArePointers : 0) | ObjectFlagIsValid | ObjectFlagArrayNoSort | ObjectFlagIsContainer | ObjectFlagIsNotContinuous;
 }
 
-UnorderedContainer unorderedContainerCreateStack(size_t initialSize, size_t sizeOfElements, bool elementsArePointers) {
+UnorderedContainer unorderedContainerCreateStack(size_t initialSize, size_t sizeOfElement, bool elementsArePointers) {
     UnorderedContainer container;
-    internal_unorderedContainerInit(&container, initialSize, sizeOfElements, elementsArePointers);
+    internal_unorderedContainerInit(&container, initialSize, sizeOfElement, elementsArePointers);
     return container;
 }
 
-UnorderedContainer* unorderedContainerCreateHeap(size_t initialSize, size_t sizeOfElements, bool elementsArePointers) {
+UnorderedContainer* unorderedContainerCreateHeap(size_t initialSize, size_t sizeOfElement, bool elementsArePointers) {
     UnorderedContainer* container = malloc(sizeof(*container));
     if (!container)
         return NULL;
-    internal_unorderedContainerInit(container, initialSize, sizeOfElements, elementsArePointers);
+    internal_unorderedContainerInit(container, initialSize, sizeOfElement, elementsArePointers);
     if (!isValidObject((DataTypeFlags*) container)) {
         free(container);
         return NULL;

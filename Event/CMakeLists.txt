@@ -8,8 +8,11 @@ set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -pedantic")
 
-include_directories(BackerLibEvent INTERFACE "${PROJECT_SOURCE_DIR}/../include")
 
 add_library(BackerLibEvent STATIC eventMain.c
         logFunctions.c)
+
+target_include_directories(BackerLibEvent INTERFACE "${PROJECT_SOURCE_DIR}/../include")
+add_dependencies(BackerLibEvent BackerLibTypes)
+target_link_libraries(BackerLibEvent BackerLibTypes)
 

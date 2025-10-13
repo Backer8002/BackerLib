@@ -21,16 +21,16 @@ static void internal_bubbleDown(Container* container, size_t sizeOfHeap, bool (*
     size_t currentIndex = 1;
     while (currentIndex * 2 < sizeOfHeap) {
         size_t bestSuitedIndex = (compare((Bytes) container->array + (currentIndex * 2 - 1) * container->byteSizeOfSingleElement, (Bytes) container->array + currentIndex * 2 * container->byteSizeOfSingleElement))
-                                   ? currentIndex * 2
-                                   : currentIndex * 2 + 1;
-        if (!compare((Bytes) container->array + (currentIndex - 1) * container->byteSizeOfSingleElement, (Bytes) container->array + (bestSuitedIndex - 1) * container->byteSizeOfSingleElement))
+                                   ? currentIndex * 2 + 1
+                                   : currentIndex * 2;
+        if (!compare((Bytes) container->array + (bestSuitedIndex - 1) * container->byteSizeOfSingleElement, (Bytes) container->array + (currentIndex - 1) * container->byteSizeOfSingleElement))
             internal_swap(container->byteSizeOfSingleElement, (Bytes) container->array + (currentIndex - 1) * container->byteSizeOfSingleElement,
                           (Bytes) container->array + (bestSuitedIndex - 1) * container->byteSizeOfSingleElement);
         currentIndex = bestSuitedIndex;
     }
 
     if (currentIndex * 2 == sizeOfHeap) {
-        if (!compare((Bytes) container->array + (currentIndex - 1) * container->byteSizeOfSingleElement, (Bytes) container->array + (currentIndex * 2 - 1) * container->byteSizeOfSingleElement))
+        if (!compare((Bytes) container->array + (currentIndex * 2 - 1) * container->byteSizeOfSingleElement, (Bytes) container->array + (currentIndex - 1) * container->byteSizeOfSingleElement))
             internal_swap(container->byteSizeOfSingleElement,
                           (Bytes) container->array + (currentIndex - 1) * container->byteSizeOfSingleElement,
                           (Bytes) container->array + (currentIndex * 2 - 1) * container->byteSizeOfSingleElement);
@@ -48,7 +48,7 @@ void heapPop(Heap* heap) {
 
 static void internal_bubbleUp(Container* container, size_t currentIndex, bool (*compare)(const void*, const void*)) {
     while (currentIndex > 1) {
-        if (compare((Bytes) container->array + (currentIndex / 2 - 1) * container->byteSizeOfSingleElement, (Bytes) container->array + (currentIndex - 1) * container->byteSizeOfSingleElement))
+        if (!compare((Bytes) container->array + (currentIndex / 2 - 1) * container->byteSizeOfSingleElement, (Bytes) container->array + (currentIndex - 1) * container->byteSizeOfSingleElement))
             break;
         internal_swap(container->byteSizeOfSingleElement, (Bytes) container->array + (currentIndex / 2 - 1) * container->byteSizeOfSingleElement, (Bytes) container->array + (currentIndex - 1) * container->byteSizeOfSingleElement);
         currentIndex /= 2;
@@ -56,7 +56,7 @@ static void internal_bubbleUp(Container* container, size_t currentIndex, bool (*
 }
 
 ContainerError heapInsert(Heap* heap, size_t sizeOfElement, const void* element) {
-    if (sizeOfElement != heap->container.byteSizeOfSingleElement)
+    if (sizeOfElement > heap->container.byteSizeOfSingleElement)
         return ContainerInvalidSize;
 
     ContainerError errorCode = containerDynamicAppend((DynamicContainer*) heap, sizeOfElement, element);
@@ -66,6 +66,7 @@ ContainerError heapInsert(Heap* heap, size_t sizeOfElement, const void* element)
     internal_bubbleUp((Container*) heap, heap->container.amountOfIndexes, heap->compare);
     return ContainerOPSuccessful;
 }
+
 
 void heapSort(Container* container, bool (*compare)(const void*, const void*)) {
     if (container->header & ObjectFlagArrayNoSort)

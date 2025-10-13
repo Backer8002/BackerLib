@@ -1,7 +1,7 @@
 //Source https://stackoverflow.com/questions/4842424/list-of-ansi-color-escape-sequences
 
-#ifndef CONTAINERTESTS_ANSIESCAPESEQUENCES_H
-#define CONTAINERTESTS_ANSIESCAPESEQUENCES_H
+#ifndef ANSIESCAPESEQUENCES_H
+#define ANSIESCAPESEQUENCES_H
 
 #define ANSI_RESET_ATTRIBUTE "\033[0m"
 #define ANSI_TEXT_BOLD "\033[1m"

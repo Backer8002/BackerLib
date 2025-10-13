@@ -1,15 +1,13 @@
-#ifndef ArrayList_h_
-#define ArrayList_h_
+#ifndef ArrayList_h
+#define ArrayList_h
 
 #include "Container.h"
 #include "DynamicContainer.h"
 #include "TypesMain.h"
+#include "../Concurrency/ConcurrencyDefines.h"
 #include <stddef.h>
 #include <stdlib.h>
-
 #include <string.h>
-#include <threads.h>
-
 
 
 
@@ -23,7 +21,7 @@ namespace BackerLib {
     typedef union ArrayList {
         struct {
             DynamicContainer dynamicContainer;
-            mtx_t            mutex;
+            Mutex            mutex;
         };
         Container     container;
         DataTypeFlags header;
@@ -32,11 +30,14 @@ namespace BackerLib {
     /**
      * @brief Sets amount of elements used to 0 and resizes to 0 elements.
      * @param arrayList Pointer to valid ArrayList
+     * @return false if failed to lock mutex.
      */
-    static inline void arrayListClear(ArrayList* arrayList) {
-        mtx_lock(&arrayList->mutex);
+    static inline bool arrayListClear(ArrayList* arrayList) {
+        if (mutexLock(&arrayList->mutex) == ConcurrencyFailure)
+            return false;
         containerDynamicClear((DynamicContainer*) arrayList);
-        mtx_unlock(&arrayList->mutex);
+        mutexUnlock(&arrayList->mutex);
+        return true;
     }
     /**
      * @brief
@@ -46,31 +47,35 @@ namespace BackerLib {
      * @param element Container to store element in
      * @return ContainerInvalidIndex if index is out of range
      * @return ContainerInvalidSize if sizeOfElement is larger than a single element in the array.
+     * @return ContainerOPUnsuccessful if mutex could not be locked.
      */
     static ContainerError arrayListGet(ArrayList* arrayList, size_t index, size_t sizeOfElement, void* restrict element) {
-        mtx_lock(&arrayList->mutex);
+        if (mutexLock(&arrayList->mutex) == ConcurrencyFailure)
+            return ContainerOPUnsuccessful;
         void* elementToGet = containerGet((Container*) arrayList, index);
         if (!elementToGet) {
-            mtx_unlock(&arrayList->mutex);
+            mutexUnlock(&arrayList->mutex);
             return ContainerInvalidIndex;
         }
         if (arrayList->container.byteSizeOfSingleElement < sizeOfElement) {
-            mtx_unlock(&arrayList->mutex);
+            mutexUnlock(&arrayList->mutex);
             return ContainerInvalidSize;
         }
         memcpy(element, elementToGet, sizeOfElement);
-        mtx_unlock(&arrayList->mutex);
+        mutexUnlock(&arrayList->mutex);
         return ContainerOPSuccessful;
     }
     /**
      * @brief Removes the last element from the ArrayList.
      * @param arrayList Pointer to valid ArrayList
      * @return ContainerInvalidIndex if there was no element to pop.
+     * @return ContainerOPUnsuccessful if mutex could not be locked.
      */
     static inline ContainerError arrayListPop(ArrayList* arrayList) {
-        mtx_lock(&arrayList->mutex);
+        if (mutexLock(&arrayList->mutex) == ConcurrencyFailure)
+            return ContainerOPUnsuccessful;
         ContainerError result = containerDynamicPop((DynamicContainer*) arrayList);
-        mtx_unlock(&arrayList->mutex);
+        mutexUnlock(&arrayList->mutex);
         return result;
     }
     /**
@@ -79,11 +84,13 @@ namespace BackerLib {
      * @param index First index in removal range (inclusive)
      * @param lastIndex Last index in removal range (inclusive)
      * @return ContainerInvalidIndex if index is larger than lastIndex or if the indexes are invalid
+     * @return ContainerOPUnsuccessful if mutex could not be locked.
      */
     static inline ContainerError arrayListRemove(ArrayList* arrayList, size_t index, size_t lastIndex) {
-        mtx_lock(&arrayList->mutex);
+        if (mutexLock(&arrayList->mutex) == ConcurrencyFailure)
+            return ContainerOPUnsuccessful;
         ContainerError result = containerDynamicRemove((DynamicContainer*) arrayList, index, lastIndex);
-        mtx_unlock(&arrayList->mutex);
+        mutexUnlock(&arrayList->mutex);
         return result;
     }
     /**
@@ -96,11 +103,13 @@ namespace BackerLib {
      * @return ContainerInvalidIndex if index was larger than the size of the array.
      * @return ContainerInvalidSize if the sizeOfElement was larger than the size of a single element in the array.
      * @return ContainerAllocFailure if the array cannot grow for the new elements.
+     * @return ContainerOPUnsuccessful if mutex could not be locked.
      */
     static inline ContainerError arrayListInsert(ArrayList* arrayList, size_t index, size_t amountOfElements, size_t sizeOfElement, const void* elements) {
-        mtx_lock(&arrayList->mutex);
+        if (mutexLock(&arrayList->mutex) == ConcurrencyFailure)
+            return ContainerOPUnsuccessful;
         ContainerError result = containerDynamicInsert((DynamicContainer*) arrayList, index, amountOfElements, sizeOfElement, elements);
-        mtx_unlock(&arrayList->mutex);
+        mutexUnlock(&arrayList->mutex);
         return result;
     }
     /**
@@ -112,11 +121,13 @@ namespace BackerLib {
      * @return ContainerOPSuccessful if valid operation
      * @return ContainerInvalidIndex if index is out of bounds
      * @return ContainerInvalidSize if element was larger than a single element in array
+     * @return ContainerOPUnsuccessful if mutex could not be locked.
      */
     static inline ContainerError arrayListSet(ArrayList* arrayList, size_t index, size_t elementSize, const void* element) {
-        mtx_lock(&arrayList->mutex);
+        if (mutexLock(&arrayList->mutex) == ConcurrencyFailure)
+            return ContainerOPUnsuccessful;
         ContainerError result = containerSet((Container*) arrayList, index, elementSize, element);
-        mtx_unlock(&arrayList->mutex);
+        mutexUnlock(&arrayList->mutex);
         return result;
     }
     /**
@@ -130,7 +141,8 @@ namespace BackerLib {
         ArrayList arrayList = {.dynamicContainer = containerDynamicCreateStack(initialSize, elementSize, elementsArePointers)};
         if (!isValidObject(&arrayList.header))
             return arrayList;
-        if (mtx_init(&arrayList.mutex, mtx_plain) != thrd_success) {
+        arrayList.mutex = mutexCreate(MutexPlain);
+        if (!mutexIsValid(&arrayList.mutex)) {
             containerDestroy(&arrayList);
             return arrayList;
         }
@@ -154,8 +166,9 @@ namespace BackerLib {
             return NULL;
         }
         arrayList->header |= ObjectFlagIsOnHeap;
-        if (mtx_init(&arrayList->mutex, mtx_plain) != thrd_success) {
-            containerDestroy(arrayList);
+        arrayList->mutex = mutexCreate(MutexPlain);
+        if (!mutexIsValid(&arrayList->mutex)) {
+            containerDestroy(&arrayList);
             return arrayList;
         }
         arrayList->header |= ObjectFlagMutexExists;
@@ -167,7 +180,7 @@ namespace BackerLib {
      */
     static inline void arrayListDestroy(void* arrayList) {
         if (isValidObject(arrayList)) {
-            mtx_destroy(&((ArrayList*) arrayList)->mutex);
+            mutexDestroy(&((ArrayList*) arrayList)->mutex);
             containerDestroy(arrayList);
         }
     }
@@ -177,7 +190,7 @@ namespace BackerLib {
      * @param elementDestructor Destructor that will be executed on each element. Must be a valid reference
      */
     static inline void arrayListDestroyWithElements(ArrayList* arrayList, void(elementDestructor)(void* element)) {
-        mtx_destroy(&((ArrayList*) arrayList)->mutex);
+        mutexDestroy(&arrayList->mutex);
         containerDynamicDestroyWithElements((DynamicContainer*) arrayList, elementDestructor);
     }
 

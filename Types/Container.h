@@ -58,6 +58,33 @@ namespace BackerLib {
          * @return NULL if alloc failed
          */
         extern Container* containerCreateHeap(size_t size, size_t elementSize, bool elementsArePointers);
+        /**
+         * @brief Checks if container is empty.
+         * @param container Pointer to valid Container
+         * @return true if container does not contain any elements, else false.
+         */
+        static inline bool containerIsEmpty(const Container* container) {
+            return container->amountOfIndexes == 0;
+        }
+        /**
+         * @param container Pointer to valid Container
+         * @return Size of current container.
+         */
+        static inline size_t containerSize(const Container* container) {
+            return container->amountOfIndexes;
+        }
+
+        /**
+         * @brief Returns a reference index in a container
+         * @param container Pointer to valid container
+         * @param reference Pointer to reference within container
+         * @return reference's index in container
+         * @note It is undefined behavoir to use a reference to outside the container.
+         * @note Reference may point to any part of member object.
+         */
+        static inline size_t containerIndexFromReference(const Container* container, const void* const reference) {
+            return ((uintptr_t)reference - (uintptr_t)container->array)/container->byteSizeOfSingleElement;
+        }
 
         /**
          * @brief Destroys and frees object if applicable. Sets object state to invalid. Will not free container if amountOfIndexes is set to 0.
