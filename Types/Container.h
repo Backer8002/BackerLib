@@ -87,7 +87,7 @@ namespace BackerLib {
         }
 
         /**
-         * @brief Destroys and frees object if applicable. Sets object state to invalid.
+         * @brief Destroys and frees object if applicable. Sets object state to invalid. Will not free container if amountOfIndexes is set to 0.
          * @param container Container to destroy
          */
         extern void containerDestroy(void* container);
