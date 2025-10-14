@@ -3,8 +3,31 @@
 <head>
     <meta charset="UTF-8">
     <title>Container</title>
+    <link rel="stylesheet" href="/main.css">
 </head>
 <body>
+<embed type="text/html" src="/DefaultHeader.html" width="100%">
 
+<div class="definition">
+    <div class="code">
+        <p>Container  containerCreateStack(size_t size, size_t elementSize, [[deprecated]] bool elementsArePointers)</p>
+        <p>Container* containerCreateHeap(size_t size, size_t elementSize, [[deprecated]] bool elementsArePointers)</p>
+    </div>
+
+    <p>
+        Both functions create a <a href="index.html">Container</a> and allocate specified memory.
+        containerCreateHeap allocates the structure on the heap while containerCreateStack returns the structure on the stack.
+        Returns value should be checked with <a href="/Types/IsValidObject.html">isValidObject</a>.
+        containerCreateHeap can additionally be checked if it is null or not. <br> <br>
+        Functions will fail if memory for structure or array cannot be allocated. containerCreateStack with <span class="code"> size = 0</span>
+        will never fail.
+        <ul>
+            <li>size is specifying the amount of elements the container is able to contain.</li>
+            <li>elementSize is specifying the size of a individual element in the Container. This is only a maximum limit. Smallar elements may be inserted</li>
+            <li>elementsArePointers is a deprecated parameter which shall always be false.</li>
+        </ul>
+    </p>
+
+</div>
 </body>
 </html>

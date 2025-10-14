@@ -2,13 +2,14 @@
     border: 5px double black;
     font-family: serif;
     font-size: large;
+    padding: 2%;
+    margin: 2%;
 }
 
 main,header {
     padding-top: 10px;
     padding-left: 5%;
     padding-right: 5%;
-
     font-size: medium;
     font-family: serif;
 }
