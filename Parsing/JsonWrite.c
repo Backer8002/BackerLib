@@ -180,13 +180,7 @@ void jsonWriteFile(FILE* file, const JsonObject* object, const JsonFormat* forma
     fputc('\n', file);
 }
 
-typedef struct {
-    FILE* file;
-    const JsonObject object;
-    const JsonFormat format;
-} JsonWriteFileArgs;
 
-typedef asyncArgsPackType(FutureVoid, JsonWriteFileArgs) JsonWriteFilePack;
 
 static void jsonWriteFileThread(void* sharedState) {
     JsonWriteFilePack* information = sharedState;

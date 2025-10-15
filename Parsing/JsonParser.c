@@ -555,7 +555,6 @@ ErrorExit:
     return (JsonObject) {0};
 }
 
-typedef asyncArgsPackType(FutureJsonObject,FILE*) JsonReadFilePack;
 
 void jsonReadFileThread(void* sharedState) {
     JsonReadFilePack* information = sharedState;
