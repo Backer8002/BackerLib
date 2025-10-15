@@ -10,7 +10,7 @@ add_library(BackerLibParsing STATIC
         Json.h
         JsonParser.c
         ${PROJECT_SOURCE_DIR}/../include/BackerLibParsing.h
-        JsonPrint.c
+        JsonWrite.c
         JsonObjectManipulations.c)
 
 target_include_directories(BackerLibParsing INTERFACE "${PROJECT_SOURCE_DIR}/../include")

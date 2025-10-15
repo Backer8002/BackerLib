@@ -45,6 +45,15 @@ static void internal_printJsonString(FILE* file, const String* string) {
     fputc('\"',file);
 }
 
+static void internal_printTreePrepareNext(FILE* file, const size_t depth) {
+    for (size_t i = 0; i < depth; i++)
+        fprintf(file, "|   ");
+    fprintf(file,"|\n");
+    for (size_t i = 0; i < depth; i++)
+        fprintf(file, "|   ");
+    fprintf(file,"|- ");
+}
+
 static void jsonWriteObject(FILE* file, const JsonObject* object, const JsonFormat* format, size_t indentation, bool isFirstInArrayScope);
 
 static void jsonWriteArray(FILE* file, const JsonArray* array, const JsonFormat* format, size_t indentation, bool isFirstInArrayScope) {
@@ -169,4 +178,72 @@ static void jsonWriteObject(FILE* file, const JsonObject* object, const JsonForm
 void jsonWriteFile(FILE* file, const JsonObject* object, const JsonFormat* format) {
     jsonWriteObject(file, object, format, 0, true); // it is first in the global scope, no need for newline in the begining
     fputc('\n', file);
+}
+
+typedef struct {
+    FILE* file;
+    const JsonObject object;
+    const JsonFormat format;
+} JsonWriteFileArgs;
+
+typedef asyncArgsPackType(FutureVoid, JsonWriteFileArgs) JsonWriteFilePack;
+
+static void jsonWriteFileThread(void* sharedState) {
+    JsonWriteFilePack* information = sharedState;
+    jsonWriteFile(information->args.file,&information->args.object, &information->args.format);
+    information->future = true;
+}
+
+FutureVoid* jsonWriteFileAsync(ThreadPool* threadPool, size_t priority, FILE* file, const JsonObject* object, const JsonFormat* format) {
+    return threadPoolJobAssign(threadPool,
+        priority,
+        jsonWriteFileThread,
+        asyncArgsFutureOffset(JsonWriteFilePack),
+        &(JsonWriteFileArgs){.file = file, .object = *object, .format = *format},sizeof(JsonWriteFileArgs),
+        asyncArgsOffset(JsonWriteFilePack));
+}
+
+
+static void jsonWriteTree(FILE* file,JsonMemberType valueType,const JsonMemberValue* value,size_t depth) {
+    switch (valueType) {
+    case JsonTypeBoolean:
+        fprintf(file, "[[Boolean]] %s\n",value->boolean ? "true" : "false");
+        break;
+    case JsonTypeNull:
+        fprintf(file,"[[Null statement]] null\n");
+        break;
+    case JsonTypeNumber:
+        fprintf(file,"[[Number]] %lf (decimal notation), %le (scientific notation)\n",value->number, value->number);
+        break;
+    case JsonTypeInvalid:
+        fprintf(file,"[[invalid member]]\n");
+        break;
+    case JsonTypeString:
+        fprintf(file,"[[String literal]] ");
+        internal_printJsonString(file, &value->string);
+        fputc('\n',file);
+        break;
+    case JsonTypeArray:
+        fprintf(file, "[[Array]]\n");
+        for (JsonArrayMember* currentMember = containerDynamicFront(&value->array); currentMember < (JsonArrayMember*)containerDynamicEnd(&value->array); currentMember++) {
+            internal_printTreePrepareNext(file, depth);
+            jsonWriteTree(file, currentMember->valueType, &currentMember->value,depth + 1);
+        }
+        break;
+    case JsonTypeObject:
+        fprintf(file, "[[Object]]\n");
+        for (JsonObjectMember* currentMember = containerDynamicFront(&value->array); currentMember < (JsonObjectMember*)containerDynamicEnd(&value->array); currentMember++) {
+            internal_printTreePrepareNext(file, depth);
+            internal_printJsonString(file,&currentMember->identifier);
+            fprintf(file, " -> ");
+            jsonWriteTree(file, currentMember->valueType, &currentMember->value,depth + 1);
+        }
+        break;
+        default:
+        fprintf(file, "[[Invalid member]]\n");
+    }
+}
+
+void jsonWriteTreeStyle(FILE* file,JsonMemberType valueType,const JsonMemberValue* value) {
+    jsonWriteTree(file,valueType,value,0);
 }
