@@ -555,3 +555,13 @@ ErrorExit:
     return (JsonObject) {0};
 }
 
+
+void jsonReadFileThread(void* sharedState) {
+    JsonReadFilePack* information = sharedState;
+    information->future.future = jsonReadFile(information->args);
+    information->future.isValid = true;
+}
+
+FutureJsonObject* jsonReadFileAsync(ThreadPool* threadPool, size_t priority, FILE* file) {
+    return threadPoolJobAssign(threadPool,priority,jsonReadFileThread,asyncArgsFutureOffset(JsonReadFilePack),&file,sizeof(FILE*),asyncArgsOffset(JsonReadFilePack));
+}

@@ -37,7 +37,7 @@ namespace BackerLib {
     } JsonMemberValue;
 
     typedef struct JsonObjectMember {
-        String                identifier;
+        String          identifier;
         JsonMemberValue value;
         JsonMemberType  valueType;
     } JsonObjectMember;
@@ -77,7 +77,7 @@ namespace BackerLib {
     } JsonTokenType;
 
     typedef struct JsonToken {
-        JsonTokenType         tokenType;
+        JsonTokenType   tokenType;
         JsonMemberValue additionalData;
     } JsonToken;
 
@@ -91,46 +91,151 @@ namespace BackerLib {
         .groupIds       = &ErrorLogLevel,
         .amountOfGroups = 1};
 
+
     typedef Future(JsonObject) FutureJsonObject;
+    typedef asyncArgsPackType(FutureJsonObject, FILE*) JsonReadFilePack;
+    typedef struct JsonWriteFileArgs {
+        FILE*            file;
+        const JsonObject object;
+        const JsonFormat format;
+    } JsonWriteFileArgs;
 
-    extern JsonTokenStore           jsonTokenizeFile(FILE* file);
+    typedef asyncArgsPackType(FutureVoid, JsonWriteFileArgs) JsonWriteFilePack;
+    /**
+     * @brief Tokenizes a file until opening json object is closed.
+     * @param file File to read from
+     * @return Invalid object if any allocation has failed, else Container of JsonToken with strings allocated.
+     * @note An illformated file may read an arbitrary amount of chars from stream.
+     */
+    extern JsonTokenStore          jsonTokenizeFile(FILE* file);
 
-    extern JsonObject               jsonReadFile(FILE* file);
-
-    extern FutureJsonObject         jsonReadFileAsync(ThreadPool* threadPool, FILE* file);
-
-    extern void                     jsonWriteFile(FILE* file, const JsonObject* object, const JsonFormat* format);
-
-    extern FutureVoid               jsonWriteFileAsync(ThreadPool* threadPool, FILE* file, JsonObject* object, const JsonFormat* format);
-
-    extern void                     jsonWriteTreeStyle(FILE* file, JsonObjectMember* object);
-
-    static inline JsonObject        jsonObjectCreate(void) { return containerDynamicCreateStack(0, sizeof(JsonObjectMember), false); }
-
-    static inline JsonArray         jsonArrayCreate(void) { return containerDynamicCreateStack(0, sizeof(JsonArrayMember), false); }
-
-    static inline JsonObjectMember* jsonObjectMemberGetByIndex(const JsonObject* jsonObject, size_t index) { return containerGet((Container*) jsonObject, index); }
-    static inline JsonArrayMember*  jsonArrayMemberGet(const JsonArray* jsonArray, size_t index) { return containerGet((Container*) jsonArray, index); }
-
-    extern JsonObjectMember*        jsonObjectMemberGetByIdentifier(const JsonObject* jsonObject, StringView* identifier);
-
-    extern ContainerError           jsonObjectAdd(JsonObject* jsonObject, StringView* identifier, JsonMemberType valueType, const JsonMemberValue* value);
-
-    extern ContainerError           jsonArrayAdd(JsonArray* jsonArray, JsonMemberType valueType, const JsonMemberValue* value);
-
-    extern ContainerError           jsonArrayAddAtIndex(JsonArray* jsonArray, size_t index, JsonMemberType valueType, const JsonMemberValue* value);
-
-    extern bool                     jsonObjectRemove(JsonObject* jsonObject, size_t index);
-
-    extern bool                     jsonArrayRemove(JsonArray* jsonArray, size_t index);
-
-    extern JsonArray                jsonArrayCopy(const JsonArray* jsonArray);
-
-    extern JsonObject               jsonObjectCopy(const JsonObject* jsonObject);
-
-    extern void                     jsonArrayDestroy(void* jsonArray);
-
-    extern void                     jsonObjectDestroy(void* jsonObject);
+    /**
+     * @brief Reads a json object from file until closing scope or undefined length if illformated.
+     * @param file File to read from
+     * @return JsonObject if allocations have been successful and file was well formated, else invalid object.
+     */
+    extern JsonObject              jsonReadFile(FILE* file);
+    /**
+     * @brief Runs jsonReadFile asynchronously.
+     * @param threadPool Pointer to valid ThreadPool
+     * @param priority Priority to read with
+     * @param file File to read from
+     * @return NULL if job could not be amended, else pointer to future of object.
+     */
+    extern FutureJsonObject*       jsonReadFileAsync(ThreadPool* threadPool, size_t priority, FILE* file);
+    /**
+     * @brief Writes object to file.
+     * @param file File to write to
+     * @param object Object to write
+     * @param format Formating to use
+     * @note An incomplete object will result in illformed json.
+     */
+    extern void                    jsonWriteFile(FILE* file, const JsonObject* object, const JsonFormat* format);
+    /**
+     * @brief Writes JsonObject to File asynchronusly.
+     * @param threadPool Pointer to valid ThreadPool
+     * @param priority Priority to write with
+     * @param file File to write to
+     * @param object Object to write
+     * @param format Formating to use
+     * @return FutureVoid indicating completeness if successful at amending job to queue, else NULL.
+     */
+    extern FutureVoid*             jsonWriteFileAsync(ThreadPool* threadPool, size_t priority, FILE* file, const JsonObject* object, const JsonFormat* format);
+    /**
+     * @brief Writes a debug view of a JsonMemberValue.
+     * @param file File to write to
+     * @param valueType Type of value
+     * @param value Value to write
+     * @note Output will be illformed JSON.
+     */
+    extern void                    jsonWriteTreeStyle(FILE* file, JsonMemberType valueType, const JsonMemberValue* value);
+    /**
+     * @brief Creates a JsonObject.
+     * @return Valid JsonObject of size 0.
+     */
+    static inline JsonObject       jsonObjectCreate(void) { return containerDynamicCreateStack(0, sizeof(JsonObjectMember), false); }
+    /**
+     * @brief Creates a JsonArray.
+     * @return Valid JsonArray of size 0.
+     */
+    static inline JsonArray        jsonArrayCreate(void) { return containerDynamicCreateStack(0, sizeof(JsonArrayMember), false); }
+    /**
+     * @brief Get a member from an JsonArray.
+     * @param jsonArray Pointer to valid JsonArray
+     * @param index Index in array
+     * @return NULL if index is out of range, else pointer to array member.
+     */
+    static inline JsonArrayMember* jsonArrayMemberGet(const JsonArray* jsonArray, size_t index) { return containerGet((Container*) jsonArray, index); }
+    /**
+     * @brief Get member from object.
+     * @param jsonObject Pointer to valid JsonObject
+     * @param identifier Key to search for
+     * @return NULL if key does not exist in object, else pointer to member.
+     */
+    extern JsonObjectMember*       jsonObjectMemberGet(const JsonObject* jsonObject, StringView* identifier);
+    /**
+     * @brief Adds a new member to JsonObject. Copying value.
+     * @param jsonObject Pointer to valid JsonObject
+     * @param identifier Key for value
+     * @param valueType Type of value
+     * @param value Value to store
+     * @return ContainerAllocFailure if allocation fails.
+     */
+    extern ContainerError          jsonObjectAdd(JsonObject* jsonObject, StringView* identifier, JsonMemberType valueType, const JsonMemberValue* value);
+    /**
+     * @brief Adds value to end of array. Copying value.
+     * @param jsonArray Pointer to valid JsonArray
+     * @param valueType Type of value
+     * @param value Value to store
+     * @return ContainerAllocFailure if allocation fails.
+     */
+    extern ContainerError          jsonArrayAdd(JsonArray* jsonArray, JsonMemberType valueType, const JsonMemberValue* value);
+    /**
+     * @brief Add value at index in array. Copying value.
+     * @param jsonArray Pointer to valid JsonArray
+     * @param index Index to store at
+     * @param valueType Type of value
+     * @param value Value to store
+     * @return ContainerAllocFailure if allocation fails. ContainerInvalidIndex if index is beyond the size of container.
+     */
+    extern ContainerError          jsonArrayAddAtIndex(JsonArray* jsonArray, size_t index, JsonMemberType valueType, const JsonMemberValue* value);
+    /**
+     * @brief Removes member from object.
+     * @param jsonObject Pointer to valid JsonObject
+     * @param member Pointer to member in object
+     * @note Function frees all associated and descending allocations of member in object. To save value you may set valueType to JsonTypeInvalid before calling this function.
+     */
+    extern void                    jsonObjectRemove(JsonObject* jsonObject, JsonObjectMember* member);
+    /**
+     * @brief Removes member from array.
+     * @param jsonArray Pointer to valid JsonArray
+     * @param index Index in array to remove
+     * @return false if index was out of range, else true.
+     * @note Function frees all associated and descending allocations of member in array. To save value you may set valueType to JsonTypeInvalid before calling this function.
+     */
+    extern bool                    jsonArrayRemove(JsonArray* jsonArray, size_t index);
+    /**
+     * @brief Deep-copies JsonArray.
+     * @param jsonArray Pointer to valid JsonArray
+     * @return Deepcopy of JsonArray and descending structures. Invalid object if allocation fails.
+     */
+    extern JsonArray               jsonArrayCopy(const JsonArray* jsonArray);
+    /**
+     * @brief Deep-copies JsonObject.
+     * @param jsonObject Pointer to valid JsonObject
+     * @return Deepcopy of JsonObject and descending structures. Invalid object if allcation fails.
+     */
+    extern JsonObject              jsonObjectCopy(const JsonObject* jsonObject);
+    /**
+     * @brief Destroys JsonArray and descending structures.
+     * @param jsonArray Pointer to valid JsonArray
+     */
+    extern void                    jsonArrayDestroy(void* jsonArray);
+    /**
+     * @brief Destroys JsonObject and descending structures.
+     * @param jsonObject Pointer to valid JsonObject
+     */
+    extern void                    jsonObjectDestroy(void* jsonObject);
 
 #ifdef __cplusplus
     }

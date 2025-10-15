@@ -24,7 +24,7 @@ static bool jsonCopyValueHasFailed(const JsonMemberValue* value, JsonMemberType 
     return false;
 }
 
-JsonObjectMember* jsonObjectMemberGetByIdentifier(const JsonObject* jsonObject, StringView* string) {
+JsonObjectMember* jsonObjectMemberGet(const JsonObject* jsonObject, StringView* string) {
     size_t begin = 0;
     size_t end   = containerSize((const Container*) jsonObject);
     while (end - begin > 1) {
@@ -90,30 +90,25 @@ ContainerError jsonArrayAddAtIndex(JsonArray* jsonArray, size_t index, JsonMembe
     return containerDynamicInsert(jsonArray, index, 1, sizeof(JsonArrayMember), &(JsonArrayMember) {.valueType = valueType, .value = valueToUse});
 }
 
-bool jsonObjectRemove(JsonObject* jsonObject, size_t index) {
-    if (index >= containerSize((Container*) jsonObject))
-        return false;
+void jsonObjectRemove(JsonObject* jsonObject, JsonObjectMember* member) {
 
-    JsonObjectMember* jsonObjectMember = jsonObjectMemberGetByIndex(jsonObject, index);
+    containerDestroy(&member->identifier);
 
-    containerDestroy(&jsonObjectMember->identifier);
-
-    switch (jsonObjectMember->valueType) {
+    switch (member->valueType) {
     case JsonTypeArray:
-        jsonArrayDestroy(&jsonObjectMember->value);
+        jsonArrayDestroy(&member->value);
         break;
     case JsonTypeObject:
-        jsonObjectDestroy(&jsonObjectMember->value);
+        jsonObjectDestroy(&member->value);
         break;
     case JsonTypeString:
-        containerDestroy(&jsonObjectMember->value);
+        containerDestroy(&member->value);
         break;
     default:
         break;
     }
-
-    containerDynamicRemove(jsonObject, index, index);
-    return true;
+    const size_t indexInBaseObject = containerIndexFromReference((Container*)jsonObject, member);
+    containerDynamicRemove(jsonObject, indexInBaseObject, indexInBaseObject);
 }
 
 bool jsonArrayRemove(JsonArray* jsonArray, size_t index) {

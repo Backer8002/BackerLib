@@ -10,14 +10,14 @@ add_library(BackerLibParsing STATIC
         Json.h
         JsonParser.c
         ${PROJECT_SOURCE_DIR}/../include/BackerLibParsing.h
-        JsonPrint.c
+        JsonWrite.c
         JsonObjectManipulations.c)
 
 target_include_directories(BackerLibParsing INTERFACE "${PROJECT_SOURCE_DIR}/../include")
-add_dependencies(BackerLibParsing BackerLibTypes BackerLibEvent)
+add_dependencies(BackerLibParsing BackerLibTypes BackerLibEvent BackerLibConcurrency)
 find_library(MATH_LIB m)
 if(MATH_LIB)
-    target_link_libraries(BackerLibParsing LINK_PUBLIC ${MATH_LIB} BackerLibTypes BackerLibEvent)
+    target_link_libraries(BackerLibParsing LINK_PUBLIC ${MATH_LIB} BackerLibTypes BackerLibEvent BackerLibConcurrency)
 else ()
-    target_link_libraries(BackerLibParsing LINK_PUBLIC BackerLibTypes BackerLibEvent)
+    target_link_libraries(BackerLibParsing LINK_PUBLIC BackerLibTypes BackerLibEvent BackerLibConcurrency)
 endif ()
