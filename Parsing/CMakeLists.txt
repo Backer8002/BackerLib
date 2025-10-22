@@ -11,7 +11,9 @@ add_library(BackerLibParsing STATIC
         JsonParser.c
         ${PROJECT_SOURCE_DIR}/../include/BackerLibParsing.h
         JsonWrite.c
-        JsonObjectManipulations.c)
+        JsonObjectManipulations.c
+        ExprParsing.c
+        ExprParsing.h)
 
 target_include_directories(BackerLibParsing INTERFACE "${PROJECT_SOURCE_DIR}/../include")
 add_dependencies(BackerLibParsing BackerLibTypes BackerLibEvent BackerLibConcurrency)
