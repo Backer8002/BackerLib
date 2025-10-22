@@ -1,4 +1,6 @@
 #include "UnorderedContainer.h"
+
+#include "Container.h"
 #include "TypesMain.h"
 
 #include <assert.h>
@@ -166,6 +168,47 @@ UnorderedContainer* unorderedContainerCreateHeap(size_t initialSize, size_t size
     }
     container->header |= ObjectFlagIsOnHeap;
     return container;
+}
+
+void* unorderedContainerFront(const UnorderedContainer* container) {
+    if (container->container.array == NULL)
+        return NULL;
+    for (size_t i = 0; i < container->maxSize; i++) {
+        if (internal_bitsetGet(container->bitset,i))
+            return unorderedContainerGet(container,i).element;
+    }
+    return NULL;
+}
+
+void* unorderedContainerNext(const UnorderedContainer* container, const void* element) {
+    size_t startingIndex = containerIndexFromReference((Container*)container,element) + 1;
+    for (size_t i = startingIndex; i < container->maxSize; i++) {
+        if (internal_bitsetGet(container->bitset,i))
+            return unorderedContainerGet(container,i).element;
+    }
+    return NULL;
+}
+
+void* unorderedContainerPrev(const UnorderedContainer* container, const void* element) {
+    size_t startingIndex = containerIndexFromReference((Container*)container,element) - 1;
+    for (size_t i = startingIndex; i != SIZE_MAX; i--) {
+        if (internal_bitsetGet(container->bitset,i))
+            return unorderedContainerGet(container,i).element;
+    }
+    return NULL;
+}
+
+void* unorderedContainerBack(const UnorderedContainer* container) {
+    if (container->container.array == NULL)
+        return NULL;
+    return unorderedContainerPrev(container,(Bytes)container->container.array + container->container.byteSizeOfSingleElement * container->container.amountOfIndexes);
+}
+
+void* unorderedContainerEnd(const UnorderedContainer* container) {
+    void* back = unorderedContainerBack(container);
+    if (back == NULL)
+        return NULL;
+    return (Bytes)back + container->container.byteSizeOfSingleElement;
 }
 
 void unorderedContainerDestroy(void* container) {

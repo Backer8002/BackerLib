@@ -37,6 +37,12 @@ namespace BackerLib {
          */
         extern Container containerGetSubArray(const Container* container, size_t firstIndex, size_t lastIndex,bool copyInReverse);
         /**
+         * @brief Wrapper of containerGetSubArray(container,0,size,false)
+         * @param container Pointer to valid Container
+         * @return Invalid container if allocation failed.
+         */
+        extern Container containerCopy(const Container* container);
+        /**
          * @brief Reverses the order of elemenets in container inplace.
          * @param container Pointer to valid container
          */
@@ -85,6 +91,24 @@ namespace BackerLib {
         static inline size_t containerIndexFromReference(const Container* container, const void* const reference) {
             return ((uintptr_t)reference - (uintptr_t)container->array)/container->byteSizeOfSingleElement;
         }
+        /**
+         * @brief Returns pointer to first index in container. Index is NULL if container is empty.
+         * @param container Pointer to valid Container
+         * @return Pointer to first index in container.
+         */
+        void* containerFront(const Container* container);
+        /**
+         * @brief Returns pointer to last index in container. Index is NULL if container is empty
+         * @param container Pointer to valid Container
+         * @return Pointer to last index in container.
+         */
+        void* containerBack(const Container* container);
+        /**
+         * @brief Returns pointer to the first invalid index in the container.
+         * @param container Pointer to valid Container
+         * @return Pointer to the first invalid index in container.
+         */
+        void* containerEnd(const Container* container);
 
         /**
          * @brief Destroys and frees object if applicable. Sets object state to invalid. Will not free container if amountOfIndexes is set to 0.

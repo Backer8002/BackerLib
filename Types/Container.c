@@ -55,6 +55,11 @@ Container containerGetSubArray(const Container* container, size_t firstIndex, si
     return returnContainer;
 }
 
+
+Container containerCopy(const Container* container) {
+    return containerGetSubArray(container,0,container->amountOfIndexes,false);
+}
+
 void containerReverse(Container* container) {
     if (container->amountOfIndexes == 0)
         return;
@@ -71,6 +76,18 @@ void containerReverse(Container* container) {
         front += container->byteSizeOfSingleElement;
         end -= container->byteSizeOfSingleElement;
     }
+}
+
+void* containerFront(const Container* container) {
+    return container->array;
+}
+
+void* containerBack(const Container* container) {
+    return container->array ? (Bytes)container->array + container->byteSizeOfSingleElement * (container->amountOfIndexes - 1) : NULL;
+}
+
+void* containerEnd(const Container* container) {
+    return (Bytes)container->array + container->amountOfIndexes * container->byteSizeOfSingleElement;
 }
 
 Container containerCreateStack(size_t size, size_t elementSize, bool elementsArePointers) {

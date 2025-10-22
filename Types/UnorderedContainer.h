@@ -81,6 +81,39 @@ namespace BackerLib {
      * @return NULL if allocation failed.
      */
     extern UnorderedContainer*         unorderedContainerCreateHeap(size_t initialSize, size_t sizeOfElement, bool elementsArePointers);
+
+    /**
+     * @brief Gets the first valid index in an UnorderedContainer.
+     * @param container Pointer to valid UnorderedContainer
+     * @return Pointer to first valid index, else NULL.
+     */
+    extern void* unorderedContainerFront(const UnorderedContainer* container);
+    /**
+     * @brief Gets the next valid index after element. Returns NULL if no such index exists.
+     * @param container Pointer to valid UnorderedContainer
+     * @param element Element in container
+     * @return Next valid index, else NULL.
+     */
+    extern void* unorderedContainerNext(const UnorderedContainer* container, const void* element);
+    /**
+     * @brief Gets the next valid index in reverse order after element. Returns NULL if no such index exists.
+     * @param container Pointer to valid UnorderedContainer
+     * @param element Element in container
+     * @return Next valid index in reverse order, else NULL
+     */
+    extern void* unorderedContainerPrev(const UnorderedContainer* container, const void* element);
+    /**
+     * @brief Gets the last valid index in container.
+     * @param container Pointer to valid UnorderedContainer
+     * @return Last valid index in container, else NULL.
+     */
+    extern void* unorderedContainerBack(const UnorderedContainer* container);
+    /**
+     * @brief Gets the index after unorderedContainerBack. Will always be invalid.
+     * @param container Pointer to valid UnorderedContainer
+     * @return NULL if no valid index exists.
+     */
+    extern void* unorderedContainerEnd(const UnorderedContainer* container);
     /**
      * @brief Destroys an UnorderedContainer if applicable. Does nothing if not an UnorderedContainer qualified.
      * @param container Pointer to UnorderedContainer
@@ -92,6 +125,7 @@ namespace BackerLib {
      * @param destructor Pointer to valid function matching argument type
      */
     extern void                        unorderedContainerDestroyWithElements(UnorderedContainer* container, void (*destructor)(void* element));
+
 
 #ifdef __cplusplus
     }
