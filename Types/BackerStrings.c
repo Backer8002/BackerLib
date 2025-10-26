@@ -9,7 +9,7 @@
 #include <uchar.h>
 #include <wchar.h>
 
-String stringCreate(const char* string, size_t length) {
+String stringCreate(const unsigned char* string, size_t length) {
     String allocatedString = containerDynamicCreateStack(length + 1, sizeof(char), false);
 
     if (!isValidObject(&allocatedString.header))
@@ -21,15 +21,15 @@ String stringCreate(const char* string, size_t length) {
     return allocatedString;
 }
 
-inline char* stringGetChar(StringView* string, size_t index) {
+inline unsigned char* stringGetChar(StringView* string, size_t index) {
     return containerGet((const Container*) string, index);
 }
 
-inline ContainerError stringAppendCString(String* destString, const char* stringToInsert, size_t length) {
+ContainerError stringAppendCString(String* destString, const unsigned char* stringToInsert, size_t length) {
     return containerDynamicInsert(destString, stringLength((StringView*)(Container*)destString), length, sizeof(*stringToInsert), stringToInsert);
 }
 
-ContainerError stringInsertSubCString(String* destString, const char* other, const size_t lenOfOther, const size_t firstIndex) {
+ContainerError stringInsertSubCString(String* destString, const unsigned char* other, const size_t lenOfOther, const size_t firstIndex) {
     return containerDynamicInsert(destString, firstIndex, lenOfOther, sizeof(*other), other);
 }
 
@@ -41,7 +41,7 @@ ContainerError stringAppendString(String* destString, const String* stringToInse
     return ContainerOPSuccessful;
 }
 
-String stringStrip(const String* string, char charToStrip, bool stripFromBack, uint64_t amountToStrip) {
+String stringStrip(const String* string, unsigned char charToStrip, bool stripFromBack, uint64_t amountToStrip) {
     if (string->container.byteSizeOfSingleElement != sizeof charToStrip) {
         String returnString = {0};
         return returnString;
@@ -52,7 +52,7 @@ String stringStrip(const String* string, char charToStrip, bool stripFromBack, u
 
     size_t amountStripped = 0;
     for (size_t iterator = 0; iterator < stringLength((StringView*)(Container*)string); iterator++) {
-        char* currentChar = stringGetChar((StringView*)(Container*)string, (stripFromBack ? stringLength((StringView*)(Container*)string) - 1 - iterator : iterator));
+        unsigned char* currentChar = stringGetChar((StringView*)(Container*)string, (stripFromBack ? stringLength((StringView*)(Container*)string) - 1 - iterator : iterator));
         if ((*currentChar != charToStrip) || (amountToStrip && (amountStripped >= amountToStrip)))
             containerDynamicAppend(&returnString, sizeof(*currentChar), currentChar);
         else
@@ -64,70 +64,70 @@ String stringStrip(const String* string, char charToStrip, bool stripFromBack, u
     return returnString;
 }
 
-DynamicContainer stringSplit(const String* string, char charToSplitOn, bool splitFromBack, uint64_t amountOfCharsToSplitAt) {
-    DynamicContainer stringArray = containerDynamicCreateStack(0, sizeof(String), false);
-    if (!isValidObject(&stringArray.header))
-        return stringArray;
+DynamicContainer stringSplit(const StringView* string, unsigned char charToSplitOn, bool splitFromBack, uint64_t amountOfCharsToSplitAt) {
+    return stringSplitMulti(string,&charToSplitOn,1,splitFromBack,amountOfCharsToSplitAt);
+}
 
-    size_t amountSplit           = 0;
-    size_t firstIndexOfSubString = 0;
-    size_t lastIndexOfSubString  = stringLength((StringView*)(Container*)string) - 1;
+DynamicContainer stringSplitMulti(const StringView* string, const unsigned char* charsToSplitOn, size_t amountOfChars, bool splitFromBack, uint64_t amountOfCharsToSplitAt) {
+    DynamicContainer stringArray = containerDynamicCreateStack(0,sizeof(String),false);
+    bool charsToSplit[256] = {0};
+    for (size_t i = 0; i < amountOfChars; i++)
+        charsToSplit[charsToSplitOn[i]] = true;
 
-    for (size_t iterator = 0; iterator < stringLength((StringView*)(Container*)string); iterator++) {
-        const char* currentChar = stringGetChar((StringView*)(Container*)string, splitFromBack ?
-            stringLength((StringView*)(Container*)string) - 1 - iterator
-            : iterator);
-        if (*currentChar != charToSplitOn)
+    size_t amountSplit = 0, beginOfSubString = splitFromBack ? stringLength(string) - 1 : 0;
+
+    for (size_t i = 0; i < stringLength(string); i++) {
+        size_t currentIndexInString = splitFromBack ? stringLength(string) - 1 - i : i;
+        unsigned char currentChar = *stringGetChar(string, currentIndexInString);
+        if (!charsToSplit[currentChar])
             continue;
-        if (amountOfCharsToSplitAt && amountOfCharsToSplitAt <= amountSplit)
+
+        if (beginOfSubString == currentIndexInString) {
+            beginOfSubString += splitFromBack ? -1 : 1;
+            continue;
+        }
+
+        String subString = stringCreate(
+            stringGetChar(string,splitFromBack ? currentIndexInString + 1 : beginOfSubString),
+            splitFromBack ? beginOfSubString - currentIndexInString : currentIndexInString - beginOfSubString);
+
+        if (!isValidObject((DataTypeFlags*)&subString)) {
+            containerDynamicDestroyWithElements(&stringArray,containerDestroy);
+            return stringArray;
+        }
+
+        if (containerDynamicAppend(&stringArray,sizeof subString, &subString) != ContainerOPSuccessful) {
+            containerDestroy(&subString);
+            containerDynamicDestroyWithElements(&stringArray,containerDestroy);
+            return stringArray;
+        }
+
+        beginOfSubString = currentIndexInString + (splitFromBack ? -1 : 1);
+
+        if (amountOfCharsToSplitAt && amountSplit++ > amountOfCharsToSplitAt)
             break;
+    }
 
-        amountSplit++;
-
-        if (splitFromBack) {
-            firstIndexOfSubString = stringLength((StringView*)(Container*)string) - iterator;
-        } else {
-            lastIndexOfSubString = iterator - 1;
-            if (iterator == 0) {
-                lastIndexOfSubString = 0;
-                firstIndexOfSubString = 1;
-            }
-        }
-
-        if (firstIndexOfSubString <= lastIndexOfSubString) {
-            String subString = containerConvertToDynamicStack(containerGetSubArray((Container*) string, firstIndexOfSubString, lastIndexOfSubString, false));
-            if (!isValidObject(&subString.header))
-                goto stringSplitErrorExit;
-            if (stringAppendCString(&subString, "\0",1) != ContainerOPSuccessful)
-                goto stringSplitErrorExit;
-            if (containerDynamicAppend(&stringArray, sizeof(String), &subString) == ContainerAllocFailure)
-                goto stringSplitErrorExit;
-        }
-        if (stringLength((StringView*)(Container*)string) - iterator == 1)
-            goto stringSplitExit;
-
+    if ((splitFromBack && beginOfSubString != SIZE_MAX) || (!splitFromBack && beginOfSubString != stringLength(string))) {
+        String subString;
         if (splitFromBack)
-            lastIndexOfSubString = stringLength((StringView*)(Container*)string) - iterator - 2;
+            subString = stringCreate(stringGetChar(string,0),beginOfSubString + 1);
         else
-            firstIndexOfSubString = iterator + 1;
+            subString = stringCreate(stringGetChar(string,beginOfSubString),stringLength(string) - beginOfSubString);
+        if (!isValidObject((DataTypeFlags*)&subString)) {
+            containerDynamicDestroyWithElements(&stringArray,containerDestroy);
+            return stringArray;
+        }
+
+        if (containerDynamicAppend(&stringArray,sizeof subString, &subString) != ContainerOPSuccessful) {
+            containerDestroy(&subString);
+            containerDynamicDestroyWithElements(&stringArray,containerDestroy);
+            return stringArray;
+        }
     }
 
     if (splitFromBack)
-        firstIndexOfSubString = 0;
-    else
-        lastIndexOfSubString = string->container.amountOfIndexes - 1;
-
-    DynamicContainer subString = containerConvertToDynamicStack(containerGetSubArray((Container*) string, firstIndexOfSubString, lastIndexOfSubString, false));
-    if (containerDynamicAppend(&stringArray, sizeof(String), &subString) == ContainerAllocFailure)
-        goto stringSplitErrorExit;
-
-stringSplitExit:
-    if (splitFromBack)
-        containerReverse(&stringArray.container);
-    return stringArray;
-
-stringSplitErrorExit:
-    containerDynamicDestroyWithElements(&stringArray, containerDestroy);
+        containerReverse((Container*)&stringArray);
     return stringArray;
 }
 
@@ -156,8 +156,8 @@ bool stringCompareAcending(const void* first, const void* second) {
             return false;
         bool firstIsUpper = false;
         bool secondIsUpper = false;
-        char firstStringChar = *stringGetChar(firstString, i);
-        char secondStringChar = *stringGetChar(secondString, i);
+        unsigned char firstStringChar = *stringGetChar(firstString, i);
+        unsigned char secondStringChar = *stringGetChar(secondString, i);
         if (isupper(firstStringChar))
             firstIsUpper = true;
         if (isupper(secondStringChar))
@@ -186,8 +186,8 @@ bool stringCompareDecending(const void* first, const void* second) {
             return true;
         bool firstIsUpper = false;
         bool secondIsUpper = false;
-        char firstStringChar = *stringGetChar(firstString, i);
-        char secondStringChar = *stringGetChar(secondString, i);
+        unsigned char firstStringChar = *stringGetChar(firstString, i);
+        unsigned char secondStringChar = *stringGetChar(secondString, i);
         if (isupper(firstStringChar))
             firstIsUpper = true;
         if (isupper(secondStringChar))

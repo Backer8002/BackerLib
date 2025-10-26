@@ -98,6 +98,20 @@ namespace BackerLib {
          */
         void* containerFront(const Container* container);
         /**
+         * @brief Gets the next element in container.
+         * @param container Pointer to valid Container
+         * @param element Pointer to element in container
+         * @return Next element in container, NULL if no such exists
+         */
+        void* containerNext(const Container* container, const void* element);
+        /**
+         * @brief Gets the next element in reversed order in container.
+         * @param container Pointer to valid Container
+         * @param element Pointer to element in container
+         * @return Next element in reverse order in container, NULL if no such exists
+         */
+        void* containerPrev(const Container* container, const void* element);
+        /**
          * @brief Returns pointer to last index in container. Index is NULL if container is empty
          * @param container Pointer to valid Container
          * @return Pointer to last index in container.
