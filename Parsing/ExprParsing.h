@@ -2,6 +2,7 @@
 #define BACKERLIB_EXPRPARSING_H
 
 #include <BackerLibTypes.h>
+#include <stdio.h>
 
 #ifdef __cplusplus
 namespace BackerLib {
@@ -12,7 +13,7 @@ namespace BackerLib {
     typedef String ExprAtom;
 
     typedef struct ExprOperatorDefine {
-        unsigned char operator;
+        unsigned char operatorChar;
         bool          isBinaryOperator;
         bool          isUnaryOperator;
         size_t        leftUnaryBinding, rightUnaryBinding, lhsBinaryBinding, rhsBinaryBinding;
@@ -23,7 +24,7 @@ namespace BackerLib {
     typedef struct ExprOperationOperand {
         bool isAtom;
         union {
-            ExprAtom*       atom;
+            ExprAtom       atom;
             ExprOperation* operation;
         };
     } ExprOperationOperand;
@@ -37,7 +38,7 @@ namespace BackerLib {
     } ExprParsingToken;
 
     struct ExprOperation {
-        unsigned char operator;
+        unsigned char operatorChar;
         bool          isBinaryOperation;
         union {
             struct {
@@ -53,6 +54,7 @@ namespace BackerLib {
 
     DynamicContainer exprTokenize(StringView* expresion, ExprOperatorDefine* operators, size_t amountOfOperators);
     DynamicContainer exprParse(const DynamicContainer* tokens, ExprOperatorDefine* operators, size_t amountOfOperators);
+    void exprPrint(FILE* file,const DynamicContainer* tree);
 
 
 #ifdef __cplusplus
