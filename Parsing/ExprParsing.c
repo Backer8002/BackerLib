@@ -23,17 +23,26 @@ DynamicContainer          exprTokenize(StringView* expresion, ExprOperatorDefine
 
     DynamicContainer tokens      = containerDynamicCreateStack(0, sizeof(ExprParsingToken), false);
 
-    size_t           currentAtom = 0;
-    bool isInAtom = false;
+    size_t           currentAtom = 0, sizeOfAtoms = containerSize(&atoms.container);
+    bool isInAtom = false,foundToken = false;
     for (size_t i = 0; i < stringLength(expresion); i++) {
         unsigned char currentChar = *stringGetChar(expresion, i);
         if (!operatorChars[currentChar] && !isspace(currentChar)) {
-            isInAtom = true;
+            isInAtom = true, foundToken = false;
             continue;
         }
 
-        if (isspace(currentChar))
+        if (isspace(currentChar)) {
+            if (!foundToken && currentAtom < sizeOfAtoms) {
+                if (containerDynamicAppend(&tokens, sizeof(ExprParsingToken), &(ExprParsingToken) {.isAtom = true, .atom = *(String*) containerGet((Container*) &atoms, currentAtom)}) != ContainerOPSuccessful)
+                    goto errorPath;
+                currentAtom++;
+            }
+            isInAtom = false;
             continue;
+        }
+
+        foundToken = true;
 
         if (i != 0 && isInAtom) {
             if (containerDynamicAppend(&tokens, sizeof(ExprParsingToken), &(ExprParsingToken) {.isAtom = true, .atom = *(String*) containerGet((Container*) &atoms, currentAtom)}) != ContainerOPSuccessful)
@@ -46,8 +55,8 @@ DynamicContainer          exprTokenize(StringView* expresion, ExprOperatorDefine
             goto errorPath;
     }
 
-    if (isInAtom) {
-        if (containerDynamicAppend(&tokens, sizeof(ExprParsingToken), &(ExprParsingToken) {.isAtom = true, .atom = *(String*) containerGet((Container*) &atoms, currentAtom)}) != ContainerOPSuccessful)
+    for (; currentAtom < sizeOfAtoms;currentAtom++) {
+        if (containerDynamicAppend(&tokens, sizeof(ExprParsingToken),&(ExprParsingToken){.isAtom = true, .atom = *(String*)containerGet((Container*)&atoms,currentAtom)}) != ContainerOPSuccessful)
             goto errorPath;
     }
 
@@ -101,14 +110,14 @@ ExprOperation* internal_expr_parse(const DynamicContainer* tokens, ExprParsingTo
     for (ExprParsingToken* currentTokenLocal = *currentTokenGlobal; currentTokenLocal; currentTokenLocal = containerDynamicNext(tokens, currentTokenLocal)) {
         if (currentTokenLocal->isAtom && prevTokenWasAtom) {
             LogError("An atom cannot follow an atom without at binary operator in between.");
-            *currentTokenGlobal = (ExprParsingToken*) containerDynamicBack(tokens) - 1;
+            *currentTokenGlobal = (ExprParsingToken*) containerDynamicBack(tokens);
             return NULL;
         }
 
         if (currentTokenLocal->isAtom) {
             if (!hasSeenBinaryOp) {
                 LogError("A binary operator must exist between atoms");
-                *currentTokenGlobal = (ExprParsingToken*) containerDynamicBack(tokens) - 1;
+                *currentTokenGlobal = (ExprParsingToken*) containerDynamicBack(tokens);
                 return NULL;
             }
             prevTokenWasAtom = true;
@@ -118,7 +127,7 @@ ExprOperation* internal_expr_parse(const DynamicContainer* tokens, ExprParsingTo
         ExprOperatorDefine currentOperator = internal_get_operator(operators, amountOfOperators, currentTokenLocal->operator);
         if (!currentOperator.isUnaryOperator && hasSeenBinaryOp) {
             LogError("Two binary operator cannot exist between two atoms");
-            *currentTokenGlobal = (ExprParsingToken*) containerDynamicBack(tokens) - 1;
+            *currentTokenGlobal = (ExprParsingToken*) containerDynamicBack(tokens);
             return NULL;
         }
 
