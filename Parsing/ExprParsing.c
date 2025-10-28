@@ -5,7 +5,7 @@
 #include <ctype.h>
 #include <stdio.h>
 
-static ExprOperation*     internal_expr_parse(const DynamicContainer* tokens, ExprParsingToken** currentTokenGlobal, DynamicContainer* tree, size_t currentBindingPower, ExprOperatorDefine* operators, size_t amountOfOperators);
+static ExprOperation*     internal_expr_parse(const DynamicContainer* tokens, ExprParsingToken** currentTokenGlobal, DynamicContainer* tree, size_t currentBindingPower, bool* hasSeenBinaryOp, ExprOperatorDefine* operators, size_t amountOfOperators);
 static ExprOperatorDefine internal_get_operator(const ExprOperatorDefine* operationDefine, size_t amountOfOperators, unsigned char operator);
 
 DynamicContainer          exprTokenize(StringView* expresion, ExprOperatorDefine* operators, size_t amountOfOperators) {
@@ -24,7 +24,7 @@ DynamicContainer          exprTokenize(StringView* expresion, ExprOperatorDefine
     DynamicContainer tokens      = containerDynamicCreateStack(0, sizeof(ExprParsingToken), false);
 
     size_t           currentAtom = 0, sizeOfAtoms = containerSize(&atoms.container);
-    bool isInAtom = false,foundToken = false;
+    bool             isInAtom = false, foundToken = false;
     for (size_t i = 0; i < stringLength(expresion); i++) {
         unsigned char currentChar = *stringGetChar(expresion, i);
         if (!operatorChars[currentChar] && !isspace(currentChar)) {
@@ -55,8 +55,8 @@ DynamicContainer          exprTokenize(StringView* expresion, ExprOperatorDefine
             goto errorPath;
     }
 
-    for (; currentAtom < sizeOfAtoms;currentAtom++) {
-        if (containerDynamicAppend(&tokens, sizeof(ExprParsingToken),&(ExprParsingToken){.isAtom = true, .atom = *(String*)containerGet((Container*)&atoms,currentAtom)}) != ContainerOPSuccessful)
+    for (; currentAtom < sizeOfAtoms; currentAtom++) {
+        if (containerDynamicAppend(&tokens, sizeof(ExprParsingToken), &(ExprParsingToken) {.isAtom = true, .atom = *(String*) containerGet((Container*) &atoms, currentAtom)}) != ContainerOPSuccessful)
             goto errorPath;
     }
 
@@ -90,7 +90,7 @@ DynamicContainer exprParse(const DynamicContainer* tokens, ExprOperatorDefine* o
         return tree;
     }
 
-    ExprOperation* result = internal_expr_parse(tokens, &(ExprParsingToken*) {containerDynamicFront(tokens)}, &tree, 0, operators, amountOfOperators);
+    ExprOperation* result = internal_expr_parse(tokens, &(ExprParsingToken*) {containerDynamicFront(tokens)}, &tree, 0, &(bool) {true}, operators, amountOfOperators);
     if (!result) {
         containerDestroy(&tree);
         return tree;
@@ -100,12 +100,15 @@ DynamicContainer exprParse(const DynamicContainer* tokens, ExprOperatorDefine* o
 }
 
 ExprOperation* internal_expr_parse(const DynamicContainer* tokens, ExprParsingToken** currentTokenGlobal,
-                                   DynamicContainer*   tree,
-                                   size_t              currentBindingPower,
+                                   DynamicContainer* tree,
+                                   size_t currentBindingPower, bool* hasSeenBinaryOp,
                                    ExprOperatorDefine* operators, size_t amountOfOperators) {
-    bool           prevTokenWasAtom = false, hasSeenBinaryOp = true;
+    bool           prevTokenWasAtom  = false;
 
     ExprOperation* previousOperation = NULL;
+
+    if (*currentTokenGlobal >= (ExprParsingToken*) containerDynamicEnd(tokens))
+        return NULL;
 
     for (ExprParsingToken* currentTokenLocal = *currentTokenGlobal; currentTokenLocal; currentTokenLocal = containerDynamicNext(tokens, currentTokenLocal)) {
         if (currentTokenLocal->isAtom && prevTokenWasAtom) {
@@ -115,25 +118,56 @@ ExprOperation* internal_expr_parse(const DynamicContainer* tokens, ExprParsingTo
         }
 
         if (currentTokenLocal->isAtom) {
-            if (!hasSeenBinaryOp) {
+            if (!*hasSeenBinaryOp) {
                 LogError("A binary operator must exist between atoms");
                 *currentTokenGlobal = (ExprParsingToken*) containerDynamicBack(tokens);
                 return NULL;
             }
             prevTokenWasAtom = true;
-            hasSeenBinaryOp  = false;
+            *hasSeenBinaryOp = false;
             continue;
         }
         ExprOperatorDefine currentOperator = internal_get_operator(operators, amountOfOperators, currentTokenLocal->operator);
-        if (!currentOperator.isUnaryOperator && hasSeenBinaryOp) {
-            LogError("Two binary operator cannot exist between two atoms");
+        if (!currentOperator.isUnaryOperator && *hasSeenBinaryOp) {
+            LogError("Two binary operators cannot exist between two atoms");
             *currentTokenGlobal = (ExprParsingToken*) containerDynamicBack(tokens);
             return NULL;
         }
 
-        if ((currentOperator.isUnaryOperator && currentOperator.isBinaryOperator && hasSeenBinaryOp) || (currentOperator.isUnaryOperator && !currentOperator.isBinaryOperator)) {
+        printf("Evaluating %c Token: %zu\n", currentOperator.operatorChar, containerIndexFromReference((Container*) tokens, currentTokenLocal));
+
+        prevTokenWasAtom = false;
+
+        if ((currentOperator.isUnaryOperator && currentOperator.isBinaryOperator && *hasSeenBinaryOp) || (currentOperator.isUnaryOperator && !currentOperator.isBinaryOperator)) {
+            if (currentOperator.leftUnaryBinding && currentOperator.leftUnaryBinding <= currentBindingPower) {
+                *currentTokenGlobal = currentTokenLocal - 2;
+                printf("Found lower binding unary\n");
+                return previousOperation;
+            }
+
+            if (!*hasSeenBinaryOp && currentOperator.leftUnaryBinding) {
+                if (!previousOperation) {
+                    LogError("A left binding unary operator must bind to an atom, but no such has been provided before it.");
+                    *currentTokenGlobal = containerDynamicBack(tokens);
+                    return NULL;
+                }
+
+                ExprOperation operation = {
+                    .operatorChar      = currentOperator.operatorChar,
+                    .isBinaryOperation = false,
+                    .unaryOperation    = {
+                           .unaryOperand = (ExprOperationOperand) {
+                               .isAtom    = false,
+                               .operation = previousOperation},
+                           .unaryOperatorWasOnRight = true}};
+                containerDynamicAppend(tree, sizeof operation,&operation);
+                previousOperation = containerDynamicBack(tree);
+                continue;
+            }
+
             currentTokenLocal++;
-            ExprOperation* operation = internal_expr_parse(tokens, &currentTokenLocal, tree, currentOperator.rightUnaryBinding, operators, amountOfOperators);
+            bool           hasSeenBinOpDuringParse = *hasSeenBinaryOp;
+            ExprOperation* operation               = internal_expr_parse(tokens, &currentTokenLocal, tree, currentOperator.rightUnaryBinding, &hasSeenBinOpDuringParse, operators, amountOfOperators);
             if (operation) {
                 containerDynamicAppend(tree,
                                        sizeof(ExprOperationOperand),
@@ -167,10 +201,11 @@ ExprOperation* internal_expr_parse(const DynamicContainer* tokens, ExprParsingTo
 
         if (currentOperator.lhsBinaryBinding <= currentBindingPower) {
             *currentTokenGlobal = currentTokenLocal - 2;
+            printf("Found lower binding\n");
             return previousOperation;
         }
 
-        prevTokenWasAtom = false;
+        *hasSeenBinaryOp = true;
 
         ExprOperationOperand lhs, rhs;
         if (previousOperation)
@@ -178,7 +213,7 @@ ExprOperation* internal_expr_parse(const DynamicContainer* tokens, ExprParsingTo
         else
             lhs = (ExprOperationOperand) {.isAtom = true, .atom = (currentTokenLocal - 1)->atom};
         currentTokenLocal++;
-        ExprOperation* rhsOperation = internal_expr_parse(tokens, &currentTokenLocal, tree, currentOperator.rhsBinaryBinding, operators, amountOfOperators);
+        ExprOperation* rhsOperation = internal_expr_parse(tokens, &currentTokenLocal, tree, currentOperator.rhsBinaryBinding, &(bool) {*hasSeenBinaryOp}, operators, amountOfOperators);
         if (!rhsOperation) {
             ExprParsingToken* nextToken = containerDynamicNext(tokens, currentTokenLocal);
             if (!nextToken || !nextToken->isAtom)
@@ -193,7 +228,6 @@ ExprOperation* internal_expr_parse(const DynamicContainer* tokens, ExprParsingTo
                                                              .rhs = rhs}};
         containerDynamicAppend(tree, sizeof nextOperation, &nextOperation);
         previousOperation = containerDynamicBack(tree);
-        hasSeenBinaryOp = true;
     }
     *currentTokenGlobal = (ExprParsingToken*) containerDynamicBack(tokens) - 1;
     return previousOperation;
@@ -223,13 +257,13 @@ static void internal_expr_print(FILE* file, const ExprOperation* operation) {
         else
             fputs(containerDynamicFront(&operation->binaryOperands.rhs.atom), file);
         fputc(' ', file);
-        fputc(operation->operatorChar,file);
+        fputc(operation->operatorChar, file);
     } else {
         if (!operation->unaryOperation.unaryOperatorWasOnRight) {
             if (operation->operatorChar == '\0')
                 fprintf(file, "Expr: ");
             else
-                fputc(operation->operatorChar,file);
+                fputc(operation->operatorChar, file);
         }
         if (!operation->unaryOperation.unaryOperand.isAtom)
             internal_expr_print(file, operation->unaryOperation.unaryOperand.operation);
