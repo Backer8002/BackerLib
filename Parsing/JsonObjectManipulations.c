@@ -24,6 +24,12 @@ static bool jsonCopyValueHasFailed(const JsonMemberValue* value, JsonMemberType 
     return false;
 }
 
+JsonObject       jsonObjectCreate(void) { return containerDynamicCreateStack(0, sizeof(JsonObjectMember), false); }
+
+JsonArray        jsonArrayCreate(void) { return containerDynamicCreateStack(0, sizeof(JsonArrayMember), false); }
+
+JsonArrayMember* jsonArrayMemberGet(const JsonArray* jsonArray, size_t index) { return containerGet((Container*) jsonArray, index); }
+
 JsonObjectMember* jsonObjectMemberGet(const JsonObject* jsonObject, StringView* string) {
     size_t begin = 0;
     size_t end   = containerSize((const Container*) jsonObject);

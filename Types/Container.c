@@ -78,6 +78,18 @@ void containerReverse(Container* container) {
     }
 }
 
+bool containerIsEmpty(const Container* container) {
+    return container->amountOfIndexes == 0;
+}
+
+size_t containerSize(const Container* container) {
+    return container->amountOfIndexes;
+}
+
+size_t containerIndexFromReference(const Container* container, const void* const reference) {
+    return ((uintptr_t)reference - (uintptr_t)container->array)/container->byteSizeOfSingleElement;
+}
+
 void* containerFront(const Container* container) {
     return container->array;
 }

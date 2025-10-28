@@ -1,4 +1,4 @@
-#include "extMath.h"
+#include "ExtendedMath.h"
 #include <stdint.h>
 
 uint64_t factorial(uint32_t number) {

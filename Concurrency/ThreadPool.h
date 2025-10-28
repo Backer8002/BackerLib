@@ -7,9 +7,8 @@
 #ifdef __cplusplus
 namespace BackerLib {
     extern "C" {
-
-
-
+#else
+#define noexcept
 #endif
 
 /**
@@ -87,7 +86,7 @@ typedef asyncArgsPackType(FutureString, FILE*) AsyncFileReadArg;
  * @param amountOfThreads Amount of threads to use in ThreadPool
  * @param sizeOfLargestAsyncArgsPack The size of the largest asyncArgsPack this threadpool can accept.
  */
-extern ConcurrencyError threadPoolInit(ThreadPool* threadPool, size_t amountOfThreads, size_t sizeOfLargestAsyncArgsPack);
+extern ConcurrencyError threadPoolInit(ThreadPool* threadPool, size_t amountOfThreads, size_t sizeOfLargestAsyncArgsPack) noexcept;
 
 /**
  * @brief Assigns a job to the threadpool.
@@ -100,7 +99,7 @@ extern ConcurrencyError threadPoolInit(ThreadPool* threadPool, size_t amountOfTh
  * @param argsOffset args offset in asyncArgsPackType
  * @return NULL if job could not be submitted, else pointer to future as defined by asyncArgsPackType.
  */
-extern void* threadPoolJobAssign(ThreadPool* threadPool, size_t priority, void (*function)(void*), size_t futureOffset, void* args, size_t argsSize, size_t argsOffset);
+extern void* threadPoolJobAssign(ThreadPool* threadPool, size_t priority, void (*function)(void*), size_t futureOffset, void* args, size_t argsSize, size_t argsOffset) noexcept;
 
 #define threadPoolJobAssignShort(threadPool,priority,function,argsPtr,asyncArgsPackType) threadPoolJobAssign(()threadPool),(priority),(function),asyncArgsFutureOffset(asyncArgsPackType),(argsPtr),sizeof(*(argsPtr)),asyncArgsOffset(asyncArgsPackType))
 
@@ -109,13 +108,13 @@ extern void* threadPoolJobAssign(ThreadPool* threadPool, size_t priority, void (
  * @param threadPool Pointer to valid ThreadPool
  * @return ConcurrencyFailure if request could not be honored, due to issues with allocation or mutex locking.
  */
-extern ConcurrencyError threadPoolJoin(ThreadPool* threadPool);
+extern ConcurrencyError threadPoolJoin(ThreadPool* threadPool) noexcept;
 
 /**
  * @brief Threads quit after finishing what they currently work with. Awaits threads to exit.
  * @param threadPool Pointer to valid ThreadPool
  */
-extern void threadPoolExit(ThreadPool* threadPool);
+extern void threadPoolExit(ThreadPool* threadPool) noexcept;
 
 /**
  * @brief Reads file asyncronusly to String.
@@ -124,7 +123,7 @@ extern void threadPoolExit(ThreadPool* threadPool);
  * @param file Open file with read permission
  * @return Future to file contents. Invalid String if initialization of string failed.
  */
-extern FutureString* asyncFileRead(ThreadPool* threadPool, size_t priority, FILE* file);
+extern FutureString* asyncFileRead(ThreadPool* threadPool, size_t priority, FILE* file) noexcept;
 
 /**
  * @brief Destroys future
@@ -132,13 +131,13 @@ extern FutureString* asyncFileRead(ThreadPool* threadPool, size_t priority, FILE
  * @param future Pointer to Future assigned from ThreadPool
  * @return false if future was not valid and thus could not be destroyed, else true.
  */
-extern bool futureDestroy(ThreadPool* threadPool, void* future);
+extern bool futureDestroy(ThreadPool* threadPool, void* future) noexcept;
 
 /**
  * @brief Awaits future to be valid.
  * @param future Pointer to future
  */
-static inline void futureAwait(void* future) { while (!*(bool*) future) {} }
+extern void futureAwait(void* future) noexcept;
 
 /**
  * @brief Awaits future until future is valid or until timepoint.
@@ -146,21 +145,7 @@ static inline void futureAwait(void* future) { while (!*(bool*) future) {} }
  * @param timepoint Point in UTC time
  * @return true if function returned due to future is valid, else false
  */
-static inline bool futureAwaitUntil(void* future, const struct timespec* timepoint) {
-    while (true) {
-        if (*(bool*) future)
-            return true;
-        struct timespec currentTime;
-#if USES_PTHREAD
-        clock_gettime(CLOCK_REALTIME, &currentTime);
-#else
-        timespec_get(&currentTime, TIME_UTC);
-#endif
-        if (currentTime.tv_sec > timepoint->tv_sec ||
-            (currentTime.tv_sec == timepoint->tv_sec && currentTime.tv_nsec > timepoint->tv_nsec))
-            return false;
-    }
-}
+extern bool futureAwaitUntil(void* future, const struct timespec* timepoint) noexcept;
 
 /**
  * @brief Await future to be valid or for a maximum of duration.
@@ -168,18 +153,7 @@ static inline bool futureAwaitUntil(void* future, const struct timespec* timepoi
  * @param duration Duration to wait
  * @return true if future became valid in less than duration, else false.
  */
-static inline bool futureAwaitFor(void* future, const struct timespec* duration) {
-    struct timespec currentTime;
-#if USES_PTHREAD
-    clock_gettime(CLOCK_REALTIME, &currentTime);
-#else
-    timespec_get(&currentTime, TIME_UTC);
-#endif
-    return futureAwaitUntil(future, &(struct timespec){
-                                .tv_sec = currentTime.tv_sec + duration->tv_sec + (currentTime.tv_nsec + duration->tv_nsec) / (long) 1e9,
-                                .tv_nsec = (currentTime.tv_nsec + duration->tv_nsec) % (long) 1e9});
-
-}
+extern bool futureAwaitFor(void* future, const struct timespec* duration) noexcept;
 #ifdef __cplusplus
 }
 };

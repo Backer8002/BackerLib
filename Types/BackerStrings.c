@@ -21,6 +21,11 @@ String stringCreate(const unsigned char* string, size_t length) {
     return allocatedString;
 }
 
+size_t     stringLength(StringView* string) {
+    const size_t stringSize = containerSize((Container*) string);
+    return stringSize ? stringSize - 1 : 0;
+}
+
 inline unsigned char* stringGetChar(StringView* string, size_t index) {
     return containerGet((const Container*) string, index);
 }
@@ -228,4 +233,28 @@ StringW stringWCreate(const wchar_t* str, size_t len) {
     allocatedString.container.amountOfIndexes = len;
     containerDynamicAppend(&allocatedString, sizeof(wchar_t),&(wchar_t){L'\0'});
     return allocatedString;
+}
+
+StringView stringViewInit(const unsigned char* str) {
+    return (StringView) {
+        .amountOfIndexes         = strlen(str),
+        .array                   = str,
+        .byteSizeOfSingleElement = 1,
+        .header                  = ObjectFlagIsValid | ObjectFlagIsContainer};
+}
+
+StringViewW stringViewWInit(const wchar_t* str) {
+    return (StringViewW) {
+        .amountOfIndexes         = wcslen(str),
+        .array                   = str,
+        .byteSizeOfSingleElement = sizeof(wchar_t),
+        .header                  = ObjectFlagIsValid | ObjectFlagIsContainer};
+}
+
+StringView stringViewCast(String string) {
+    return (StringView){.container = string.container};
+}
+
+StringView* stringViewPtrCast(const String* string) {
+    return (StringView*)(Container*)string;
 }

@@ -152,6 +152,11 @@ static void internal_containerDynamicInit(DynamicContainer* container, size_t in
     container->header = (elementsArePointers ? ObjectFlagElementsArePointers : 0) | ObjectFlagIsValid | ObjectFlagIsDynamicContainer | ObjectFlagIsContainer;
 }
 
+DynamicContainer containerConvertToDynamicStack(Container container) {
+    DynamicContainer containerToReturn = {.container = container, .containerMaxSize = container.amountOfIndexes};
+    return containerToReturn;
+}
+
 DynamicContainer containerDynamicCreateStack(size_t initialSize, size_t elementSize, bool elementsArePointers) {
     DynamicContainer container = {0};
     internal_containerDynamicInit(&container, initialSize, elementSize, elementsArePointers);
@@ -178,4 +183,24 @@ void containerDynamicDestroyWithElements(DynamicContainer* container, void(eleme
                               : (Bytes) container->container.array + container->container.byteSizeOfSingleElement * i);
     }
     containerDestroy(container);
+}
+
+void* containerDynamicFront(const DynamicContainer* container) {
+    return containerFront(&container->container);
+}
+
+void* containerDynamicNext(const DynamicContainer* container, const void* element) {
+    return containerNext(&container->container,element);
+}
+
+void* containerDynamicPrev(const DynamicContainer* container, const void* element) {
+    return containerPrev(&container->container,element);
+}
+
+void* containerDynamicBack(const DynamicContainer* container) {
+    return containerBack(&container->container);
+}
+
+void* containerDynamicEnd(const DynamicContainer* container) {
+    return containerEnd((Container*)container);
 }

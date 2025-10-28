@@ -12,9 +12,8 @@
 #ifdef __cplusplus
 namespace BackerLib {
     extern "C" {
-
-
-
+#else
+#define noexcept
 #endif // __cplusplus
 
     /**
@@ -58,26 +57,20 @@ namespace BackerLib {
      * @return String that contains a copy of string up to length chars.
      * @return Invalid object if alloc failed.
      */
-    extern String            stringCreate(const unsigned char* string, size_t length);
-
+    extern String            stringCreate(const unsigned char* string, size_t length) noexcept;
     /**
      * @brief Length of string.
      * @param string Pointer to valid String
      * @return Size of char array in bytes, excluding the end null terminator.
      */
-    static inline size_t     stringLength(StringView* string) {
-        const size_t stringSize = containerSize((Container*) string);
-        return stringSize ? stringSize - 1 : 0;
-    }
-
+    extern size_t     stringLength(StringView* string) noexcept;
     /**
      * @brief Wrapper of containerGet
      * @param string Pointer to valid String
      * @param index Index to get char from
      * @return Pointer to char in array. NULL if invalid index.
      */
-    extern inline unsigned char*          stringGetChar(StringView* string, size_t index);
-
+    extern inline unsigned char*          stringGetChar(StringView* string, size_t index) noexcept;
     /**
      * @brief Appends stringToInsert on to destString.
      * @param destString Destination string object. Must be pointer to valid String/DynamicContainer
@@ -85,8 +78,7 @@ namespace BackerLib {
      * @param length Length of stringToInsert. This is the only length check
      * @return ContainerAllocFailure if allocation failed for the extra needed space.
      */
-    extern ContainerError stringAppendCString(String* destString, const unsigned char* stringToInsert, size_t length);
-
+    extern ContainerError stringAppendCString(String* destString, const unsigned char* stringToInsert, size_t length) noexcept;
     /**
      * @brief Inserts a CString into a String. Wrapper of containerDynamicInsert.
      * @param destString Pointer to valid String
@@ -96,16 +88,14 @@ namespace BackerLib {
      * @return ContainerInvalidIndex if index was larger than the length of destString.
      * @return ContainerAllocFailure if destString could not grow.
      */
-    extern ContainerError stringInsertSubCString(String* destString, const unsigned char* other, size_t lenOfOther, size_t firstIndex);
-
+    extern ContainerError stringInsertSubCString(String* destString, const unsigned char* other, size_t lenOfOther, size_t firstIndex) noexcept;
     /**
      * @brief Appends stringToInsert on to destString
      * @param destString String to append to. Must be pointer to valid String/DynamicContainer
      * @param stringToInsert String used to append with. Must be pointer to valid String
      * @return ContainerAllocFailure if allocation failed for the extra needed space.
      */
-    extern ContainerError stringAppendString(String* destString, const String* stringToInsert);
-
+    extern ContainerError stringAppendString(String* destString, const String* stringToInsert) noexcept;
     /**
      * @brief Removes amountToStrip charToStrip chars in string. Result is returned as a copy.
      * @param string Pointer to valid String
@@ -114,8 +104,7 @@ namespace BackerLib {
      * @param amountToStrip Max amount of charToStrip to remove. 0 means infinity
      * @return Result String. Check validity with isValidObject.
      */
-    extern String                stringStrip(const String* string, unsigned char charToStrip, bool stripFromBack, uint64_t amountToStrip);
-
+    extern String                stringStrip(const String* string, unsigned char charToStrip, bool stripFromBack, uint64_t amountToStrip) noexcept;
     /**
      * @brief Splits string on charToSplit up to amountOfCharsToSplitAt times. This is not mutating string
      * @param string Pointer to valid StringView
@@ -124,7 +113,7 @@ namespace BackerLib {
      * @param amountOfCharsToSplitAt Max amount of times a split can happen. 0 means infinity
      * @return DynamicContainer containing Strings in order of how they were placed in string. Check validity of result with isValidObject. No cleanup needed for invalid result.
      */
-    extern DynamicContainer      stringSplit(const StringView* string, unsigned char charToSplitOn, bool splitFromBack, uint64_t amountOfCharsToSplitAt);
+    extern DynamicContainer      stringSplit(const StringView* string, unsigned char charToSplitOn, bool splitFromBack, uint64_t amountOfCharsToSplitAt) noexcept;
     /**
      * @brief Splits string on specified chars. Use isValidObject to check validity of return result.
      * @param string Pointer to valid StringView
@@ -134,8 +123,7 @@ namespace BackerLib {
      * @param amountOfCharsToSplitAt Max amount of characters to split on. 0, means no limit.
      * @return DynamicContainer containing split Strings in the order they occured in string.
      */
-    extern DynamicContainer stringSplitMulti(const StringView* string, const unsigned char* charsToSplitOn, size_t amountOfChars, bool splitFromBack, uint64_t amountOfCharsToSplitAt);
-
+    extern DynamicContainer stringSplitMulti(const StringView* string, const unsigned char* charsToSplitOn, size_t amountOfChars, bool splitFromBack, uint64_t amountOfCharsToSplitAt) noexcept;
     /**
      * @brief Replaces part of string with stringToReplaceWith starting from firstIndex. Unused indexes are considered valid to write to as long as it begins at maximum length of destString.
      * @param destString String which contents are to be replaced. Pointer to valid String
@@ -144,28 +132,28 @@ namespace BackerLib {
      * @return ContainerAllocFailure if string cannot grow in the cases were unused indexes are being written to.
      * @return ContainerInvalidIndex if index was larger than the length of destString or if replacement intrupted a UTF-8 char.
      */
-    extern ContainerError        stringReplace(String* destString, const String* stringToReplaceWith, size_t firstIndex);
+    extern ContainerError        stringReplace(String* destString, const String* stringToReplaceWith, size_t firstIndex) noexcept;
     /**
      * @brief Compares two Strings lexoconographicly
      * @param first Pointer to valid String
      * @param second Pointer to valid String
      * @return true if first is less than or equal to second, else false
      */
-    extern bool                  stringCompareAcending(const void* first, const void* second);
+    extern bool                  stringCompareAcending(const void* first, const void* second) noexcept;
     /**
      * @brief Compares two Strings lexoconographicly
      * @param first Pointer to valid String
      * @param second Pointer to valid String
      * @return true if first is greater than or equal to second, else false
      */
-    extern bool                  stringCompareDecending(const void* first, const void* second);
+    extern bool                  stringCompareDecending(const void* first, const void* second) noexcept;
     /**
      * @brief Compares the equality of two strings.
      * @param first Pointer to valid String
      * @param second Pointer to valid String
      * @return true if strings are equal, else false.
      */
-    extern bool stringEqual(const void* first, const void* second);
+    extern bool stringEqual(const void* first, const void* second) noexcept;
 
     /**
      * @brief Creates a StringW that contains a copy of str param. If str is a CString it is not length checked with strlen, instead function will copy len indicies.
@@ -174,7 +162,7 @@ namespace BackerLib {
      * @return StringW that contains a copy of string up to length chars.
      * @return Invalid object if alloc failed.
      */
-    extern StringW               stringWCreate(const wchar_t* str, size_t len);
+    extern StringW               stringWCreate(const wchar_t* str, size_t len) noexcept;
 
 /**
  * @param cString Any valid constexpr char[] or literal
@@ -190,34 +178,15 @@ namespace BackerLib {
      * @param str Any valid C-string
      * @return StringView Object with len counted.
      */
-    static inline StringView stringViewInit(const unsigned char* str) {
-        return (StringView) {
-            .amountOfIndexes         = strlen(str),
-            .array                   = str,
-            .byteSizeOfSingleElement = 1,
-            .header                  = ObjectFlagIsValid | ObjectFlagIsContainer};
-    }
-
+    extern StringView stringViewInit(const unsigned char* str) noexcept;
     /**
      *
      * @param str Any valid Wide C-string
      * @return StringViewW Object with len counted.
      */
-    static inline StringViewW stringViewWInit(const wchar_t* str) {
-        return (StringViewW) {
-            .amountOfIndexes         = wcslen(str),
-            .array                   = str,
-            .byteSizeOfSingleElement = sizeof(wchar_t),
-            .header                  = ObjectFlagIsValid | ObjectFlagIsContainer};
-    }
-
-static inline StringView stringViewCast(String string) {
-        return (StringView){.container = string.container};
-    }
-
-static inline StringView* stringViewPtrCast(const String* string) {
-        return (StringView*)(Container*)string;
-    }
+    extern StringViewW stringViewWInit(const wchar_t* str) noexcept;
+    extern StringView stringViewCast(String string) noexcept;
+    extern StringView* stringViewPtrCast(const String* string) noexcept;
 
 #ifdef __cplusplus
     }

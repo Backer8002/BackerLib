@@ -9,4 +9,4 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -pedantic")
 
 include_directories(BackerLibMath INTERFACE "${PROJECT_SOURCE_DIR}/../include")
-add_library(BackerLibMath STATIC extendedMath.c)
+add_library(BackerLibMath STATIC ExtendedMath.c)

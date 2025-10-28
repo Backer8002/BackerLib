@@ -59,7 +59,7 @@ namespace BackerLib {
 #define ObjectFlagElementsArePointers           0x00400000
 #define ObjectFlagArrayNoSort                   0x00800000
 
-    static inline bool isValidObject(const DataTypeFlags* flags) {
+    static bool isValidObject(const DataTypeFlags* flags) {
         if (flags)
             return *flags & ObjectFlagIsValid;
         return false;

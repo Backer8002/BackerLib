@@ -20,3 +20,7 @@ uint64_t hashFunctionDefualt(size_t amountOfVars, ...) {
     va_end(argsToHash);
     return hash;
 }
+
+uint64_t hashFunctionDefualtSingleVar(const void* element, size_t size) {
+    return hashFunctionDefualt(1, size, element);
+}

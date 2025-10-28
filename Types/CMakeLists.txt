@@ -9,6 +9,7 @@ set(CMAKE_C_STANDARD_REQUIRED ON)
 include_directories(BackerLibTypes INTERFACE "${PROJECT_SOURCE_DIR}/../include")
 add_library(BackerLibTypes STATIC
         ArrayList.h
+        ArrayList.c
         Bitsets.c
         HashMapClosed.c
         Queue.c
@@ -26,5 +27,6 @@ add_library(BackerLibTypes STATIC
         Trie.c
         Trie.h
         HashMap.h
-        HashMapPublicShared.c)
+        HashMapPublicShared.c
+        )
 

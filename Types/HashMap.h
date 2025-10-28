@@ -9,6 +9,8 @@
 #ifdef __cplusplus
 namespace BackerLib {
     extern "C" {
+#else
+#define noexcept
 #endif // __cplusplus
 
     typedef struct {
@@ -25,7 +27,7 @@ namespace BackerLib {
      * @return ContainerOPUnsuccessful if bit was low.
      * @return ContainerOPSuccessful if bit was high.
      */
-    extern ContainerError bitSetGet(const BitSet* set, size_t index);
+    extern ContainerError bitSetGet(const BitSet* set, size_t index) noexcept;
     /**
      * @brief Sets index bit to high. Returns previous state.
      * @param set Pointer to valid BitSet
@@ -34,7 +36,7 @@ namespace BackerLib {
      * @return ContainerOPUnsuccessful if bit was low.
      * @return ContainerOPSuccessful if bit was high.
      */
-    extern ContainerError bitSetAdd(BitSet* set, size_t index);
+    extern ContainerError bitSetAdd(BitSet* set, size_t index) noexcept;
     /**
      * @brief Sets index bit to high. Returns previous state.
      * @param set Pointer to valid BitSet
@@ -43,49 +45,49 @@ namespace BackerLib {
      * @return ContainerOPUnsuccessful if bit was low.
      * @return ContainerOPSuccessful if bit was high.
      */
-    extern ContainerError bitSetRemove(BitSet* set, size_t index);
+    extern ContainerError bitSetRemove(BitSet* set, size_t index) noexcept;
     /**
      * @param set Pointer to valid BitSet
      * @return true if BitSet is empty.
      */
-    extern bool           bitSetIsEmpty(BitSet* set);
+    extern bool           bitSetIsEmpty(BitSet* set) noexcept;
     /**
      * @brief Preforms Exclusive AND on firstSet with secondSet
      * @param firstSet Pointer to valid BitSet
      * @param secondSet Pointer to valid BitSet
      * @return ContainerOPUnsuccessful if the BitSets were of different size.
      */
-    extern ContainerError bitSetAnd(BitSet* firstSet, BitSet* secondSet);
+    extern ContainerError bitSetAnd(BitSet* firstSet, BitSet* secondSet) noexcept;
     /**
      * @brief Preforms OR on firstSet with secondSet
      * @param firstSet Pointer to valid BitSet
      * @param secondSet Pointer to valid BitSet
      * @return ContainerOPUnsuccessful if the BitSets were of different size.
      */
-    extern ContainerError bitSetOr(BitSet* firstSet, BitSet* secondSet);
+    extern ContainerError bitSetOr(BitSet* firstSet, BitSet* secondSet) noexcept;
     /**
      * @brief Preforms Exclusive OR on firstSet with secondSet
      * @param firstSet Pointer to valid BitSet
      * @param secondSet Pointer to valid BitSet
      * @return ContainerOPUnsuccessful if the BitSets were of different size.
      */
-    extern ContainerError bitSetXOr(BitSet* firstSet, BitSet* secondSet);
+    extern ContainerError bitSetXOr(BitSet* firstSet, BitSet* secondSet) noexcept;
     /**
      * @brief Inverts all indexes in BitSet.
      * @param set Pointer to valid BitSet
      */
-    extern void           bitSetNot(BitSet* set);
+    extern void           bitSetNot(BitSet* set) noexcept;
     /**
      * @brief Destroys BitSet if applicable.
      * @param set Pointer to BitSet
      */
-    extern void           bitSetDestroy(BitSet* set);
+    extern void           bitSetDestroy(BitSet* set) noexcept;
     /**
      * @brief Creates a BitSet on the Stack. Use isValidObject to check validity.
      * @param amountOfElements Amount of indexes to allocate
      * @param objectIsHeapAllocated Is the bitset going to be on the heap?
      */
-    extern BitSet         bitSetCreate(size_t amountOfElements, bool objectIsHeapAllocated);
+    extern BitSet         bitSetCreate(size_t amountOfElements, bool objectIsHeapAllocated) noexcept;
 
     typedef union HashMapClosed {
         struct {
@@ -104,10 +106,10 @@ namespace BackerLib {
         };
     } HashMap;
 
-#define HASHMAP_MAX_DEPTH                       UINT32_MAX
-#define HASHMAP_MAX_LOADFACTOR                  1.0f
+#define HASHMAP_MAX_DEPTH             UINT32_MAX
+#define HASHMAP_MAX_LOADFACTOR        1.0f
 
-#define FlagHashMapKeyIsDataTypeFlags           0x100
+#define FlagHashMapKeyIsDataTypeFlags 0x100
 
     /**
      * @brief Creates an HashMap on the stack. Use isValidObject to check validity.
@@ -118,8 +120,8 @@ namespace BackerLib {
      * @param hashFunction Callback to hash a key
      * @return HashMap on the stack.
      */
-    extern HashMap  hashMapCreateStack(size_t initialSize, size_t keySize, size_t elementSize, bool keyIsDataTypeFlags,
-                                       uint64_t (*hashFunction)(const void* element, size_t elementSize));
+    extern HashMap        hashMapCreateStack(size_t initialSize, size_t keySize, size_t elementSize, bool keyIsDataTypeFlags,
+                                             uint64_t (*hashFunction)(const void* element, size_t elementSize)) noexcept;
 
     /**
      * @brief Creates an HashMap on the heap.
@@ -130,8 +132,8 @@ namespace BackerLib {
      * @param hashFunction Callback to hash a key
      * @return NULL if allocation failed.
      */
-    extern HashMap* hashMapCreateHeap(size_t initialSize, size_t keySize, size_t elementSize, bool keyIsDataTypeFlags,
-                                      uint64_t (*hashFunction)(const void* element, size_t elementSize));
+    extern HashMap*       hashMapCreateHeap(size_t initialSize, size_t keySize, size_t elementSize, bool keyIsDataTypeFlags,
+                                            uint64_t (*hashFunction)(const void* element, size_t elementSize)) noexcept;
 
     /**
      * @brief Hash function. Defualt for the HashMap implementations.
@@ -139,16 +141,14 @@ namespace BackerLib {
      * @param ... size of element followed by pointer to element
      * @return Hash.
      */
-    extern uint64_t hashFunctionDefualt(size_t amountOfVars, ...);
+    extern uint64_t       hashFunctionDefualt(size_t amountOfVars, ...) noexcept;
     /**
      *
      * @param element Pointer to element to hash
      * @param size Size of element to hash
      * @return Hash
      */
-    static uint64_t hashFunctionDefualtSingleVar(const void* element, size_t size) {
-        return hashFunctionDefualt(1, size, element);
-    }
+    extern uint64_t       hashFunctionDefualtSingleVar(const void* element, size_t size) noexcept;
 
     /**
      * @brief Inserts element into hashMap using key.
@@ -162,7 +162,7 @@ namespace BackerLib {
      * @return ContainerOPUnsuccessful if key already is associated with an element in the hashMap.
      * @return ContainerAllocFailure if hashMap could not grow.
      */
-    extern ContainerError hashMapInsert(HashMap* hashMap, size_t keySize, const void* key, size_t elementSize, void* element);
+    extern ContainerError hashMapInsert(HashMap* hashMap, size_t keySize, const void* key, size_t elementSize, void* element) noexcept;
     /**
      *
      * @param hashMap Pointer to valid HashMap
@@ -170,7 +170,7 @@ namespace BackerLib {
      * @param key Key to locate element with
      * @return NULL if key does not exist in hashMap, if key does not match the size of a key in the hashMap, else pointer to element.
      */
-    extern void*          hashMapGet(const HashMap* hashMap, size_t keySize, const void* key);
+    extern void*          hashMapGet(const HashMap* hashMap, size_t keySize, const void* key) noexcept;
     /**
      *
      * @param hashMap Pointer to valid HashMap
@@ -179,9 +179,7 @@ namespace BackerLib {
      * @return true if Key does exist in hashMap.
      * @return false if keySize was invalid or if element does not exist.
      */
-    static inline bool    hashMapContainsKey(void* hashMap, size_t keySize, const void* key) {
-        return hashMapGet(hashMap, keySize, key) ? true : false;
-    }
+    extern bool    hashMapContainsKey(void* hashMap, size_t keySize, const void* key) noexcept;
     /**
      * @brief Removes element from hashMap.
      * @param hashMap Pointer to valid HashMap
@@ -192,7 +190,7 @@ namespace BackerLib {
      * @return ContainerInvalidSize if size of key was different from the size of a key in the hashMap.
      * @return ContainerOPUnsuccessful if key did not exist in hashMap.
      */
-    extern ContainerError hashMapRemove(HashMap* hashMap, size_t keySize, const void* key, void (*keyDestructor)(void* object), void (*elementDestructor)(void* object));
+    extern ContainerError hashMapRemove(HashMap* hashMap, size_t keySize, const void* key, void (*keyDestructor)(void* object), void (*elementDestructor)(void* object)) noexcept;
     /**
      * @brief Replaces element at key.
      * @param hashMap Pointer to valid HashMap
@@ -204,14 +202,14 @@ namespace BackerLib {
      * @return ContainerInvalidSize if size of key was different then the size of a key in the hashMap.
      * @return ContainerOPUnsuccessful if key did not exist in hashMap.
      */
-    extern ContainerError hashMapReplace(HashMap* hashMap, size_t keySize, const void* key, size_t elementSize, void* element, void (*elementDestructor)(void* object));
+    extern ContainerError hashMapReplace(HashMap* hashMap, size_t keySize, const void* key, size_t elementSize, void* element, void (*elementDestructor)(void* object)) noexcept;
     /**
      * @brief Destroys hashMap if applicable
      * @param hashMap Pointer to HashMap
      * @param keyDestructor Optional key destructor
      * @param elementDestructor Optional element destructor
      */
-    extern void           hashMapDestroy(HashMap* hashMap, void (*keyDestructor)(void* object), void (*elementDestructor)(void* object));
+    extern void           hashMapDestroy(HashMap* hashMap, void (*keyDestructor)(void* object), void (*elementDestructor)(void* object)) noexcept;
 #ifdef __cplusplus
     }
 };

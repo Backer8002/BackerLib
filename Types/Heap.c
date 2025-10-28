@@ -100,3 +100,12 @@ Heap* heapCreateHeap(size_t elementSize, bool (*compare)(const void*, const void
     heap->compare = compare;
     return heap;
 }
+
+Heap containerDynamicToHeapReinterperate(DynamicContainer container,bool(*compare)(const void*, const void*)) {
+    container.header |= ObjectFlagIsNotContinuousCustomTracking | ObjectFlagArrayNoSort;
+    return (Heap){.dynamicContainer = container, .compare = compare};
+}
+
+void    heapDestroy(void* heap) {
+    containerDestroy(heap);
+}

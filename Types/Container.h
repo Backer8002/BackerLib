@@ -5,6 +5,8 @@
 #ifdef __cplusplus
 namespace BackerLib {
     extern "C" {
+#else
+#define noexcept
 #endif
 
         /**
@@ -18,7 +20,7 @@ namespace BackerLib {
          * @return ContainerInvalidIndex if index is out of bounds
          * @return ContainerInvalidSize if element was larger than a single element in array
          */
-        extern ContainerError containerSet(Container* container,size_t index,size_t elementSize, const void* restrict element);
+        extern ContainerError containerSet(Container* container,size_t index,size_t elementSize, const void* restrict element) noexcept;
         /**
          * @brief Gets an element in the array.
          * @param container Pointer to valid container object
@@ -26,7 +28,7 @@ namespace BackerLib {
          * @return NULL if index was out of range.
          * @return Pointer to object in array. If elementsArePointers were specified this instead returns the pointer to object within the array.
          */
-        extern void* containerGet(const Container* container,size_t index);
+        extern void* containerGet(const Container* container,size_t index) noexcept;
         /**
          * @brief Makes a copy of subarray specefied by first and last index. Use isValidObject to check validity of return object.
          * @param container Pointer to valid Container
@@ -35,18 +37,18 @@ namespace BackerLib {
          * @param copyInReverse Should the elements be copied in reverse order
          * @return Container containing copy of subarray.
          */
-        extern Container containerGetSubArray(const Container* container, size_t firstIndex, size_t lastIndex,bool copyInReverse);
+        extern Container containerGetSubArray(const Container* container, size_t firstIndex, size_t lastIndex,bool copyInReverse) noexcept;
         /**
          * @brief Wrapper of containerGetSubArray(container,0,size,false)
          * @param container Pointer to valid Container
          * @return Invalid container if allocation failed.
          */
-        extern Container containerCopy(const Container* container);
+        extern Container containerCopy(const Container* container) noexcept;
         /**
          * @brief Reverses the order of elemenets in container inplace.
          * @param container Pointer to valid container
          */
-        extern void containerReverse(Container* container);
+        extern void containerReverse(Container* container) noexcept;
         /**
          * @brief Creates and returns a container allocated on the stack.
          * @param size Amount of elements to allocate for
@@ -54,7 +56,7 @@ namespace BackerLib {
          * @param elementsArePointers Is the array to store the pointers to elements instead of copying them
          * @return Stack allocated Container. Use isValidObject to determine validity.
          */
-        extern Container containerCreateStack(size_t size, size_t elementSize, bool elementsArePointers);
+        extern Container containerCreateStack(size_t size, size_t elementSize, bool elementsArePointers) noexcept;
         /**
          * @brief Creates and returns a container allocated on the heap.
          * @param size Amount of elements to allocate for
@@ -63,23 +65,18 @@ namespace BackerLib {
          * @return Heap allocated Container
          * @return NULL if alloc failed
          */
-        extern Container* containerCreateHeap(size_t size, size_t elementSize, bool elementsArePointers);
+        extern Container* containerCreateHeap(size_t size, size_t elementSize, bool elementsArePointers) noexcept;
         /**
          * @brief Checks if container is empty.
          * @param container Pointer to valid Container
          * @return true if container does not contain any elements, else false.
          */
-        static inline bool containerIsEmpty(const Container* container) {
-            return container->amountOfIndexes == 0;
-        }
+        extern bool containerIsEmpty(const Container* container) noexcept;
         /**
          * @param container Pointer to valid Container
          * @return Size of current container.
          */
-        static inline size_t containerSize(const Container* container) {
-            return container->amountOfIndexes;
-        }
-
+        extern size_t containerSize(const Container* container) noexcept;
         /**
          * @brief Returns a reference index in a container
          * @param container Pointer to valid container
@@ -88,47 +85,44 @@ namespace BackerLib {
          * @note It is undefined behavoir to use a reference to outside the container.
          * @note Reference may point to any part of member object.
          */
-        static inline size_t containerIndexFromReference(const Container* container, const void* const reference) {
-            return ((uintptr_t)reference - (uintptr_t)container->array)/container->byteSizeOfSingleElement;
-        }
+        extern size_t containerIndexFromReference(const Container* container, const void* reference) noexcept;
         /**
          * @brief Returns pointer to first index in container. Index is NULL if container is empty.
          * @param container Pointer to valid Container
          * @return Pointer to first index in container.
          */
-        void* containerFront(const Container* container);
+        extern void* containerFront(const Container* container) noexcept;
         /**
          * @brief Gets the next element in container.
          * @param container Pointer to valid Container
          * @param element Pointer to element in container
          * @return Next element in container, NULL if no such exists
          */
-        void* containerNext(const Container* container, const void* element);
+        extern void* containerNext(const Container* container, const void* element) noexcept;
         /**
          * @brief Gets the next element in reversed order in container.
          * @param container Pointer to valid Container
          * @param element Pointer to element in container
          * @return Next element in reverse order in container, NULL if no such exists
          */
-        void* containerPrev(const Container* container, const void* element);
+        extern void* containerPrev(const Container* container, const void* element) noexcept;
         /**
          * @brief Returns pointer to last index in container. Index is NULL if container is empty
          * @param container Pointer to valid Container
          * @return Pointer to last index in container.
          */
-        void* containerBack(const Container* container);
+        extern void* containerBack(const Container* container) noexcept;
         /**
          * @brief Returns pointer to the first invalid index in the container.
          * @param container Pointer to valid Container
          * @return Pointer to the first invalid index in container.
          */
-        void* containerEnd(const Container* container);
-
+        extern void* containerEnd(const Container* container) noexcept;
         /**
          * @brief Destroys and frees object if applicable. Sets object state to invalid. Will not free container if amountOfIndexes is set to 0.
          * @param container Container to destroy
          */
-        extern void containerDestroy(void* container);
+        extern void containerDestroy(void* container) noexcept;
 
 #ifdef __cplusplus
     }

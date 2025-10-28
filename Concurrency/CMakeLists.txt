@@ -9,7 +9,9 @@ add_library(BackerLibConcurrency STATIC
         ThreadPool.c
         ThreadPool.h
         ConcurrencyDefines.h
-        ../include/BackerLibConcurrency.h)
+        ../include/BackerLibConcurrency.h
+        ConcurrencyDefines.c
+        Future.c)
 
 target_include_directories(BackerLibConcurrency BEFORE INTERFACE "${PROJECT_SOURCE_DIR}/../include")
 target_include_directories(BackerLibConcurrency BEFORE PUBLIC "${PROJECT_BINARY_DIR}/..")
