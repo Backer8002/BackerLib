@@ -1,14 +1,14 @@
 #ifndef Queue_h_
 #define Queue_h_
 
+#include "TypesMain.h"
+#include <stdbool.h>
+#include <stdint.h>
+
 #ifdef __cplusplus
 namespace BackerLib {
     extern "C" {
 #endif
-
-#include "TypesMain.h"
-#include <stdbool.h>
-#include <stdint.h>
 
 #define FlagQueueIsDequeue 0x100
 

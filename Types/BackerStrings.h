@@ -31,7 +31,7 @@ namespace BackerLib {
                 DataTypeFlags  header;
                 const uint32_t byteSizeOfSingleElement;
                 const size_t   amountOfIndexes;
-                const char*    array;
+                const unsigned char*    array;
             };
             Container container;
         } StringView;
@@ -58,7 +58,7 @@ namespace BackerLib {
      * @return String that contains a copy of string up to length chars.
      * @return Invalid object if alloc failed.
      */
-    extern String            stringCreate(const char* string, size_t length);
+    extern String            stringCreate(const unsigned char* string, size_t length);
 
     /**
      * @brief Length of string.
@@ -76,7 +76,7 @@ namespace BackerLib {
      * @param index Index to get char from
      * @return Pointer to char in array. NULL if invalid index.
      */
-    extern inline char*          stringGetChar(StringView* string, size_t index);
+    extern inline unsigned char*          stringGetChar(StringView* string, size_t index);
 
     /**
      * @brief Appends stringToInsert on to destString.
@@ -85,7 +85,7 @@ namespace BackerLib {
      * @param length Length of stringToInsert. This is the only length check
      * @return ContainerAllocFailure if allocation failed for the extra needed space.
      */
-    extern inline ContainerError stringAppendCString(String* destString, const char* stringToInsert, size_t length);
+    extern ContainerError stringAppendCString(String* destString, const unsigned char* stringToInsert, size_t length);
 
     /**
      * @brief Inserts a CString into a String. Wrapper of containerDynamicInsert.
@@ -96,7 +96,7 @@ namespace BackerLib {
      * @return ContainerInvalidIndex if index was larger than the length of destString.
      * @return ContainerAllocFailure if destString could not grow.
      */
-    extern inline ContainerError stringInsertSubCString(String* destString, const char* other, size_t lenOfOther, size_t firstIndex);
+    extern ContainerError stringInsertSubCString(String* destString, const unsigned char* other, size_t lenOfOther, size_t firstIndex);
 
     /**
      * @brief Appends stringToInsert on to destString
@@ -104,7 +104,7 @@ namespace BackerLib {
      * @param stringToInsert String used to append with. Must be pointer to valid String
      * @return ContainerAllocFailure if allocation failed for the extra needed space.
      */
-    extern inline ContainerError stringAppendString(String* destString, const String* stringToInsert);
+    extern ContainerError stringAppendString(String* destString, const String* stringToInsert);
 
     /**
      * @brief Removes amountToStrip charToStrip chars in string. Result is returned as a copy.
@@ -114,17 +114,27 @@ namespace BackerLib {
      * @param amountToStrip Max amount of charToStrip to remove. 0 means infinity
      * @return Result String. Check validity with isValidObject.
      */
-    extern String                stringStrip(const String* string, char charToStrip, bool stripFromBack, uint64_t amountToStrip);
+    extern String                stringStrip(const String* string, unsigned char charToStrip, bool stripFromBack, uint64_t amountToStrip);
 
     /**
      * @brief Splits string on charToSplit up to amountOfCharsToSplitAt times. This is not mutating string
-     * @param string Pointer to valid String
+     * @param string Pointer to valid StringView
      * @param charToSplitOn Char that should be used as a splitting point
      * @param splitFromBack Should the splitting commence from back to front
      * @param amountOfCharsToSplitAt Max amount of times a split can happen. 0 means infinity
      * @return DynamicContainer containing Strings in order of how they were placed in string. Check validity of result with isValidObject. No cleanup needed for invalid result.
      */
-    extern DynamicContainer      stringSplit(const String* string, char charToSplitOn, bool splitFromBack, uint64_t amountOfCharsToSplitAt);
+    extern DynamicContainer      stringSplit(const StringView* string, unsigned char charToSplitOn, bool splitFromBack, uint64_t amountOfCharsToSplitAt);
+    /**
+     * @brief Splits string on specified chars. Use isValidObject to check validity of return result.
+     * @param string Pointer to valid StringView
+     * @param charsToSplitOn List of characters to split on
+     * @param amountOfChars Length of charsToSplitOn
+     * @param splitFromBack Should splitting commence from back to front
+     * @param amountOfCharsToSplitAt Max amount of characters to split on. 0, means no limit.
+     * @return DynamicContainer containing split Strings in the order they occured in string.
+     */
+    extern DynamicContainer stringSplitMulti(const StringView* string, const unsigned char* charsToSplitOn, size_t amountOfChars, bool splitFromBack, uint64_t amountOfCharsToSplitAt);
 
     /**
      * @brief Replaces part of string with stringToReplaceWith starting from firstIndex. Unused indexes are considered valid to write to as long as it begins at maximum length of destString.
@@ -180,7 +190,7 @@ namespace BackerLib {
      * @param str Any valid C-string
      * @return StringView Object with len counted.
      */
-    static inline StringView stringViewInit(const char* str) {
+    static inline StringView stringViewInit(const unsigned char* str) {
         return (StringView) {
             .amountOfIndexes         = strlen(str),
             .array                   = str,

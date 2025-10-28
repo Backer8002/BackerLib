@@ -23,7 +23,7 @@ static bool internal_memCmpKey(size_t keySize, const void* key, const void* othe
     if (!otherKey || !key)
         return false;
     if (isDataTypeFlagsQualified) {
-        if ((DataTypeFlags*) key != (DataTypeFlags*) otherKey)
+        if (*(DataTypeFlags*) key != *(DataTypeFlags*) otherKey)
             return false;
         if ((*(DataTypeFlags*) key & ObjectFlagIsContainer) && (*(DataTypeFlags*) key & ObjectFlagIsNotContinuous) == 0) {
             if (((Container*) key)->amountOfIndexes != ((Container*) otherKey)->amountOfIndexes || ((Container*) key)->byteSizeOfSingleElement != ((Container*) otherKey)->byteSizeOfSingleElement)

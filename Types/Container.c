@@ -82,6 +82,18 @@ void* containerFront(const Container* container) {
     return container->array;
 }
 
+void* containerNext(const Container* container, const void* element) {
+    size_t nextIndex = containerIndexFromReference(container,element) + 1;
+    return containerGet(container,nextIndex);
+}
+
+void* containerPrev(const Container* container, const void* element) {
+    size_t index = containerIndexFromReference(container, element);
+    if (index == 0)
+        return NULL;
+    return containerGet(container, index - 1);
+}
+
 void* containerBack(const Container* container) {
     return container->array ? (Bytes)container->array + container->byteSizeOfSingleElement * (container->amountOfIndexes - 1) : NULL;
 }
