@@ -141,8 +141,8 @@ extern bool eventInitDefualtLog(const char* debugLogFile, bool outputToStdout, c
         errorFileStreams[1] = errorLog;
     } else if (outputToStdout) { errorFileStreams[1] = errorLog; } else { errorFileStreams[0] = errorLog; }
 
-    eventRegLogSubToID(mainEventHandle, InfoLogLevel, writeEventToLogLocations, false, (errorLog != NULL) + outputToStdout, debugFileStreams);
-    eventRegLogSubToID(mainEventHandle, DebugLogLevel, writeEventToLogLocations, false, (errorLog != NULL) + outputToStdout, debugFileStreams);
+    eventRegLogSubToID(mainEventHandle, InfoLogLevel, writeEventToLogLocations, false, (debugLog != NULL) + outputToStdout, debugFileStreams);
+    eventRegLogSubToID(mainEventHandle, DebugLogLevel, writeEventToLogLocations, false, (debugLog != NULL) + outputToStdout, debugFileStreams);
     eventRegLogSubToID(mainEventHandle, WarningLogLevel, writeEventToLogLocations, false, (errorLog != NULL) + (outputToStdout || outputErrorsToStdErr), errorFileStreams);
     eventRegLogSubToID(mainEventHandle, ErrorLogLevel, writeEventToLogLocations, false, (errorLog != NULL) + (outputToStdout || outputErrorsToStdErr), errorFileStreams);
     eventRegLogSubToID(mainEventHandle, CriticalLogLevel, writeEventToLogLocations, false, (errorLog != NULL) + (outputToStdout || outputErrorsToStdErr), errorFileStreams);
@@ -377,13 +377,13 @@ void writeEventToLogLocations(EventCall event, StringView logLevel, size_t amoun
         break;
     case EventLogEvent:
         for (size_t i = 0; i < amountOfLocations; i++)
-            fprintf(locations[i], ANSI_TEXT_YELLOW "%" PRIi64 ANSI_TEXT_WHITE "[%s] " ANSI_TEXT_MAGENTA "%s " ANSI_RESET_ATTRIBUTE " in file: " ANSI_TEXT_CYAN ANSI_TEXT_BOLD "%s" ANSI_RESET_ATTRIBUTE " at line: " ANSI_TEXT_BLUE "%zu" ANSI_RESET_ATTRIBUTE "\n", time(NULL), logLevel.array, event.eventCallMain.id.array, event.eventCallLog.file, event.eventCallLog.line);
+            fprintf(locations[i], ANSI_TEXT_YELLOW "%" PRIi64 ANSI_TEXT_WHITE "[%s] " ANSI_TEXT_MAGENTA "%s" ANSI_RESET_ATTRIBUTE " in file: " ANSI_TEXT_CYAN ANSI_TEXT_BOLD "%s" ANSI_RESET_ATTRIBUTE " at line: " ANSI_TEXT_BLUE "%zu" ANSI_RESET_ATTRIBUTE "\n", time(NULL), logLevel.array, event.eventCallMain.id.array, event.eventCallLog.file, event.eventCallLog.line);
         break;
     case EventMemLogEvent:
         for (size_t i = 0; i < amountOfLocations; i++) {
             fprintf(
                 locations[i],
-                ANSI_TEXT_YELLOW "%" PRIi64 ANSI_TEXT_WHITE "[%s]" ANSI_TEXT_MAGENTA "%s" ANSI_RESET_ATTRIBUTE "of size: " ANSI_TEXT_YELLOW "%zu" ANSI_RESET_ATTRIBUTE " at address: " ANSI_TEXT_GREEN "0x%zx" ANSI_RESET_ATTRIBUTE " in file: " ANSI_TEXT_CYAN ANSI_TEXT_BOLD "%s" ANSI_RESET_ATTRIBUTE " at line: " ANSI_TEXT_BLUE "%zu" ANSI_RESET_ATTRIBUTE "\n",
+                ANSI_TEXT_YELLOW "%" PRIi64 ANSI_TEXT_WHITE "[%s]" ANSI_TEXT_MAGENTA "%s" ANSI_RESET_ATTRIBUTE " of size: " ANSI_TEXT_YELLOW "%zu" ANSI_RESET_ATTRIBUTE " at address: " ANSI_TEXT_GREEN "0x%zx" ANSI_RESET_ATTRIBUTE " in file: " ANSI_TEXT_CYAN ANSI_TEXT_BOLD "%s" ANSI_RESET_ATTRIBUTE " at line: " ANSI_TEXT_BLUE "%zu" ANSI_RESET_ATTRIBUTE "\n",
                 time(NULL),
                 logLevel.array,
                 event.eventCallMain.id.array,

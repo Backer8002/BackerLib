@@ -1,6 +1,8 @@
 #ifndef THREADPOOL_H
 #define THREADPOOL_H
 #include <stdio.h>
+#include <BackerLibTypes.h>
+#include "ConcurrencyDefines.h"
 
 #ifdef __cplusplus
 namespace BackerLib {
@@ -10,8 +12,6 @@ namespace BackerLib {
 
 #endif
 
-#include <BackerLibTypes.h>
-#include "ConcurrencyDefines.h"
 /**
  * @brief Assembles future type of T.
  * @param T Type to make future of
