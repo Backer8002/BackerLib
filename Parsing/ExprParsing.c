@@ -5,16 +5,16 @@
 #include <ctype.h>
 #include <stdio.h>
 
-static ExprOperation*     internal_expr_parse(const DynamicContainer* tokens, ExprParsingToken** currentTokenGlobal, DynamicContainer* tree, size_t currentBindingPower, bool hasSeenBinaryOp, ExprOperatorDefine* operators, size_t amountOfOperators);
-static ExprOperatorDefine internal_get_operator(const ExprOperatorDefine* operationDefine, size_t amountOfOperators, unsigned char operator);
+static ExprOperation*     internal_expr_parse(const DynamicContainer* tokens, ExprParsingToken** currentTokenGlobal, DynamicContainer* tree, size_t currentBindingPower, bool hasSeenBinaryOp, const ExprOperatorDefine* operators, size_t amountOfOperators);
+static ExprOperatorDefine internal_get_operator(const ExprOperatorDefine* operationDefine, size_t amountOfOperators, int operator);
 
-DynamicContainer          exprTokenize(StringView* expresion, ExprOperatorDefine* operators, size_t amountOfOperators) {
+DynamicContainer          exprTokenize(StringView* expresion,const ExprOperatorDefine* operators, size_t amountOfOperators) {
     unsigned char splitablesList[256] = {' ', '\n', '\t', '\v', '\b', '\f', '\0'};
     bool          operatorChars[256]  = {0};
 
     for (size_t i = 0; i < amountOfOperators; i++) {
-        splitablesList[i + 7]                    = operators[i].operatorChar;
-        operatorChars[operators[i].operatorChar] = true;
+        splitablesList[i + 7]                    = operators[i].operatorID;
+        operatorChars[operators[i].operatorID] = true;
     }
 
     DynamicContainer atoms = stringSplitMulti(expresion, splitablesList, amountOfOperators + 7, false, 0);
@@ -51,7 +51,7 @@ DynamicContainer          exprTokenize(StringView* expresion, ExprOperatorDefine
             isInAtom = false;
         }
 
-        if (containerDynamicAppend(&tokens, sizeof(ExprParsingToken),&(ExprParsingToken){.isAtom = false, .operator = currentChar}) != ContainerOPSuccessful)
+        if (containerDynamicAppend(&tokens, sizeof(ExprParsingToken),&(ExprParsingToken){.isAtom = false, .operatorID = currentChar}) != ContainerOPSuccessful)
             goto errorPath;
     }
 
@@ -70,7 +70,7 @@ errorPath:
     return tokens;
 }
 
-DynamicContainer exprParse(const DynamicContainer* tokens, ExprOperatorDefine* operators, size_t amountOfOperators) {
+DynamicContainer exprParse(const DynamicContainer* tokens, const ExprOperatorDefine* operators, size_t amountOfOperators) {
     DynamicContainer tree = containerDynamicCreateStack(containerSize((Container*) tokens) + 1, sizeof(ExprOperation), false);
 
 
@@ -86,7 +86,7 @@ DynamicContainer exprParse(const DynamicContainer* tokens, ExprOperatorDefine* o
         }
 
         ExprOperationOperand operand = {.isAtom = true, .atom = token->atom};
-        containerDynamicAppend(&tree, sizeof(ExprOperation), &(ExprOperation) {.operatorChar = '\0', .isBinaryOperation = false, .unaryOperation = {.unaryOperand = operand, .unaryOperatorWasOnRight = false}});
+        containerDynamicAppend(&tree, sizeof(ExprOperation), &(ExprOperation) {.operatorID = '\0', .isBinaryOperation = false, .unaryOperation = {.unaryOperand = operand, .unaryOperatorWasOnRight = false}});
         return tree;
     }
 
@@ -95,14 +95,14 @@ DynamicContainer exprParse(const DynamicContainer* tokens, ExprOperatorDefine* o
         containerDestroy(&tree);
         return tree;
     }
-    containerDynamicAppend(&tree, sizeof(ExprOperation), &(ExprOperation) {.operatorChar = '\0', .isBinaryOperation = false, .unaryOperation = {.unaryOperand = (ExprOperationOperand) {.isAtom = false, .operation = result}, .unaryOperatorWasOnRight = false}});
+    containerDynamicAppend(&tree, sizeof(ExprOperation), &(ExprOperation) {.operatorID = '\0', .isBinaryOperation = false, .unaryOperation = {.unaryOperand = (ExprOperationOperand) {.isAtom = false, .operation = result}, .unaryOperatorWasOnRight = false}});
     return tree;
 }
 
 ExprOperation* internal_expr_parse(const DynamicContainer* tokens, ExprParsingToken** currentTokenGlobal,
                                    DynamicContainer* tree,
                                    size_t currentBindingPower, bool hasSeenBinaryOp,
-                                   ExprOperatorDefine* operators, size_t amountOfOperators) {
+                                   const ExprOperatorDefine* operators, size_t amountOfOperators) {
     bool           prevTokenWasAtom  = false;
 
     ExprOperation* previousOperation = NULL;
@@ -127,7 +127,7 @@ ExprOperation* internal_expr_parse(const DynamicContainer* tokens, ExprParsingTo
             hasSeenBinaryOp  = false;
             continue;
         }
-        ExprOperatorDefine currentOperator = internal_get_operator(operators, amountOfOperators, currentTokenLocal->operator);
+        ExprOperatorDefine currentOperator = internal_get_operator(operators, amountOfOperators, currentTokenLocal->operatorID);
         if (!currentOperator.isUnaryOperator && hasSeenBinaryOp) {
             LogError("Two binary operators cannot exist between two atoms");
             *currentTokenGlobal = (ExprParsingToken*) containerDynamicBack(tokens);
@@ -152,7 +152,7 @@ ExprOperation* internal_expr_parse(const DynamicContainer* tokens, ExprParsingTo
                                                    ? (ExprOperationOperand) {.isAtom = true, .atom = (currentTokenLocal - 1)->atom}
                                                    : (ExprOperationOperand) {.isAtom = false, .operation = previousOperation};
                 ExprOperation        operation = {
-                           .operatorChar      = currentOperator.operatorChar,
+                           .operatorID      = currentOperator.operatorID,
                            .isBinaryOperation = false,
                            .unaryOperation    = {
                                   .unaryOperand            = operand,
@@ -175,7 +175,7 @@ ExprOperation* internal_expr_parse(const DynamicContainer* tokens, ExprParsingTo
                 containerDynamicAppend(tree,
                                        sizeof(ExprOperation),
                                        &(ExprOperation) {
-                                           .operatorChar      = currentOperator.operatorChar,
+                                           .operatorID      = currentOperator.operatorID,
                                            .isBinaryOperation = false,
                                            .unaryOperation    = {
                                                   .unaryOperand = (ExprOperationOperand) {
@@ -189,7 +189,7 @@ ExprOperation* internal_expr_parse(const DynamicContainer* tokens, ExprParsingTo
                 containerDynamicAppend(tree,
                                        sizeof(ExprOperation),
                                        &(ExprOperation) {
-                                           .operatorChar      = currentOperator.operatorChar,
+                                           .operatorID      = currentOperator.operatorID,
                                            .isBinaryOperation = false,
                                            .unaryOperation    = {
                                                   .unaryOperand = (ExprOperationOperand) {
@@ -225,7 +225,7 @@ ExprOperation* internal_expr_parse(const DynamicContainer* tokens, ExprParsingTo
         } else
             rhs = (ExprOperationOperand) {.isAtom = false, .operation = rhsOperation};
 
-        ExprOperation nextOperation = {.operatorChar      = currentOperator.operatorChar,
+        ExprOperation nextOperation = {.operatorID      = currentOperator.operatorID,
                                        .isBinaryOperation = true,
                                        .binaryOperands    = {.lhs = lhs,
                                                              .rhs = rhs}};
@@ -239,10 +239,10 @@ ExprOperation* internal_expr_parse(const DynamicContainer* tokens, ExprParsingTo
 
 
 
-static ExprOperatorDefine internal_get_operator(const ExprOperatorDefine* operationDefine, size_t amountOfOperators, unsigned char operator) {
+static ExprOperatorDefine internal_get_operator(const ExprOperatorDefine* operationDefine, size_t amountOfOperators, int operator) {
     size_t i = 0;
     while (i < amountOfOperators) {
-        if (operationDefine[i].operatorChar == operator)
+        if (operationDefine[i].operatorID == operator)
             return operationDefine[i];
         i++;
     }
@@ -262,13 +262,13 @@ static void internal_expr_print(FILE* file, const ExprOperation* operation) {
         else
             fputs(containerDynamicFront(&operation->binaryOperands.rhs.atom), file);
         fputc(' ', file);
-        fputc(operation->operatorChar, file);
+        fputc(operation->operatorID, file);
     } else {
         if (!operation->unaryOperation.unaryOperatorWasOnRight) {
-            if (operation->operatorChar == '\0')
+            if (operation->operatorID == '\0')
                 fprintf(file, "Expr: ");
             else
-                fputc(operation->operatorChar, file);
+                fputc(operation->operatorID, file);
         }
         if (!operation->unaryOperation.unaryOperand.isAtom)
             internal_expr_print(file, operation->unaryOperation.unaryOperand.operation);
@@ -276,7 +276,7 @@ static void internal_expr_print(FILE* file, const ExprOperation* operation) {
             fputs(containerDynamicFront(&operation->unaryOperation.unaryOperand.atom), file);
 
         if (operation->unaryOperation.unaryOperatorWasOnRight)
-            fputc(operation->operatorChar, file);
+            fputc(operation->operatorID, file);
     }
     fputc(')',file);
 }
