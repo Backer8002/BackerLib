@@ -1,8 +1,8 @@
 #include "ThreadPool.h"
 
-void futureAwait(void* future) { while (!*(bool*) future) {} }
+void bl_future_await(void* future) { while (!*(bool*) future) {} }
 
-bool futureAwaitUntil(void* future, const struct timespec* timepoint) {
+bool bl_future_await_until(void* future, const struct timespec* timepoint) {
     while (true) {
         if (*(bool*) future)
             return true;
@@ -18,14 +18,14 @@ bool futureAwaitUntil(void* future, const struct timespec* timepoint) {
     }
 }
 
-bool futureAwaitFor(void* future, const struct timespec* duration) {
+bool bl_future_await_for(void* future, const struct timespec* duration) {
     struct timespec currentTime;
 #if USES_PTHREAD
     clock_gettime(CLOCK_REALTIME, &currentTime);
 #else
     timespec_get(&currentTime, TIME_UTC);
 #endif
-    return futureAwaitUntil(future, &(struct timespec){
+    return bl_future_await_until(future, &(struct timespec){
                                 .tv_sec = currentTime.tv_sec + duration->tv_sec + (currentTime.tv_nsec + duration->tv_nsec) / (long) 1e9,
                                 .tv_nsec = (currentTime.tv_nsec + duration->tv_nsec) % (long) 1e9});
 }

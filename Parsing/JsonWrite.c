@@ -8,9 +8,9 @@ static void internal_printIndentation(FILE* file, size_t indentation) {
         fputc(' ', file);
 }
 
-static void internal_printJsonString(FILE* file, const String* string) {
+static void internal_printJsonString(FILE* file, const BL_String* string) {
     fputc('\"',file);
-    for (const Byte* currentChar = containerDynamicFront(string); currentChar < (const Byte*) containerDynamicEnd(string); currentChar++) {
+    for (const BL_Byte* currentChar = bl_container_dynamic_front(string); currentChar < (const BL_Byte*) bl_container_dynamic_end(string); currentChar++) {
         switch (*currentChar) {
         case '\0':
             break;
@@ -69,13 +69,13 @@ static void jsonWriteArray(FILE* file, const JsonArray* array, const JsonFormat*
         internal_printIndentation(file, indentation + format->amountOfSpacesForIndentation);
     }
 
-    for (JsonArrayMember* currentMember = containerDynamicFront(array); currentMember < (JsonArrayMember*) containerDynamicEnd(array); currentMember++) {
+    for (JsonArrayMember* currentMember = bl_container_dynamic_front(array); currentMember < (JsonArrayMember*) bl_container_dynamic_end(array); currentMember++) {
         switch (currentMember->valueType) {
         case JsonTypeArray:
-            jsonWriteArray(file, &currentMember->value.array, format, indentation + format->amountOfSpacesForIndentation, currentMember == containerDynamicFront(array));
+            jsonWriteArray(file, &currentMember->value.array, format, indentation + format->amountOfSpacesForIndentation, currentMember == bl_container_dynamic_front(array));
             break;
         case JsonTypeObject:
-            jsonWriteObject(file, &currentMember->value.object, format, indentation + format->amountOfSpacesForIndentation, currentMember == containerDynamicFront(array));
+            jsonWriteObject(file, &currentMember->value.object, format, indentation + format->amountOfSpacesForIndentation, currentMember == bl_container_dynamic_front(array));
             break;
         case JsonTypeNull:
             fprintf(file, "null");
@@ -93,7 +93,7 @@ static void jsonWriteArray(FILE* file, const JsonArray* array, const JsonFormat*
             LogError("Uninitialized JSON found.");
             break;
         }
-        if (currentMember != containerDynamicBack(array)) {
+        if (currentMember != bl_container_dynamic_back(array)) {
             if (format->spaceBeforeComma)
                 fputc(' ', file);
             fputc(',', file);
@@ -125,7 +125,7 @@ static void jsonWriteObject(FILE* file, const JsonObject* object, const JsonForm
         internal_printIndentation(file, indentation + format->amountOfSpacesForIndentation);
     }
 
-    for (JsonObjectMember* currentMember = containerDynamicFront(object); currentMember < (JsonObjectMember*) containerDynamicEnd(object); currentMember++) {
+    for (JsonObjectMember* currentMember = bl_container_dynamic_front(object); currentMember < (JsonObjectMember*) bl_container_dynamic_end(object); currentMember++) {
         internal_printJsonString(file, &currentMember->identifier);
         if (format->spaceBeforeColon)
             fputc(' ', file);
@@ -156,7 +156,7 @@ static void jsonWriteObject(FILE* file, const JsonObject* object, const JsonForm
             LogError("Uninitialized JSON found.");
             break;
         }
-        if (currentMember != containerDynamicBack(object)) {
+        if (currentMember != bl_container_dynamic_back(object)) {
             if (format->spaceBeforeComma)
                 fputc(' ', file);
             fputc(',', file);
@@ -189,7 +189,7 @@ static void jsonWriteFileThread(void* sharedState) {
 }
 
 FutureVoid* jsonWriteFileAsync(ThreadPool* threadPool, size_t priority, FILE* file, const JsonObject* object, const JsonFormat* format) {
-    return threadPoolJobAssign(threadPool,
+    return bl_threadpool_job_assign(threadPool,
         priority,
         jsonWriteFileThread,
         asyncArgsFutureOffset(JsonWriteFilePack),
@@ -219,14 +219,14 @@ static void jsonWriteTree(FILE* file,JsonMemberType valueType,const JsonMemberVa
         break;
     case JsonTypeArray:
         fprintf(file, "[[Array]]\n");
-        for (JsonArrayMember* currentMember = containerDynamicFront(&value->array); currentMember < (JsonArrayMember*)containerDynamicEnd(&value->array); currentMember++) {
+        for (JsonArrayMember* currentMember = bl_container_dynamic_front(&value->array); currentMember < (JsonArrayMember*)bl_container_dynamic_end(&value->array); currentMember++) {
             internal_printTreePrepareNext(file, depth);
             jsonWriteTree(file, currentMember->valueType, &currentMember->value,depth + 1);
         }
         break;
     case JsonTypeObject:
         fprintf(file, "[[Object]]\n");
-        for (JsonObjectMember* currentMember = containerDynamicFront(&value->array); currentMember < (JsonObjectMember*)containerDynamicEnd(&value->array); currentMember++) {
+        for (JsonObjectMember* currentMember = bl_container_dynamic_front(&value->array); currentMember < (JsonObjectMember*)bl_container_dynamic_end(&value->array); currentMember++) {
             internal_printTreePrepareNext(file, depth);
             internal_printJsonString(file,&currentMember->identifier);
             fprintf(file, " -> ");

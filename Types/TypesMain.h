@@ -7,46 +7,18 @@ namespace BackerLib {
     extern "C" {
 #endif
 
-    typedef unsigned char Byte;
-    typedef Byte*         Bytes;
+    typedef unsigned char BL_Byte;
+    typedef BL_Byte*         BL_Bytes;
 
-    typedef uint32_t      DataTypeFlags;
+    typedef uint32_t      BL_DataTypeFlags;
 
-    typedef struct Container {
-        DataTypeFlags header;
-        uint32_t      byteSizeOfSingleElement;
-        size_t        amountOfIndexes;
-        void*         array;
-    } Container;
-
-    typedef union UnorderedContainer {
-        struct {
-            DataTypeFlags header;
-        };
-        struct {
-            Container container;
-            size_t    maxSize;
-            uint64_t*  bitset;
-        };
-    } UnorderedContainer;
-
-    typedef union DynamicContainer {
-        struct {
-            DataTypeFlags header;
-        };
-        struct {
-            Container container;
-            size_t    containerMaxSize;
-        };
-    } DynamicContainer;
-
-    typedef enum ContainerError {
-        ContainerOPSuccessful = 0,
-        ContainerOPUnsuccessful,
-        ContainerInvalidIndex,
-        ContainerInvalidSize,
-        ContainerAllocFailure
-    } ContainerError;
+    typedef enum BL_ContainerError {
+        BL_ContainerOPSuccessful = 0,
+        BL_ContainerOPUnsuccessful,
+        BL_ContainerInvalidIndex,
+        BL_ContainerInvalidSize,
+        BL_ContainerAllocFailure
+    } BL_ContainerError;
 
 #define ObjectFlagIsValid                       0x1
 #define ObjectFlagIsOnHeap                      0x2
@@ -58,12 +30,6 @@ namespace BackerLib {
 #define ObjectFlagIsNotContinuousCustomTracking 0x00080000
 #define ObjectFlagElementsArePointers           0x00400000
 #define ObjectFlagArrayNoSort                   0x00800000
-
-    static bool isValidObject(const DataTypeFlags* flags) {
-        if (flags)
-            return *flags & ObjectFlagIsValid;
-        return false;
-    }
 #ifdef __cplusplus
     }
 };

@@ -4,8 +4,8 @@
 static JsonMemberValue jsonCopyValue(const JsonMemberValue* value, JsonMemberType valueType) {
     switch (valueType) {
     case JsonTypeString:
-        return (JsonMemberValue) {.string = stringCreate(containerDynamicFront(&value->string),
-            stringLength(stringViewPtrCast(&value->string)))};
+        return (JsonMemberValue) {.string = bl_string_create(bl_container_dynamic_front(&value->string),
+            bl_string_length(bl_stringview_ptr_cast(&value->string)))};
         break;
     case JsonTypeArray:
         return (JsonMemberValue) {.array = jsonArrayCopy(&value->array)};
@@ -19,23 +19,23 @@ static JsonMemberValue jsonCopyValue(const JsonMemberValue* value, JsonMemberTyp
 }
 
 static bool jsonCopyValueHasFailed(const JsonMemberValue* value, JsonMemberType valueType) {
-    if ((valueType == JsonTypeString || valueType == JsonTypeArray || valueType == JsonTypeObject) && !isValidObject((DataTypeFlags*) value))
+    if ((valueType == JsonTypeString || valueType == JsonTypeArray || valueType == JsonTypeObject) && !bl_container_dynamic_is_valid(&value->object))
         return true;
     return false;
 }
 
-JsonObject       jsonObjectCreate(void) { return containerDynamicCreateStack(0, sizeof(JsonObjectMember), false); }
+JsonObject       jsonObjectCreate(void) { return bl_container_dynamic_create_stack(0, sizeof(JsonObjectMember)); }
 
-JsonArray        jsonArrayCreate(void) { return containerDynamicCreateStack(0, sizeof(JsonArrayMember), false); }
+JsonArray        jsonArrayCreate(void) { return bl_container_dynamic_create_stack(0, sizeof(JsonArrayMember)); }
 
-JsonArrayMember* jsonArrayMemberGet(const JsonArray* jsonArray, size_t index) { return containerGet((Container*) jsonArray, index); }
+JsonArrayMember* jsonArrayMemberGet(const JsonArray* jsonArray, size_t index) { return bl_container_get((BL_Container*) jsonArray, index); }
 
-JsonObjectMember* jsonObjectMemberGet(const JsonObject* jsonObject, StringView* string) {
+JsonObjectMember* jsonObjectMemberGet(const JsonObject* jsonObject, BL_StringView* string) {
     size_t begin = 0;
-    size_t end   = containerSize((const Container*) jsonObject);
+    size_t end   = bl_container_size((const BL_Container*) jsonObject);
     while (end - begin > 1) {
         size_t mid = (begin + end) / 2;
-        if (stringCompareAcending(containerGet((const Container*) jsonObject, mid), string))
+        if (bl_string_compare_acending(bl_container_get((const BL_Container*) jsonObject, mid), string))
             begin = mid;
         else
             end = mid;
@@ -43,29 +43,29 @@ JsonObjectMember* jsonObjectMemberGet(const JsonObject* jsonObject, StringView* 
     if (begin == end)
         return NULL;
 
-    if (stringEqual(containerGet((const Container*) jsonObject, begin), string))
-        return containerGet((const Container*) jsonObject, begin);
-    if (containerSize((Container*) jsonObject) > 1 && stringEqual(containerGet((const Container*) jsonObject, end), string))
-        return containerGet((const Container*) jsonObject, end);
+    if (bl_string_equal(bl_container_get((const BL_Container*) jsonObject, begin), string))
+        return bl_container_get((const BL_Container*) jsonObject, begin);
+    if (bl_container_size((BL_Container*) jsonObject) > 1 && bl_string_equal(bl_container_get((const BL_Container*) jsonObject, end), string))
+        return bl_container_get((const BL_Container*) jsonObject, end);
     return NULL;
 }
 
-ContainerError jsonObjectAdd(JsonObject* jsonObject, StringView* string, JsonMemberType valueType, const JsonMemberValue* value) {
-    String stringToUse = containerConvertToDynamicStack(
-        containerGetSubArray((const Container*) string,
+BL_ContainerError jsonObjectAdd(JsonObject* jsonObject, BL_StringView* string, JsonMemberType valueType, const JsonMemberValue* value) {
+    BL_String stringToUse = bl_dynamic_container_cast_container(
+        bl_container_get_subarray((const BL_Container*) string,
                              0,
-                             containerSize((const Container*) string) - 1,
+                             bl_container_size((const BL_Container*) string) - 1,
                              false));
-    if (!isValidObject((DataTypeFlags*) &stringToUse))
-        return ContainerAllocFailure;
+    if (!bl_container_dynamic_is_valid(&stringToUse))
+        return BL_ContainerAllocFailure;
     JsonMemberValue valueToUse = jsonCopyValue(value, valueType);
     if (jsonCopyValueHasFailed(&valueToUse, valueType)) {
-        containerDestroy(&stringToUse);
-        return ContainerAllocFailure;
+        bl_container_destroy(&stringToUse);
+        return BL_ContainerAllocFailure;
     }
 
-    if (containerDynamicAppend(jsonObject, sizeof(JsonObjectMember), &(JsonObjectMember) {.identifier = stringToUse, .value = valueToUse, .valueType = valueType}) != ContainerOPSuccessful) {
-        containerDestroy(&stringToUse);
+    if (bl_container_dynamic_append(jsonObject, sizeof(JsonObjectMember), &(JsonObjectMember) {.identifier = stringToUse, .value = valueToUse, .valueType = valueType}) != BL_ContainerOPSuccessful) {
+        bl_container_destroy(&stringToUse);
         switch (valueType) {
         case JsonTypeArray:
             jsonArrayDestroy(&valueToUse);
@@ -74,31 +74,31 @@ ContainerError jsonObjectAdd(JsonObject* jsonObject, StringView* string, JsonMem
             jsonObjectDestroy(&valueToUse);
             break;
         case JsonTypeString:
-            containerDestroy(&valueToUse);
+            bl_container_destroy(&valueToUse);
             break;
         default:
             break;
         }
-        return ContainerAllocFailure;
+        return BL_ContainerAllocFailure;
     }
-    heapSort((Container*)jsonObject,stringCompareAcending);
-    return ContainerOPSuccessful;
+    bl_sort_heap((BL_Container*)jsonObject,bl_string_compare_acending);
+    return BL_ContainerOPSuccessful;
 }
 
-ContainerError jsonArrayAdd(JsonArray* jsonArray, JsonMemberType valueType, const JsonMemberValue* value) {
-    return jsonArrayAddAtIndex(jsonArray, containerSize((Container*) jsonArray), valueType, value);
+BL_ContainerError jsonArrayAdd(JsonArray* jsonArray, JsonMemberType valueType, const JsonMemberValue* value) {
+    return jsonArrayAddAtIndex(jsonArray, bl_container_size((BL_Container*) jsonArray), valueType, value);
 }
 
-ContainerError jsonArrayAddAtIndex(JsonArray* jsonArray, size_t index, JsonMemberType valueType, const JsonMemberValue* value) {
+BL_ContainerError jsonArrayAddAtIndex(JsonArray* jsonArray, size_t index, JsonMemberType valueType, const JsonMemberValue* value) {
     JsonMemberValue valueToUse = jsonCopyValue(value, valueType);
     if (jsonCopyValueHasFailed(&valueToUse, valueType))
-        return ContainerAllocFailure;
-    return containerDynamicInsert(jsonArray, index, 1, sizeof(JsonArrayMember), &(JsonArrayMember) {.valueType = valueType, .value = valueToUse});
+        return BL_ContainerAllocFailure;
+    return bl_container_dynamic_insert(jsonArray, index, 1, sizeof(JsonArrayMember), &(JsonArrayMember) {.valueType = valueType, .value = valueToUse});
 }
 
 void jsonObjectRemove(JsonObject* jsonObject, JsonObjectMember* member) {
 
-    containerDestroy(&member->identifier);
+    bl_container_destroy(&member->identifier);
 
     switch (member->valueType) {
     case JsonTypeArray:
@@ -108,17 +108,17 @@ void jsonObjectRemove(JsonObject* jsonObject, JsonObjectMember* member) {
         jsonObjectDestroy(&member->value);
         break;
     case JsonTypeString:
-        containerDestroy(&member->value);
+        bl_container_destroy(&member->value);
         break;
     default:
         break;
     }
-    const size_t indexInBaseObject = containerIndexFromReference((Container*)jsonObject, member);
-    containerDynamicRemove(jsonObject, indexInBaseObject, indexInBaseObject);
+    const size_t indexInBaseObject = bl_container_index_from_reference((BL_Container*)jsonObject, member);
+    bl_container_dynamic_remove(jsonObject, indexInBaseObject, indexInBaseObject);
 }
 
 bool jsonArrayRemove(JsonArray* jsonArray, size_t index) {
-    if (index >= containerSize((Container*) jsonArray))
+    if (index >= bl_container_size((BL_Container*) jsonArray))
         return false;
 
     JsonArrayMember* jsonArrayMember = jsonArrayMemberGet(jsonArray, index);
@@ -131,26 +131,26 @@ bool jsonArrayRemove(JsonArray* jsonArray, size_t index) {
         jsonObjectDestroy(&jsonArrayMember->value);
         break;
     case JsonTypeString:
-        containerDestroy(&jsonArrayMember->value);
+        bl_container_destroy(&jsonArrayMember->value);
         break;
     default:
         break;
     }
 
-    containerDynamicRemove(jsonArray, index, index);
+    bl_container_dynamic_remove(jsonArray, index, index);
     return true;
 }
 
 JsonArray jsonArrayCopy(const JsonArray* jsonArray) {
-    JsonArray newArray = containerConvertToDynamicStack(
-        containerGetSubArray((const Container*) jsonArray,
+    JsonArray newArray = bl_dynamic_container_cast_container(
+        bl_container_get_subarray((const BL_Container*) jsonArray,
                              0,
-                             containerSize((const Container*) jsonArray) - 1,
+                             bl_container_size((const BL_Container*) jsonArray) - 1,
                              false));
-    if (!isValidObject(&newArray.header))
+    if (!bl_container_dynamic_is_valid(&newArray))
         return newArray;
     JsonArrayMember* jsonArrayMember = NULL;
-    for (jsonArrayMember = containerDynamicFront(&newArray); jsonArrayMember < (JsonArrayMember*)containerDynamicEnd(&newArray); jsonArrayMember++) {
+    for (jsonArrayMember = bl_container_dynamic_front(&newArray); jsonArrayMember < (JsonArrayMember*)bl_container_dynamic_end(&newArray); jsonArrayMember++) {
         jsonArrayMember->value = jsonCopyValue(&jsonArrayMember->value, jsonArrayMember->valueType);
         if (jsonCopyValueHasFailed(&jsonArrayMember->value, jsonArrayMember->valueType))
             goto jsonArrayCopyErrorExit;
@@ -158,10 +158,10 @@ JsonArray jsonArrayCopy(const JsonArray* jsonArray) {
     return newArray;
 
 jsonArrayCopyErrorExit:
-    for (JsonArrayMember* member = containerDynamicFront(&newArray); member < jsonArrayMember; member++) {
+    for (JsonArrayMember* member = bl_container_dynamic_front(&newArray); member < jsonArrayMember; member++) {
         switch (member->valueType) {
         case JsonTypeString:
-            containerDestroy(&member->value);
+            bl_container_destroy(&member->value);
             break;
         case JsonTypeArray:
             jsonArrayDestroy(&member->value);
@@ -173,29 +173,29 @@ jsonArrayCopyErrorExit:
             break;
         }
     }
-    containerDestroy(&newArray);
+    bl_container_destroy(&newArray);
     return newArray;
 }
 
 JsonObject jsonObjectCopy(const JsonObject* jsonObject) {
-    JsonObject newObject = containerConvertToDynamicStack(
-        containerGetSubArray((const Container*) jsonObject,
+    JsonObject newObject = bl_dynamic_container_cast_container(
+        bl_container_get_subarray((const BL_Container*) jsonObject,
                              0,
-                             containerSize((const Container*) jsonObject) - 1,
+                             bl_container_size((const BL_Container*) jsonObject) - 1,
                              false));
-    if (!isValidObject(&newObject.header))
+    if (!bl_container_dynamic_is_valid(&newObject))
         return newObject;
     JsonObjectMember* jsonObjectMember = NULL;
-    for (jsonObjectMember = containerDynamicFront(&newObject); jsonObjectMember < (JsonObjectMember*)containerDynamicEnd(&newObject); jsonObjectMember++) {
-        jsonObjectMember->identifier = stringCreate(containerDynamicFront(&jsonObjectMember->identifier),
-            stringLength(stringViewPtrCast(&jsonObjectMember->identifier)));
-        if (!isValidObject(&jsonObjectMember->identifier.header))
+    for (jsonObjectMember = bl_container_dynamic_front(&newObject); jsonObjectMember < (JsonObjectMember*)bl_container_dynamic_end(&newObject); jsonObjectMember++) {
+        jsonObjectMember->identifier = bl_string_create(bl_container_dynamic_front(&jsonObjectMember->identifier),
+            bl_string_length(bl_stringview_ptr_cast(&jsonObjectMember->identifier)));
+        if (!bl_container_dynamic_is_valid(&jsonObjectMember->identifier))
             goto jsonObjectCopyErrorExit;
 
         jsonObjectMember->value = jsonCopyValue(&jsonObjectMember->value, jsonObjectMember->valueType);
 
         if (jsonCopyValueHasFailed(&jsonObjectMember->value, jsonObjectMember->valueType)) {
-            containerDestroy(&jsonObjectMember->identifier);
+            bl_container_destroy(&jsonObjectMember->identifier);
             goto jsonObjectCopyErrorExit;
         }
     }
@@ -203,11 +203,11 @@ JsonObject jsonObjectCopy(const JsonObject* jsonObject) {
     return newObject;
 
 jsonObjectCopyErrorExit:
-    for (JsonObjectMember* member = containerDynamicFront(&newObject); member < jsonObjectMember; member++) {
-        containerDestroy(&member->identifier);
+    for (JsonObjectMember* member = bl_container_dynamic_front(&newObject); member < jsonObjectMember; member++) {
+        bl_container_destroy(&member->identifier);
         switch (member->valueType) {
         case JsonTypeString:
-            containerDestroy(&member->value);
+            bl_container_destroy(&member->value);
             break;
         case JsonTypeArray:
             jsonArrayDestroy(&member->value);
@@ -219,35 +219,35 @@ jsonObjectCopyErrorExit:
             break;
         }
     }
-    containerDestroy(&newObject);
+    bl_container_destroy(&newObject);
     return newObject;
 }
 
 void jsonArrayDestroy(void* jsonArray) {
-    if (!isValidObject((DataTypeFlags*) jsonArray))
+    if (!bl_container_dynamic_is_valid(jsonArray))
         return;
-    for (JsonArrayMember* currentMember = containerDynamicFront(jsonArray); currentMember < (JsonArrayMember*) containerDynamicEnd(jsonArray); currentMember++) {
+    for (JsonArrayMember* currentMember = bl_container_dynamic_front(jsonArray); currentMember < (JsonArrayMember*) bl_container_dynamic_end(jsonArray); currentMember++) {
         if (currentMember->valueType == JsonTypeString)
-            containerDestroy(&currentMember->value.string);
+            bl_container_destroy(&currentMember->value.string);
         else if (currentMember->valueType == JsonTypeArray)
             jsonArrayDestroy(&currentMember->value.array);
         else if (currentMember->valueType == JsonTypeObject)
             jsonObjectDestroy(&currentMember->value.object);
     }
-    containerDestroy(jsonArray);
+    bl_container_destroy(jsonArray);
 }
 
 void jsonObjectDestroy(void* jsonObject) {
-    if (!isValidObject(jsonObject))
+    if (!bl_container_dynamic_is_valid(jsonObject))
         return;
-    for (JsonObjectMember* currentMember = containerDynamicFront(jsonObject); currentMember < (JsonObjectMember*) containerDynamicEnd(jsonObject); currentMember++) {
-        containerDestroy(&currentMember->identifier);
+    for (JsonObjectMember* currentMember = bl_container_dynamic_front(jsonObject); currentMember < (JsonObjectMember*) bl_container_dynamic_end(jsonObject); currentMember++) {
+        bl_container_destroy(&currentMember->identifier);
         if (currentMember->valueType == JsonTypeString)
-            containerDestroy(&currentMember->value.string);
+            bl_container_destroy(&currentMember->value.string);
         else if (currentMember->valueType == JsonTypeArray)
             jsonArrayDestroy(&currentMember->value.array);
         else if (currentMember->valueType == JsonTypeObject)
             jsonObjectDestroy(&currentMember->value.object);
     }
-    containerDestroy(jsonObject);
+    bl_container_destroy(jsonObject);
 }

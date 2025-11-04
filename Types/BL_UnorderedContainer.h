@@ -1,6 +1,7 @@
 #ifndef UNORDEREDCONTAINER_H
 #define UNORDEREDCONTAINER_H
 
+#include "BL_Container.h"
 #include "TypesMain.h"
 #include <stddef.h>
 
@@ -10,14 +11,19 @@ namespace BackerLib {
 #else
 #define noexcept
 #endif
-    typedef struct UnorderedContainerPutResult {
-        ContainerError resultCode;
-        size_t         locationOfElement;
-    } UnorderedContainerPutResult;
-    typedef struct UnorderedContainerGetResult {
-        ContainerError resultCode;
-        void*          element;
-    } UnorderedContainerGetResult;
+
+    typedef struct BL_UnorderedContainer {
+        BL_Container container;
+        uint64_t*    bitset;
+        size_t       maxSize;
+    } BL_UnorderedContainer;
+
+
+    typedef struct BL_UnorderedContainerPutResult {
+        BL_ContainerError resultCode;
+        size_t            locationOfElement;
+    } BL_UnorderedContainerPutResult;
+
     /**
      * @brief Puts element in the next available slot. Resizes if needed.
      * @param container Pointer to valid UnorderedContainer
@@ -27,7 +33,7 @@ namespace BackerLib {
      * @return If resultCode is ContainerInvalidSize then size of object was invalid. This is only possible if elementsArePointers is not set.
      * @return ContainerAllocFailure if resizing was invalid. No breaking changes have been made.
      */
-    extern UnorderedContainerPutResult unorderedContainerPut(UnorderedContainer* container, size_t sizeOfElement, const void* element) noexcept;
+    extern BL_UnorderedContainerPutResult bl_unordered_container_put(BL_UnorderedContainer* container, size_t sizeOfElement, const void* element) noexcept;
     /**
      * @brief Overwrites and sets element at index. Index may not be larger than the internal container.
      * @param container Pointer to valid UnorderedContainer
@@ -37,7 +43,7 @@ namespace BackerLib {
      * @return ContainerInvalidSize if sizeOfElement was larger than the largestElement in the array. Only applicable if elementsArePointers is not set.
      * @return ContainerInvalidIndex if index was out of bounds.
      */
-    extern ContainerError              unorderedContainerSet(UnorderedContainer* container, size_t index, size_t sizeOfElement, const void* element) noexcept;
+    extern BL_ContainerError              bl_unordered_container_set(BL_UnorderedContainer* container, size_t index, size_t sizeOfElement, const void* element) noexcept;
     /**
      * @brief Like unorderedContainerSet this sets an element at an index. Though this only sets the element if it is not yet set.
      * Index may not be larger than the internal container.
@@ -49,7 +55,7 @@ namespace BackerLib {
      * @return ContainerInvalidSize if sizeOfElement was larger than the largestElement in the array. Only applicable if elementsArePointers is not set.
      * @return ContainerInvalidIndex if index was out of bounds.
      */
-    extern ContainerError              unorderedContainerSetTry(UnorderedContainer* container, size_t index, size_t sizeOfElement, const void* element) noexcept;
+    extern BL_ContainerError              bl_unordered_container_set_try(BL_UnorderedContainer* container, size_t index, size_t sizeOfElement, const void* element) noexcept;
     /**
      * @brief Gets element in UnorderedContainer.
      * @param container Pointer to valid UnorderedContainer
@@ -58,7 +64,7 @@ namespace BackerLib {
      * @return ResultCode is ContainerInvalidIndex if index was out of bounds in the container.
      * @return ResultCode is ContainerOPUnsuccessful if index was not occupied.
      */
-    extern UnorderedContainerGetResult unorderedContainerGet(const UnorderedContainer* container, size_t index) noexcept;
+    extern void*                          bl_unordered_container_get(const BL_UnorderedContainer* container, size_t index) noexcept;
     /**
      * @brief Removes element at index.
      * @param container Pointer to valid UnorderedContainer
@@ -67,69 +73,81 @@ namespace BackerLib {
      * @return ContainerInvalidIndex if index was out of bounds of the container.
      * @return ContainerOPUnsuccessful if index was not occupied.
      */
-    extern ContainerError              unorderedContainerRemove(UnorderedContainer* container, size_t index, void (*destructor)(void* element)) noexcept;
+    extern BL_ContainerError              bl_unordered_container_remove(BL_UnorderedContainer* container, size_t index, void (*destructor)(void* element)) noexcept;
     /**
      * @brief Creates a UnorderedContainer on the stack. Use isValidObject to check validity.
      * @param initialSize Initial size of internal array
      * @param sizeOfElement Size of the largest element to be stored in array
-     * @param elementsArePointers Is the array to store the pointers to elements instead of copying them
      */
-    extern UnorderedContainer          unorderedContainerCreateStack(size_t initialSize, size_t sizeOfElement, bool elementsArePointers) noexcept;
+    extern BL_UnorderedContainer          bl_unordered_container_create_stack(size_t initialSize, size_t sizeOfElement) noexcept;
     /**
      * @brief Creates a UnorderedContainer on the heap.
      * @param initialSize Initial size of internal array
      * @param sizeOfElement Size of the largest element to be stored in array
-     * @param elementsArePointers Is the array to store the pointers to elements instead of copying them
      * @return NULL if allocation failed.
      */
-    extern UnorderedContainer*         unorderedContainerCreateHeap(size_t initialSize, size_t sizeOfElement, bool elementsArePointers) noexcept;
+    extern BL_UnorderedContainer*         bl_unordered_container_create_heap(size_t initialSize, size_t sizeOfElement) noexcept;
     /**
      * @brief Gets the first valid index in an UnorderedContainer.
      * @param container Pointer to valid UnorderedContainer
      * @return Pointer to first valid index, else NULL.
      */
-    extern void* unorderedContainerFront(const UnorderedContainer* container) noexcept;
+    extern void*                          bl_unordered_container_front(const BL_UnorderedContainer* container) noexcept;
     /**
      * @brief Gets the next valid index after element. Returns NULL if no such index exists.
      * @param container Pointer to valid UnorderedContainer
      * @param element Element in container
      * @return Next valid index, else NULL.
      */
-    extern void* unorderedContainerNext(const UnorderedContainer* container, const void* element) noexcept;
+    extern void*                          bl_unordered_container_next(const BL_UnorderedContainer* container, const void* element) noexcept;
     /**
      * @brief Gets the next valid index in reverse order after element. Returns NULL if no such index exists.
      * @param container Pointer to valid UnorderedContainer
      * @param element Element in container
      * @return Next valid index in reverse order, else NULL
      */
-    extern void* unorderedContainerPrev(const UnorderedContainer* container, const void* element) noexcept;
+    extern void*                          bl_unordered_container_prev(const BL_UnorderedContainer* container, const void* element) noexcept;
     /**
      * @brief Gets the last valid index in container.
      * @param container Pointer to valid UnorderedContainer
      * @return Last valid index in container, else NULL.
      */
-    extern void* unorderedContainerBack(const UnorderedContainer* container) noexcept;
+    extern void*                          bl_unordered_container_back(const BL_UnorderedContainer* container) noexcept;
     /**
      * @brief Gets the index after unorderedContainerBack. Will always be invalid.
      * @param container Pointer to valid UnorderedContainer
      * @return NULL if no valid index exists.
      */
-    extern void* unorderedContainerEnd(const UnorderedContainer* container) noexcept;
+    extern void*                          bl_unordered_container_end(const BL_UnorderedContainer* container) noexcept;
+    /**
+     *
+     * @param container Pointer to UnorderedContainer or NULL
+     * @return true if UnorderedContainer is valid, else NULL.
+     */
+    extern bool                           bl_unordered_container_is_valid(const BL_UnorderedContainer* container) noexcept;
+    /**
+     *
+     * @param container Pointer to valid UnorderedContainer
+     * @return Amount of elements in container.
+     */
+    extern size_t                         bl_unordered_container_size(const BL_UnorderedContainer* container) noexcept;
     /**
      * @brief Destroys an UnorderedContainer if applicable. Does nothing if not an UnorderedContainer qualified.
      * @param container Pointer to UnorderedContainer
      */
-    extern void                        unorderedContainerDestroy(void* container) noexcept;
+    extern void                           bl_unordered_container_destroy(void* container) noexcept;
     /**
      * @brief Destroys an UnorderedContainer and runs destructor on every valid element.
      * @param container Pointer to valid UnorderedContainer
      * @param destructor Pointer to valid function matching argument type
      */
-    extern void                        unorderedContainerDestroyWithElements(UnorderedContainer* container, void (*destructor)(void* element)) noexcept;
+    extern void                           bl_unordered_container_destroy_with_elements(BL_UnorderedContainer* container, void (*destructor)(void* element)) noexcept;
 
 
 #ifdef __cplusplus
     }
 };
+#else
+#undef noexcept
 #endif
 #endif // UNORDEREDCONTAINER_H

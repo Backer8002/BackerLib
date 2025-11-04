@@ -11,7 +11,7 @@ namespace BackerLib {
 #define noexcept
 #endif //__cplusplus
 
-    typedef String ExprAtom; // Atom will be changed at a later date to a better suitable type.
+    typedef BL_String ExprAtom; // Atom will be changed at a later date to a better suitable type.
 
     typedef struct ExprOperatorDefine {
         int    operatorID;
@@ -60,7 +60,7 @@ namespace BackerLib {
      * @param amountOfOperators Length of operators
      * @return Valid DynamicContainer if operation was successful.
      */
-    extern DynamicContainer exprTokenize(StringView* expresion, const ExprOperatorDefine* operators, size_t amountOfOperators) noexcept;
+    extern BL_DynamicContainer exprTokenize(BL_StringView* expresion, const ExprOperatorDefine* operators, size_t amountOfOperators) noexcept;
     /**
      * @brief Parses tokens to a valid AST of an expression, if possible from provided operators.
      * @param tokens Pointer to valid DynamicContainer of tokens
@@ -73,13 +73,13 @@ namespace BackerLib {
      * Operator pairs like a * (b + c) assuming () has the lowest priority followed by + and * will parse to a (b c + *) because of operator precedence. Recommended for tokenizers to catch this.
      * Iterating the result inorder will traverse the AST in execution order. The last element should always have operatorID set to 0.
      */
-    extern DynamicContainer exprParse(const DynamicContainer* tokens, const ExprOperatorDefine* operators, size_t amountOfOperators) noexcept;
+    extern BL_DynamicContainer exprParse(const BL_DynamicContainer* tokens, const ExprOperatorDefine* operators, size_t amountOfOperators) noexcept;
     /**
      * @brief Prints a AST in reverse polish notation.
      * @param file Pointer to file to write to.
      * @param tree Valid pointer to result of exprParse
      */
-    extern void             exprPrint(FILE* file, const DynamicContainer* tree) noexcept;
+    extern void             exprPrint(FILE* file, const BL_DynamicContainer* tree) noexcept;
 
 
 #ifdef __cplusplus

@@ -15,8 +15,8 @@ namespace BackerLib {
 #define noexcept
 #endif
 
-    typedef DynamicContainer JsonObject;
-    typedef DynamicContainer JsonArray;
+    typedef BL_DynamicContainer JsonObject;
+    typedef BL_DynamicContainer JsonArray;
 
     typedef enum JsonObjectMemberType {
         JsonTypeInvalid,
@@ -31,13 +31,13 @@ namespace BackerLib {
     typedef union JsonObjectMemberValue {
         bool       boolean;
         double     number;
-        String     string;
+        BL_String     string;
         JsonObject object;
         JsonArray  array;
     } JsonMemberValue;
 
     typedef struct JsonObjectMember {
-        String          identifier;
+        BL_String          identifier;
         JsonMemberValue value;
         JsonMemberType  valueType;
     } JsonObjectMember;
@@ -82,12 +82,12 @@ namespace BackerLib {
     } JsonToken;
 
     typedef struct JsonTokenStore {
-        DynamicContainer dynamicContainer;
+        BL_DynamicContainer dynamicContainer;
         size_t           maxDepth;
     } JsonTokenStore;
 
     static const Event JsonFileIllFormated = {
-        .id             = (StringView) stringViewInitConstExpr("JsonFileIllFormated"),
+        .id             = (BL_StringView) stringViewInitConstExpr("JsonFileIllFormated"),
         .groupIds       = &ErrorLogLevel,
         .amountOfGroups = 1};
 
@@ -172,7 +172,7 @@ namespace BackerLib {
      * @param identifier Key to search for
      * @return NULL if key does not exist in object, else pointer to member.
      */
-    extern JsonObjectMember* jsonObjectMemberGet(const JsonObject* jsonObject, StringView* identifier) noexcept;
+    extern JsonObjectMember* jsonObjectMemberGet(const JsonObject* jsonObject, BL_StringView* identifier) noexcept;
     /**
      * @brief Adds a new member to JsonObject. Copying value.
      * @param jsonObject Pointer to valid JsonObject
@@ -181,7 +181,7 @@ namespace BackerLib {
      * @param value Value to store
      * @return ContainerAllocFailure if allocation fails.
      */
-    extern ContainerError    jsonObjectAdd(JsonObject* jsonObject, StringView* identifier, JsonMemberType valueType, const JsonMemberValue* value) noexcept;
+    extern BL_ContainerError    jsonObjectAdd(JsonObject* jsonObject, BL_StringView* identifier, JsonMemberType valueType, const JsonMemberValue* value) noexcept;
     /**
      * @brief Adds value to end of array. Copying value.
      * @param jsonArray Pointer to valid JsonArray
@@ -189,7 +189,7 @@ namespace BackerLib {
      * @param value Value to store
      * @return ContainerAllocFailure if allocation fails.
      */
-    extern ContainerError    jsonArrayAdd(JsonArray* jsonArray, JsonMemberType valueType, const JsonMemberValue* value) noexcept;
+    extern BL_ContainerError    jsonArrayAdd(JsonArray* jsonArray, JsonMemberType valueType, const JsonMemberValue* value) noexcept;
     /**
      * @brief Add value at index in array. Copying value.
      * @param jsonArray Pointer to valid JsonArray
@@ -198,7 +198,7 @@ namespace BackerLib {
      * @param value Value to store
      * @return ContainerAllocFailure if allocation fails. ContainerInvalidIndex if index is beyond the size of container.
      */
-    extern ContainerError    jsonArrayAddAtIndex(JsonArray* jsonArray, size_t index, JsonMemberType valueType, const JsonMemberValue* value) noexcept;
+    extern BL_ContainerError    jsonArrayAddAtIndex(JsonArray* jsonArray, size_t index, JsonMemberType valueType, const JsonMemberValue* value) noexcept;
     /**
      * @brief Removes member from object.
      * @param jsonObject Pointer to valid JsonObject

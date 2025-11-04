@@ -1,7 +1,7 @@
 #ifndef ArrayList_h
 #define ArrayList_h
 
-#include "TypesMain.h"
+#include "BL_DynamicContainer.h"
 #include "../Concurrency/ConcurrencyDefines.h"
 #include <stddef.h>
 
@@ -16,21 +16,17 @@ namespace BackerLib {
     /**
      * @brief A threadsafe implementation of DynamicContainer. Can work as a dynamic container, but will not lock the mutex then.
      */
-    typedef union ArrayList {
-        struct {
-            DynamicContainer dynamicContainer;
+    typedef struct BL_ArrayList {
+            BL_DynamicContainer dynamicContainer;
             Mutex            mutex;
-        };
-        Container     container;
-        DataTypeFlags header;
-    } ArrayList;
+    } BL_ArrayList;
 
     /**
      * @brief Sets amount of elements used to 0 and resizes to 0 elements.
      * @param arrayList Pointer to valid ArrayList
      * @return false if failed to lock mutex.
      */
-    extern bool arrayListClear(ArrayList* arrayList) noexcept;
+    extern bool arrayListClear(BL_ArrayList* arrayList) noexcept;
     /**
      * @brief
      * @param arrayList Pointer to valid ArrayList
@@ -41,14 +37,14 @@ namespace BackerLib {
      * @return ContainerInvalidSize if sizeOfElement is larger than a single element in the array.
      * @return ContainerOPUnsuccessful if mutex could not be locked.
      */
-    extern ContainerError arrayListGet(ArrayList* arrayList, size_t index, size_t sizeOfElement, void* restrict element) noexcept;
+    extern BL_ContainerError arrayListGet(BL_ArrayList* arrayList, size_t index, size_t sizeOfElement, void* restrict element) noexcept;
     /**
      * @brief Removes the last element from the ArrayList.
      * @param arrayList Pointer to valid ArrayList
      * @return ContainerInvalidIndex if there was no element to pop.
      * @return ContainerOPUnsuccessful if mutex could not be locked.
      */
-    extern ContainerError arrayListPop(ArrayList* arrayList) noexcept;
+    extern BL_ContainerError arrayListPop(BL_ArrayList* arrayList) noexcept;
     /**
      * @brief Removes elements from ArrayList given a range.
      * @param arrayList Pointer to valid ArrayList
@@ -57,7 +53,7 @@ namespace BackerLib {
      * @return ContainerInvalidIndex if index is larger than lastIndex or if the indexes are invalid
      * @return ContainerOPUnsuccessful if mutex could not be locked.
      */
-    extern ContainerError arrayListRemove(ArrayList* arrayList, size_t index, size_t lastIndex) noexcept;
+    extern BL_ContainerError arrayListRemove(BL_ArrayList* arrayList, size_t index, size_t lastIndex) noexcept;
     /**
      * @brief Insert elements into ArrayList.
      * @param arrayList Pointer to valid ArrayList
@@ -70,7 +66,7 @@ namespace BackerLib {
      * @return ContainerAllocFailure if the array cannot grow for the new elements.
      * @return ContainerOPUnsuccessful if mutex could not be locked.
      */
-    extern ContainerError arrayListInsert(ArrayList* arrayList, size_t index, size_t amountOfElements, size_t sizeOfElement, const void* elements) noexcept;
+    extern BL_ContainerError arrayListInsert(BL_ArrayList* arrayList, size_t index, size_t amountOfElements, size_t sizeOfElement, const void* elements) noexcept;
     /**
      * @brief Sets index in ArrayList to element. If element is smaller than a single element in the array junk values may exist after size of element.
      * @param arrayList Pointer to valid ArrayList object
@@ -82,23 +78,21 @@ namespace BackerLib {
      * @return ContainerInvalidSize if element was larger than a single element in array
      * @return ContainerOPUnsuccessful if mutex could not be locked.
      */
-    extern ContainerError arrayListSet(ArrayList* arrayList, size_t index, size_t elementSize, const void* element) noexcept;
+    extern BL_ContainerError arrayListSet(BL_ArrayList* arrayList, size_t index, size_t elementSize, const void* element) noexcept;
     /**
-     * @brief Creates a ArrayList on the stack. Use isValidObject to check validity.
+     * @brief Creates a ArrayList on the stack. Use is_valid to check validity.
      * @param initialSize Initial size of internal array
      * @param elementSize Size of the largest element to be stored in array
-     * @param elementsArePointers Are the elements that are going to be stored in this array going to be pointer to objects
      *
      */
-    extern ArrayList arrayListCreateStack(size_t initialSize, size_t elementSize, bool elementsArePointers) noexcept;
+    extern BL_ArrayList arrayListCreateStack(size_t initialSize, size_t elementSize) noexcept;
     /**
      * @brief Creates an ArrayList on the heap.
      * @param initialSize Initial size of internal array
      * @param elementSize Size of the largest element to be stored in array
-     * @param elementsArePointers Are the elements that are going to be stored in this array going to be pointer to objects
      * @return NULL if allocation failed.
      */
-    extern ArrayList* arrayListCreateHeap(size_t initialSize, size_t elementSize, bool elementsArePointers) noexcept;
+    extern BL_ArrayList* arrayListCreateHeap(size_t initialSize, size_t elementSize) noexcept;
     /**
      * @brief Frees arraylist if applicable and puts it in an invalid state.
      * @param arrayList Pointer to ArrayList
@@ -109,7 +103,7 @@ namespace BackerLib {
      * @param arrayList Pointer to valid ArrayList
      * @param elementDestructor Destructor that will be executed on each element. Must be a valid reference
      */
-    extern void arrayListDestroyWithElements(ArrayList* arrayList, void(elementDestructor)(void* element)) noexcept;
+    extern void arrayListDestroyWithElements(BL_ArrayList* arrayList, void(elementDestructor)(void* element)) noexcept;
 
 #ifdef __cplusplus
     }

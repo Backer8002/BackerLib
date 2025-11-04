@@ -2,8 +2,8 @@
 #define BackerString_h_
 
 
-#include "Container.h"
-#include "DynamicContainer.h"
+#include "BL_Container.h"
+#include "BL_DynamicContainer.h"
 #include <stddef.h>
 #include <string.h>
 #include <uchar.h>
@@ -19,34 +19,34 @@ namespace BackerLib {
     /**
      * @brief String should be treated as a DynamicContainer with element size of a char. There are no runtime checks that it is complied with and the trust is on the programmer. All library function adhere to this definition. String is a valid DynamicContainer.
      */
-    typedef DynamicContainer String;
-    typedef DynamicContainer StringW;
+    typedef BL_DynamicContainer BL_String;
+    typedef BL_DynamicContainer BL_StringW;
 
         /**
          * A non owning constant string. Existing so that it can be appended to a string or have read operations that must know the length of it.
          */
-        typedef const union StringView {
+        typedef const union BL_StringView {
             struct {
-                DataTypeFlags  header;
+                const BL_DataTypeFlags  header;
                 const uint32_t byteSizeOfSingleElement;
                 const size_t   amountOfIndexes;
                 const unsigned char*    array;
             };
-            Container container;
-        } StringView;
+            const BL_Container container;
+        } BL_StringView;
 
         /**
          * A non owning constant string. Existing so that it can be appended to a string or have read operations that must know the length of it.
          */
-        typedef const union StringViewW {
+        typedef const union BL_StringViewW {
             struct {
-                DataTypeFlags  header;
+                const BL_DataTypeFlags  header;
                 const uint32_t byteSizeOfSingleElement;
                 const size_t   amountOfIndexes;
                 const wchar_t* array;
             };
-            Container container;
-        } StringViewW;
+            const BL_Container container;
+        } BL_StringViewW;
 
     /**
      * @brief Creates a String that contains a copy of string param.
@@ -57,20 +57,20 @@ namespace BackerLib {
      * @return String that contains a copy of string up to length chars.
      * @return Invalid object if alloc failed.
      */
-    extern String            stringCreate(const unsigned char* string, size_t length) noexcept;
+    extern BL_String            bl_string_create(const unsigned char* string, size_t length) noexcept;
     /**
      * @brief Length of string.
      * @param string Pointer to valid String
      * @return Size of char array in bytes, excluding the end null terminator.
      */
-    extern size_t     stringLength(StringView* string) noexcept;
+    extern size_t     bl_string_length(BL_StringView* string) noexcept;
     /**
      * @brief Wrapper of containerGet
      * @param string Pointer to valid String
      * @param index Index to get char from
      * @return Pointer to char in array. NULL if invalid index.
      */
-    extern inline unsigned char*          stringGetChar(StringView* string, size_t index) noexcept;
+    extern inline unsigned char*          bl_string_get_char(BL_StringView* string, size_t index) noexcept;
     /**
      * @brief Appends stringToInsert on to destString.
      * @param destString Destination string object. Must be pointer to valid String/DynamicContainer
@@ -78,7 +78,7 @@ namespace BackerLib {
      * @param length Length of stringToInsert. This is the only length check
      * @return ContainerAllocFailure if allocation failed for the extra needed space.
      */
-    extern ContainerError stringAppendCString(String* destString, const unsigned char* stringToInsert, size_t length) noexcept;
+    extern BL_ContainerError bl_string_append_cstring(BL_String* destString, const unsigned char* stringToInsert, size_t length) noexcept;
     /**
      * @brief Inserts a CString into a String. Wrapper of containerDynamicInsert.
      * @param destString Pointer to valid String
@@ -88,14 +88,14 @@ namespace BackerLib {
      * @return ContainerInvalidIndex if index was larger than the length of destString.
      * @return ContainerAllocFailure if destString could not grow.
      */
-    extern ContainerError stringInsertSubCString(String* destString, const unsigned char* other, size_t lenOfOther, size_t firstIndex) noexcept;
+    extern BL_ContainerError bl_string_insert_cstring(BL_String* destString, const unsigned char* other, size_t lenOfOther, size_t firstIndex) noexcept;
     /**
      * @brief Appends stringToInsert on to destString
      * @param destString String to append to. Must be pointer to valid String/DynamicContainer
      * @param stringToInsert String used to append with. Must be pointer to valid String
      * @return ContainerAllocFailure if allocation failed for the extra needed space.
      */
-    extern ContainerError stringAppendString(String* destString, const String* stringToInsert) noexcept;
+    extern BL_ContainerError bl_string_append_string(BL_String* destString, const BL_StringView* stringToInsert) noexcept;
     /**
      * @brief Removes amountToStrip charToStrip chars in string. Result is returned as a copy.
      * @param string Pointer to valid String
@@ -104,7 +104,7 @@ namespace BackerLib {
      * @param amountToStrip Max amount of charToStrip to remove. 0 means infinity
      * @return Result String. Check validity with isValidObject.
      */
-    extern String                stringStrip(const String* string, unsigned char charToStrip, bool stripFromBack, uint64_t amountToStrip) noexcept;
+    extern BL_String                bl_string_strip(const BL_String* string, unsigned char charToStrip, bool stripFromBack, uint64_t amountToStrip) noexcept;
     /**
      * @brief Splits string on charToSplit up to amountOfCharsToSplitAt times. This is not mutating string
      * @param string Pointer to valid StringView
@@ -113,7 +113,7 @@ namespace BackerLib {
      * @param amountOfCharsToSplitAt Max amount of times a split can happen. 0 means infinity
      * @return DynamicContainer containing Strings in order of how they were placed in string. Check validity of result with isValidObject. No cleanup needed for invalid result.
      */
-    extern DynamicContainer      stringSplit(const StringView* string, unsigned char charToSplitOn, bool splitFromBack, uint64_t amountOfCharsToSplitAt) noexcept;
+    extern BL_DynamicContainer      bl_string_split(const BL_StringView* string, unsigned char charToSplitOn, bool splitFromBack, uint64_t amountOfCharsToSplitAt) noexcept;
     /**
      * @brief Splits string on specified chars. Use isValidObject to check validity of return result.
      * @param string Pointer to valid StringView
@@ -123,7 +123,7 @@ namespace BackerLib {
      * @param amountOfCharsToSplitAt Max amount of characters to split on. 0, means no limit.
      * @return DynamicContainer containing split Strings in the order they occured in string.
      */
-    extern DynamicContainer stringSplitMulti(const StringView* string, const unsigned char* charsToSplitOn, size_t amountOfChars, bool splitFromBack, uint64_t amountOfCharsToSplitAt) noexcept;
+    extern BL_DynamicContainer bl_string_split_multi(const BL_StringView* string, const unsigned char* charsToSplitOn, size_t amountOfChars, bool splitFromBack, uint64_t amountOfCharsToSplitAt) noexcept;
     /**
      * @brief Replaces part of string with stringToReplaceWith starting from firstIndex. Unused indexes are considered valid to write to as long as it begins at maximum length of destString.
      * @param destString String which contents are to be replaced. Pointer to valid String
@@ -132,28 +132,28 @@ namespace BackerLib {
      * @return ContainerAllocFailure if string cannot grow in the cases were unused indexes are being written to.
      * @return ContainerInvalidIndex if index was larger than the length of destString or if replacement intrupted a UTF-8 char.
      */
-    extern ContainerError        stringReplace(String* destString, const String* stringToReplaceWith, size_t firstIndex) noexcept;
+    extern BL_ContainerError        bl_string_replace(BL_String* destString, const BL_String* stringToReplaceWith, size_t firstIndex) noexcept;
     /**
      * @brief Compares two Strings lexoconographicly
      * @param first Pointer to valid String
      * @param second Pointer to valid String
      * @return true if first is less than or equal to second, else false
      */
-    extern bool                  stringCompareAcending(const void* first, const void* second) noexcept;
+    extern bool                  bl_string_compare_acending(const void* first, const void* second) noexcept;
     /**
      * @brief Compares two Strings lexoconographicly
      * @param first Pointer to valid String
      * @param second Pointer to valid String
      * @return true if first is greater than or equal to second, else false
      */
-    extern bool                  stringCompareDecending(const void* first, const void* second) noexcept;
+    extern bool                  bl_string_compare_decending(const void* first, const void* second) noexcept;
     /**
      * @brief Compares the equality of two strings.
      * @param first Pointer to valid String
      * @param second Pointer to valid String
      * @return true if strings are equal, else false.
      */
-    extern bool stringEqual(const void* first, const void* second) noexcept;
+    extern bool bl_string_equal(const void* first, const void* second) noexcept;
 
     /**
      * @brief Creates a StringW that contains a copy of str param. If str is a CString it is not length checked with strlen, instead function will copy len indicies.
@@ -162,12 +162,12 @@ namespace BackerLib {
      * @return StringW that contains a copy of string up to length chars.
      * @return Invalid object if alloc failed.
      */
-    extern StringW               stringWCreate(const wchar_t* str, size_t len) noexcept;
+    extern BL_StringW               bl_string_w_create(const wchar_t* str, size_t len) noexcept;
 
 /**
  * @param cString Any valid constexpr char[] or literal
  */
-#define stringViewInitConstExpr(cString)     {.amountOfIndexes = sizeof(cString), .array = cString, .byteSizeOfSingleElement = 1, .header = ObjectFlagIsValid | ObjectFlagIsContainer}
+#define stringViewInitConstExpr(cString)     {.amountOfIndexes = sizeof(cString), .array = (unsigned char*)cString, .byteSizeOfSingleElement = 1, .header = ObjectFlagIsValid | ObjectFlagIsContainer}
 /**
  * @param wideString Any valid constexpr wchar_t[] or literal
  */
@@ -178,19 +178,20 @@ namespace BackerLib {
      * @param str Any valid C-string
      * @return StringView Object with len counted.
      */
-    extern StringView stringViewInit(const unsigned char* str) noexcept;
+    extern BL_StringView bl_stringview_init(const unsigned char* str) noexcept;
     /**
      *
      * @param str Any valid Wide C-string
      * @return StringViewW Object with len counted.
      */
-    extern StringViewW stringViewWInit(const wchar_t* str) noexcept;
-    extern StringView stringViewCast(String string) noexcept;
-    extern StringView* stringViewPtrCast(const String* string) noexcept;
+    extern BL_StringViewW bl_stringview_w_init(const wchar_t* str) noexcept;
+    extern BL_StringView bl_stringview_cast(BL_String string) noexcept;
+    extern BL_StringView* bl_stringview_ptr_cast(const BL_String* string) noexcept;
 
 #ifdef __cplusplus
     }
 };
+#else
+#undef noexcept
 #endif // __cplusplus
-
 #endif

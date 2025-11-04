@@ -2,29 +2,29 @@
 #include <stdbool.h>
 #include <stdlib.h>
 
-ContainerError bitSetGet(const BitSet* set, size_t index) {
+BL_ContainerError bl_bitset_get(const BL_Bitset* set, size_t index) {
     if (set->maxAmountOfElements <= index)
-        return ContainerInvalidIndex;
-    return (set->array[index / 8] & 0x80 >> (index % 8)) ? ContainerOPSuccessful : ContainerOPUnsuccessful;
+        return BL_ContainerInvalidIndex;
+    return (set->array[index / 8] & 0x80 >> (index % 8)) ? BL_ContainerOPSuccessful : BL_ContainerOPUnsuccessful;
 }
 
-ContainerError bitSetAdd(BitSet* set, size_t index) {
-    ContainerError errorCode = bitSetGet(set, index);
-    if ((errorCode != ContainerOPUnsuccessful))
+BL_ContainerError bl_bitset_add(BL_Bitset* set, size_t index) {
+    BL_ContainerError errorCode = bl_bitset_get(set, index);
+    if ((errorCode != BL_ContainerOPUnsuccessful))
         return errorCode;
     set->array[index / 8] |= 0x80 >> (index % 8);
-    return ContainerOPUnsuccessful;
+    return BL_ContainerOPUnsuccessful;
 }
 
-ContainerError bitSetRemove(BitSet* set, size_t index) {
-    ContainerError errorCode = bitSetGet(set, index);
-    if ((errorCode != ContainerOPSuccessful))
+BL_ContainerError bl_bitset_remove(BL_Bitset* set, size_t index) {
+    BL_ContainerError errorCode = bl_bitset_get(set, index);
+    if ((errorCode != BL_ContainerOPSuccessful))
         return errorCode;
     set->array[index / 8] &= ~(0x80 >> (index % 8));
-    return ContainerOPSuccessful;
+    return BL_ContainerOPSuccessful;
 }
 
-bool bitSetIsEmpty(BitSet* set) {
+bool bl_bitset_is_empty(BL_Bitset* set) {
     for (size_t iterator = 0; iterator <= (set->maxAmountOfElements - 1) / 8; iterator++) {
         if (set->array[iterator] != 0)
             return false;
@@ -32,51 +32,55 @@ bool bitSetIsEmpty(BitSet* set) {
     return true;
 }
 
-ContainerError bitSetAnd(BitSet* firstSet, BitSet* secondSet) {
+BL_ContainerError bl_bitset_and(BL_Bitset* firstSet, BL_Bitset* secondSet) {
     if (firstSet->maxAmountOfElements != secondSet->maxAmountOfElements)
-        return ContainerOPUnsuccessful;
+        return BL_ContainerOPUnsuccessful;
 
     for (size_t iterator = 0; iterator <= (firstSet->maxAmountOfElements - 1) / 8; iterator++)
         *(firstSet->array + iterator) &= *(secondSet->array + iterator);
 
-    return ContainerOPSuccessful;
+    return BL_ContainerOPSuccessful;
 }
 
-ContainerError bitSetOr(BitSet* firstSet, BitSet* secondSet) {
+BL_ContainerError bl_bitset_or(BL_Bitset* firstSet, BL_Bitset* secondSet) {
     if (firstSet->maxAmountOfElements != secondSet->maxAmountOfElements)
-        return ContainerOPUnsuccessful;
+        return BL_ContainerOPUnsuccessful;
 
     for (size_t iterator = 0; iterator <= (firstSet->maxAmountOfElements - 1) / 8; iterator++)
         *(firstSet->array + iterator) |= *(secondSet->array + iterator);
 
-    return ContainerOPSuccessful;
+    return BL_ContainerOPSuccessful;
 }
 
-ContainerError bitSetXOr(BitSet* firstSet, BitSet* secondSet) {
+BL_ContainerError bl_bitset_xor(BL_Bitset* firstSet, BL_Bitset* secondSet) {
     if (firstSet->maxAmountOfElements != secondSet->maxAmountOfElements)
-        return ContainerOPUnsuccessful;
+        return BL_ContainerOPUnsuccessful;
 
     for (size_t iterator = 0; iterator <= (firstSet->maxAmountOfElements - 1) / 8; iterator++)
         *(firstSet->array + iterator) ^= *(secondSet->array + iterator);
 
-    return ContainerOPSuccessful;
+    return BL_ContainerOPSuccessful;
 }
 
-void bitSetNot(BitSet* set) {
+void bl_bitset_not(BL_Bitset* set) {
     for (size_t iterator = 0; iterator <= (set->maxAmountOfElements - 1) / 8; iterator++)
         *(set->array + iterator) = ~*(set->array + iterator);
 }
 
-void bitSetDestroy(BitSet* set) {
-    if (isValidObject((DataTypeFlags*) set)) {
+void bl_bitset_destroy(BL_Bitset* set) {
+    if (bl_bitset_is_valid(set)) {
         free(set->array);
         if (set->header & ObjectFlagIsOnHeap)
             free(set);
     }
 }
 
-BitSet bitSetCreate(size_t amountOfElements, bool objectIsHeapAllocated) {
-    BitSet set = {0};
+bool bl_bitset_is_valid(const BL_Bitset* set) {
+    return set->header & ObjectFlagIsValid;
+}
+
+BL_Bitset bl_bitset_create(size_t amountOfElements, bool objectIsHeapAllocated) {
+    BL_Bitset set = {0};
     if (!amountOfElements)
         return set;
     set.array    = calloc((amountOfElements + sizeof(*set.array) - 1) / sizeof(*set.array),sizeof *set.array);

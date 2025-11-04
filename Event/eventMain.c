@@ -13,14 +13,14 @@
 
 
 static EventHandle* mainEventHandle     = NULL;
-static HashMap      memoryAllocs        = {0};
+static BL_Hashmap      memoryAllocs        = {0};
 static FILE*        debugFileStreams[2] = {NULL, NULL},*errorFileStreams[2] = {NULL, NULL};
 
 #include <stdlib.h>
 
 int internal_eventMainLoop(EventHandle* eventHandle);
 
-EventError_t internal_invokeSubscriber(const EventCall* eventCall, StringView subscriberID, const EventSubscriber* eventSubscriber);
+EventError_t internal_invokeSubscriber(const EventCall* eventCall, BL_StringView subscriberID, const EventSubscriber* eventSubscriber);
 
 void internal_memoryLogCall(const Event* const event, uint32_t line, const char* file, size_t size, size_t address);
 
@@ -29,15 +29,15 @@ EventHandle* eventSystemInit(void) {
     if (eventHandle == NULL)
         return NULL;
     eventHandle->shouldQuit = false;
-    eventHandle->eventQueue = arrayListCreateStack(0, sizeof(EventCall), false);
-    if (!isValidObject((DataTypeFlags*) &eventHandle->eventQueue)) {
+    eventHandle->eventQueue = arrayListCreateStack(0, sizeof(EventCall));
+    if (!bl_container_dynamic_is_valid(&eventHandle->eventQueue.dynamicContainer)) {
         free(eventHandle);
         return NULL;
     }
 
-    eventHandle->eventSubscribers = hashMapCreateStack(5, sizeof(StringView), sizeof(EventSubscriber), true, NULL);
+    eventHandle->eventSubscribers = bl_hashmap_create_stack(5, sizeof(BL_StringView), sizeof(EventSubscriber), true, NULL);
 
-    if (!isValidObject((DataTypeFlags*) &eventHandle->eventSubscribers)) {
+    if (!bl_hashmap_is_valid(&eventHandle->eventSubscribers)) {
         arrayListDestroy(&(eventHandle->eventQueue));
         free(eventHandle);
         return NULL;
@@ -45,15 +45,15 @@ EventHandle* eventSystemInit(void) {
 
     eventHandle->mutexForSubscriber = mutexCreate(MutexPlain);
     if (!mutexIsValid(&eventHandle->mutexForSubscriber)) {
-        hashMapDestroy(&(eventHandle->eventSubscribers), NULL, NULL);
+        bl_hashmap_destroy(&(eventHandle->eventSubscribers), NULL, NULL);
         arrayListDestroy(&(eventHandle->eventQueue));
         free(eventHandle);
         return NULL;
     }
 #if 1
-    memoryAllocs = hashMapCreateStack(100, sizeof(size_t), sizeof(size_t), false, hashFunctionDefualtSingleVar);
-    if (!isValidObject((DataTypeFlags*) &memoryAllocs)) {
-        hashMapDestroy(&(eventHandle->eventSubscribers), NULL, NULL);
+    memoryAllocs = bl_hashmap_create_stack(100, sizeof(size_t), sizeof(size_t), false, bl_hashfunction_defualt_single_var);
+    if (!bl_hashmap_is_valid(&memoryAllocs)) {
+        bl_hashmap_destroy(&(eventHandle->eventSubscribers), NULL, NULL);
         arrayListDestroy(&(eventHandle->eventQueue));
         mutexDestroy(&eventHandle->mutexForSubscriber);
         free(eventHandle);
@@ -64,12 +64,12 @@ EventHandle* eventSystemInit(void) {
 
     eventHandle->eventThread = threadCreate(eventHandle,(int(*)(void*))internal_eventMainLoop);
     if (!threadIsValid(&eventHandle->eventThread)){
-        hashMapDestroy(&(eventHandle->eventSubscribers), NULL, NULL);
+        bl_hashmap_destroy(&(eventHandle->eventSubscribers), NULL, NULL);
         arrayListDestroy(&(eventHandle->eventQueue));
         mutexDestroy(&eventHandle->mutexForSubscriber);
         free(eventHandle);
 #if 1
-        hashMapDestroy(&memoryAllocs, NULL, NULL);
+        bl_hashmap_destroy(&memoryAllocs, NULL, NULL);
 #endif // _DEBUG
 
         return NULL;
@@ -90,7 +90,7 @@ void eventSystemShutdown(void) {
     mainEventHandle                   = NULL;
     mutexDestroy(&eventHandleToDestroy->mutexForSubscriber);
     arrayListDestroy(&eventHandleToDestroy->eventQueue);
-    hashMapDestroy(&eventHandleToDestroy->eventSubscribers, NULL, NULL);
+    bl_hashmap_destroy(&eventHandleToDestroy->eventSubscribers, NULL, NULL);
 
     if (debugFileStreams[0] && debugFileStreams[0] != stdout)
         fclose(debugFileStreams[0]);
@@ -103,7 +103,7 @@ void eventSystemShutdown(void) {
 #if 1
     fflush(stdout);
     fprintf(stderr, ANSI_TEXT_RED "Memory leaks:" ANSI_TEXT_GREEN "\n");
-    hashMapDestroy(&memoryAllocs, internal_freeMemAllocsKey, internal_freeMemAllocsElements);
+    bl_hashmap_destroy(&memoryAllocs, internal_freeMemAllocsKey, internal_freeMemAllocsElements);
     fprintf(stderr, ANSI_TEXT_YELLOW "End of memory leaks." ANSI_RESET_ATTRIBUTE "\n");
     fflush(stderr);
 #endif
@@ -150,7 +150,7 @@ extern bool eventInitDefualtLog(const char* debugLogFile, bool outputToStdout, c
     return true;
 }
 
-EventError_t internal_invokeSubscriber(const EventCall* eventCall, StringView subscriberID, const EventSubscriber* eventSubscriber) {
+EventError_t internal_invokeSubscriber(const EventCall* eventCall, BL_StringView subscriberID, const EventSubscriber* eventSubscriber) {
     if (eventSubscriber->eventSubscriberMain.flags & EVENT_FLAG_CREATE_THREAD) { assert("Not implemented"); } else {
         if (eventSubscriber->typeOfSubscriber == EventSubscriberNormal)
             eventSubscriber->eventSubscriberMain.function(*eventCall, subscriberID);
@@ -174,18 +174,18 @@ int internal_eventMainLoop(EventHandle* eventHandle) {
         mutexLock(&eventHandle->eventQueue.mutex);
         mutexLock(&eventHandle->mutexForSubscriber);
 
-        for (EventCall* currentCall = eventHandle->eventQueue.container.array; currentCall < ((EventCall*) eventHandle->eventQueue.container.array + eventHandle->eventQueue.container.amountOfIndexes); currentCall++) {
-            EventSubscriber* mainSubscriber = hashMapGet(&eventHandle->eventSubscribers, sizeof(StringView), &currentCall->eventCallMain.id);
+        for (EventCall* currentCall = eventHandle->eventQueue.dynamicContainer.container.array; currentCall < ((EventCall*) eventHandle->eventQueue.dynamicContainer.container.array + eventHandle->eventQueue.dynamicContainer.container.amountOfIndexes); currentCall++) {
+            EventSubscriber* mainSubscriber = bl_hashmap_get(&eventHandle->eventSubscribers, sizeof(BL_StringView), &currentCall->eventCallMain.id);
             if (mainSubscriber == NULL) {} else { if (internal_invokeSubscriber(currentCall, currentCall->eventCallMain.id, mainSubscriber) != EventOperationSuccess); }
 
             for (uint32_t groupCallIterator = 0; groupCallIterator < currentCall->eventCallMain.amountOfGroups; groupCallIterator++) {
-                EventSubscriber* groupSubscriber = hashMapGet(&eventHandle->eventSubscribers, sizeof(StringView), currentCall->eventCallMain.groupIds + groupCallIterator);
+                EventSubscriber* groupSubscriber = bl_hashmap_get(&eventHandle->eventSubscribers, sizeof(BL_StringView), currentCall->eventCallMain.groupIds + groupCallIterator);
                 if (groupSubscriber == NULL) { continue; }
                 if (internal_invokeSubscriber(currentCall, currentCall->eventCallMain.groupIds[groupCallIterator], groupSubscriber) != EventOperationSuccess);
             }
         }
 
-        containerDynamicClear(&eventHandle->eventQueue.dynamicContainer);
+        bl_container_dynamic_clear(&eventHandle->eventQueue.dynamicContainer);
 
         mutexUnlock(&eventHandle->eventQueue.mutex);
         mutexUnlock(&eventHandle->mutexForSubscriber);
@@ -193,13 +193,13 @@ int internal_eventMainLoop(EventHandle* eventHandle) {
     return 0;
 }
 
-EventError_t eventRegSubToID(EventHandle* eventHandle, const StringView ID, void (*function)(EventCall, StringView), bool shouldRunOnSeperateThread) {
+EventError_t eventRegSubToID(EventHandle* eventHandle, const BL_StringView ID, void (*function)(EventCall, BL_StringView), bool shouldRunOnSeperateThread) {
     if (mutexLock(&eventHandle->mutexForSubscriber) == ConcurrencyFailure)
         return EventOperationFailure;
 
     EventSubscriber eventSubscriberToReg = {.eventSubscriberMain = {.eventSubscriberType = EventSubscriberNormal, .function = function, .flags = (shouldRunOnSeperateThread) ? EVENT_FLAG_CREATE_THREAD : 0}};
 
-    if (hashMapInsert(&eventHandle->eventSubscribers, sizeof ID, &ID, sizeof eventSubscriberToReg, &eventSubscriberToReg) != ContainerOPSuccessful) {
+    if (bl_hashmap_insert(&eventHandle->eventSubscribers, sizeof ID, &ID, sizeof eventSubscriberToReg, &eventSubscriberToReg) != BL_ContainerOPSuccessful) {
         mutexUnlock(&eventHandle->mutexForSubscriber);
         logCriticalCall("Cannot register id to eventSubscribers", __LINE__, __FILE__);
         return EventCritError;
@@ -209,7 +209,7 @@ EventError_t eventRegSubToID(EventHandle* eventHandle, const StringView ID, void
     return EventOperationSuccess;
 }
 
-EventError_t eventRegLogSubToID(EventHandle* eventHandle, StringView ID, void (*function)(EventCall, StringView, size_t, FILE**), bool shouldRunOnSeperateThread, size_t amountOfOutputs, FILE** outputs) {
+EventError_t eventRegLogSubToID(EventHandle* eventHandle, BL_StringView ID, void (*function)(EventCall, BL_StringView, size_t, FILE**), bool shouldRunOnSeperateThread, size_t amountOfOutputs, FILE** outputs) {
     if (mutexLock(&eventHandle->mutexForSubscriber))
         return EventOperationFailure;
 
@@ -219,7 +219,7 @@ EventError_t eventRegLogSubToID(EventHandle* eventHandle, StringView ID, void (*
                                                                    .function = function,
                                                                    .flags = (shouldRunOnSeperateThread) ? EVENT_FLAG_CREATE_THREAD : 0}};
 
-    if (hashMapInsert(&eventHandle->eventSubscribers, sizeof ID, &ID, sizeof eventSubscriberToReg, &eventSubscriberToReg) != ContainerOPSuccessful) {
+    if (bl_hashmap_insert(&eventHandle->eventSubscribers, sizeof ID, &ID, sizeof eventSubscriberToReg, &eventSubscriberToReg) != BL_ContainerOPSuccessful) {
         mutexUnlock(&eventHandle->mutexForSubscriber);
         logCriticalCall("Cannot register id to eventSubscribers", __LINE__, __FILE__);
         return EventCritError;
@@ -243,7 +243,7 @@ void eventCall(const Event* const event) {
     if (mutexLock(&mainEventHandle->eventQueue.mutex) == ConcurrencyFailure)
         return;
 
-    containerDynamicAppend(&mainEventHandle->eventQueue.dynamicContainer, sizeof eventCallToSend, &eventCallToSend);
+    bl_container_dynamic_append(&mainEventHandle->eventQueue.dynamicContainer, sizeof eventCallToSend, &eventCallToSend);
 
     mutexUnlock(&mainEventHandle->eventQueue.mutex);
 }
@@ -264,14 +264,14 @@ void logCall(const Event* const event, uint32_t line, const char* file) {
     if (mutexLock(&mainEventHandle->eventQueue.mutex) == ConcurrencyFailure)
         return;
 
-    containerDynamicAppend(&mainEventHandle->eventQueue.dynamicContainer, sizeof eventCallToSend, &eventCallToSend);
+    bl_container_dynamic_append(&mainEventHandle->eventQueue.dynamicContainer, sizeof eventCallToSend, &eventCallToSend);
 
     mutexUnlock(&mainEventHandle->eventQueue.mutex);
 }
 
-StringView  freeMemDoesNotExistGroupIds[] = {MemoryGroupId, ErrorLogLevel};
-StringView  allocEventsGroupIds[]         = {MemoryGroupId, DebugLogLevel, AllocMemoryGroupId};
-StringView  freeEventGroupId[]            = {DebugLogLevel, MemoryGroupId, DeallocMemoryGroupId};
+BL_StringView  freeMemDoesNotExistGroupIds[] = {MemoryGroupId, ErrorLogLevel};
+BL_StringView  allocEventsGroupIds[]         = {MemoryGroupId, DebugLogLevel, AllocMemoryGroupId};
+BL_StringView  freeEventGroupId[]            = {DebugLogLevel, MemoryGroupId, DeallocMemoryGroupId};
 const Event freeMemDoesNotExist           = {.id = stringViewInitConstExpr("Unable to free memory since it does not exist"), .amountOfGroups = 2, .groupIds = freeMemDoesNotExistGroupIds};
 const Event mallocEvent                   = {.id = stringViewInitConstExpr("Allocated memory via malloc"), .amountOfGroups = 3, .groupIds = allocEventsGroupIds};
 const Event callocEvent                   = {.id = stringViewInitConstExpr("Allocated memory via calloc"), .amountOfGroups = 3, .groupIds = allocEventsGroupIds};
@@ -306,7 +306,7 @@ void internal_memoryLogCall(const Event* const event, uint32_t line, const char*
     if (mutexLock(&mainEventHandle->eventQueue.mutex) == ConcurrencyFailure)
         return;
 
-    containerDynamicAppend(&mainEventHandle->eventQueue.dynamicContainer, sizeof eventCallToSend, &eventCallToSend);
+    bl_container_dynamic_append(&mainEventHandle->eventQueue.dynamicContainer, sizeof eventCallToSend, &eventCallToSend);
 
     mutexUnlock(&mainEventHandle->eventQueue.mutex);
 }
@@ -318,8 +318,8 @@ void* mallocLogVersion(size_t size, uint32_t line, const char* file) {
         return NULL;
 
     internal_memoryLogCall(&mallocEvent, line, file, size, (size_t) memory);
-    if (isValidObject((DataTypeFlags*) &memoryAllocs))
-        hashMapInsert(&memoryAllocs, sizeof memory, &memory, sizeof size, &size);
+    if (bl_hashmap_is_valid(&memoryAllocs))
+        bl_hashmap_insert(&memoryAllocs, sizeof memory, &memory, sizeof size, &size);
     return memory;
 }
 
@@ -329,8 +329,8 @@ void* callocLogVersion(size_t amount, size_t size, uint32_t line, const char* fi
         return NULL;
 
     internal_memoryLogCall(&callocEvent, line, file, size * amount, (size_t) memory);
-    if (isValidObject((DataTypeFlags*) &memoryAllocs))
-        hashMapInsert(&memoryAllocs, sizeof memory, &memory, sizeof size, &size);
+    if (bl_hashmap_is_valid(&memoryAllocs))
+        bl_hashmap_insert(&memoryAllocs, sizeof memory, &memory, sizeof size, &size);
     return memory;
 }
 
@@ -343,33 +343,33 @@ void* reallocLogVersion(void* currentPtr, size_t size, uint32_t line, const char
         return NULL;
 
     internal_memoryLogCall(&reallocEvent, line, file, size, (size_t) memory);
-    if (isValidObject((DataTypeFlags*) &memoryAllocs)) {
+    if (bl_hashmap_is_valid(&memoryAllocs)) {
         if (currentPtr == memory)
-            hashMapReplace(&memoryAllocs, sizeof memory, &memory, sizeof size, &size, NULL);
+            bl_hashmap_replace(&memoryAllocs, sizeof memory, &memory, sizeof size, &size, NULL);
         else {
-            hashMapRemove(&memoryAllocs, sizeof currentPtr, &currentPtr, NULL, NULL);
-            hashMapInsert(&memoryAllocs, sizeof memory, &memory, sizeof size, &size);
+            bl_hashmap_remove(&memoryAllocs, sizeof currentPtr, &currentPtr, NULL, NULL);
+            bl_hashmap_insert(&memoryAllocs, sizeof memory, &memory, sizeof size, &size);
         }
     }
     return memory;
 }
 
 void freeLogVersion(void* ptr, uint32_t line, const char* file) {
-    if (!isValidObject((DataTypeFlags*) &memoryAllocs)) {
+    if (!bl_hashmap_is_valid(&memoryAllocs)) {
         free(ptr);
         return;
     }
     size_t size = 0;
-    if (hashMapGet(&memoryAllocs, sizeof ptr, &ptr) == NULL) {
+    if (bl_hashmap_get(&memoryAllocs, sizeof ptr, &ptr) == NULL) {
         logCall(&freeMemDoesNotExist, line, file);
         return;
     }
     internal_memoryLogCall(&freeEvent, line, file, size, (size_t) ptr);
-    hashMapRemove(&memoryAllocs, sizeof ptr, &ptr, NULL, NULL);
+    bl_hashmap_remove(&memoryAllocs, sizeof ptr, &ptr, NULL, NULL);
     free(ptr);
 }
 
-void writeEventToLogLocations(EventCall event, StringView logLevel, size_t amountOfLocations, FILE** locations) {
+void writeEventToLogLocations(EventCall event, BL_StringView logLevel, size_t amountOfLocations, FILE** locations) {
     switch (event.type) {
     case EventNormal:
         for (size_t i = 0; i < amountOfLocations; i++)

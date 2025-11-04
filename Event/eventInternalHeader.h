@@ -30,8 +30,8 @@ typedef enum {
 
 typedef struct {
     EventType    eventType;
-    StringView  id;
-    StringView* groupIds;
+    BL_StringView  id;
+    BL_StringView* groupIds;
     Thread       callerThread;
     uint32_t     amountOfGroups;
 } EventCallMain;
@@ -56,21 +56,21 @@ typedef union {
 } EventCall;
 
 typedef struct {
-    StringView  id;
-    StringView* groupIds;
+    BL_StringView  id;
+    BL_StringView* groupIds;
     uint32_t     amountOfGroups;
 } Event;
 
 typedef struct {
     EventSubscriberType eventSubscriberType;
     uint32_t            flags;
-    void (*function)(EventCall, StringView);
+    void (*function)(EventCall, BL_StringView);
 } EventSubscriberMain;
 
 typedef struct {
     EventSubscriberType eventSubscriberType;
     uint32_t            flags;
-    void (*function)(EventCall, StringView, size_t, FILE**);
+    void (*function)(EventCall, BL_StringView, size_t, FILE**);
     FILE** outputFiles;
     size_t amountOfOutputFiles;
 } EventSubscriberLog;
@@ -82,8 +82,8 @@ typedef union {
 } EventSubscriber;
 
 typedef struct {
-    ArrayList     eventQueue;
-    HashMap eventSubscribers;
+    BL_ArrayList     eventQueue;
+    BL_Hashmap eventSubscribers;
     Thread        eventThread;
     Mutex        mutexForSubscriber;
     bool           shouldQuit;
@@ -94,9 +94,9 @@ extern void         eventSystemShutdown(void);
 // Returns true if init was successful
 extern bool         eventInitDefualtLog(const char* debugLogFile, bool outputToStdout, const char* errorLogFile, bool outputErrorsToStdErr);
 // Registers function to be called when ID is intercepeted.
-extern EventError_t eventRegSubToID(EventHandle* eventHandle, StringView ID, void (*function)(EventCall, StringView), bool shouldRunOnSeperateThread);
+extern EventError_t eventRegSubToID(EventHandle* eventHandle, BL_StringView ID, void (*function)(EventCall, BL_StringView), bool shouldRunOnSeperateThread);
 // Registers function to be called when ID is intercepted. This function also takes in an array of files when calling function.
-extern EventError_t eventRegLogSubToID(EventHandle* eventHandle, StringView ID, void (*function)(EventCall, StringView, size_t, FILE**), bool shouldRunOnSeperateThread, size_t amountOfOutputs, FILE** outputs);
+extern EventError_t eventRegLogSubToID(EventHandle* eventHandle, BL_StringView ID, void (*function)(EventCall, BL_StringView, size_t, FILE**), bool shouldRunOnSeperateThread, size_t amountOfOutputs, FILE** outputs);
 
 // Puts event in the event queue given currentThread as the caller
 extern void         eventCall(const Event* const event);
@@ -117,7 +117,7 @@ extern void  freeLogVersion(void* ptr, uint32_t line, const char* file);
 #define free(ptr)                 freeLogVersion(ptr, (uint32_t) __LINE__, __FILE__)
 #endif
 
-extern void writeEventToLogLocations(EventCall event, StringView logLevel, size_t amountOfLocations, FILE** locations);
+extern void writeEventToLogLocations(EventCall event, BL_StringView logLevel, size_t amountOfLocations, FILE** locations);
 extern void logInfoCall(const char* restrict message, uint32_t line, const char* file);
 extern void logDebugCall(const char* restrict message, uint32_t line, const char* file);
 extern void logWarnCall(const char* restrict message, uint32_t line, const char* file);

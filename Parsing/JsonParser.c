@@ -6,17 +6,17 @@
 #include <stdio.h>
 
 typedef struct Utf8Char {
-    Byte firstChar;
-    Byte secondChar;
-    Byte thirdChar;
-    Byte forthChar;
-    Byte amountOfCharsUsed;
+    BL_Byte firstChar;
+    BL_Byte secondChar;
+    BL_Byte thirdChar;
+    BL_Byte forthChar;
+    BL_Byte amountOfCharsUsed;
 } Utf8Char;
 
 static void internal_tokenStorageDestructor(void* element) {
     JsonToken* jsonElement = element;
     if (jsonElement->tokenType == JsonTokenString)
-        containerDestroy(&jsonElement->additionalData);
+        bl_container_destroy(&jsonElement->additionalData);
 }
 
 static double internal_parseNumber(const double firstDigit, FILE* file) {
@@ -91,7 +91,7 @@ static double internal_parseNumber(const double firstDigit, FILE* file) {
  * @param codepoint Unicode code point in little endian. Unused chars should be 0
  * @return Utf-8 encoding where first char is the first in the sequence
  */
-static Utf8Char internal_codePointToUTF8(Byte codepoint[3]) {
+static Utf8Char internal_codePointToUTF8(BL_Byte codepoint[3]) {
     int neededChars = 4;
     if (codepoint[2] == 0) {
         neededChars = 3;
@@ -104,20 +104,22 @@ static Utf8Char internal_codePointToUTF8(Byte codepoint[3]) {
 
     if (neededChars == 1)
         return (Utf8Char) {.firstChar = codepoint[0], .secondChar = 0, .thirdChar = 0, .forthChar = 0, .amountOfCharsUsed = 1};
-    if (neededChars == 2)
+    if (neededChars == 2) {
         return (Utf8Char) {
             .firstChar         = 0xc0 | ((codepoint[1] & 0x07) << 2) | (codepoint[0] & 0xc0) >> 6,
             .secondChar        = 0x80 | (codepoint[0] & 0x3f),
             .thirdChar         = 0,
             .forthChar         = 0,
             .amountOfCharsUsed = 2};
-    if (neededChars == 3)
+    }
+    if (neededChars == 3) {
         return (Utf8Char) {
             .firstChar         = 0xe0 | (codepoint[1] & 0xf0) >> 4,
             .secondChar        = 0x80 | (codepoint[1] & 0x0f) << 2 | (codepoint[0] & 0xc0) >> 6,
             .thirdChar         = 0x80 | (codepoint[0] & 0x3f),
             .forthChar         = 0,
             .amountOfCharsUsed = 3};
+    }
     return (Utf8Char) {
         .firstChar         = 0xf0 | (codepoint[2] & 0x1c) >> 2,
         .secondChar        = 0x80 | (codepoint[2] & 0x03) << 4 | (codepoint[1] & 0xf0) >> 4,
@@ -136,14 +138,14 @@ static Utf8Char internal_handleUnicodeEscape(FILE* file) {
     if (!isxdigit(firstChar) || !isxdigit(secondChar) || !isxdigit(thirdChar) || !isxdigit(fourthChar))
         return (Utf8Char) {0};
 
-    Byte codepoint[2];
+    BL_Byte codepoint[2];
 
     codepoint[0] = strtoul((char[3]) {(char) firstChar, (char) secondChar, '\0'}, NULL, 16);
     codepoint[1] = strtoul((char[3]) {(char) thirdChar, (char) fourthChar, '\0'}, NULL, 16);
 
     if ((codepoint[0] & 0xfc) == 0xd8) {
-        Byte codepointSecondPart[2];
-        Byte unicodePoint[3];
+        BL_Byte codepointSecondPart[2];
+        BL_Byte unicodePoint[3];
         if (fgetc(file) != '\\')
             return (Utf8Char) {0};
         if (fgetc(file) != 'u')
@@ -168,87 +170,87 @@ static Utf8Char internal_handleUnicodeEscape(FILE* file) {
         unicodePoint[2]++;
         return internal_codePointToUTF8(unicodePoint);
     }
-    return internal_codePointToUTF8((Byte[3]) {codepoint[1], codepoint[0], 0});
+    return internal_codePointToUTF8((BL_Byte[3]) {codepoint[1], codepoint[0], 0});
 }
 
-static String internal_parseUTF8String(FILE* file) {
-    String string = containerDynamicCreateStack(0, sizeof(char), false);
-    if (!isValidObject(&string.header))
+static BL_String internal_parseUTF8String(FILE* file) {
+    BL_String string = bl_container_dynamic_create_stack(0, sizeof(char));
+    if (!bl_container_dynamic_is_valid(&string))
         return string;
 
     while (1) {
-        Byte currentChar = (Byte) fgetc(file);
+        BL_Byte currentChar = (BL_Byte) fgetc(file);
         if (feof(file)) {
-            containerDestroy(&string);
+            bl_container_destroy(&string);
             return string;
         }
 
         if (currentChar == '\"') {
-            if (containerDynamicAppend(&string, sizeof(Byte), &(Byte) {'\0'}) != ContainerOPSuccessful)
-                containerDestroy(&string);
+            if (bl_container_dynamic_append(&string, sizeof(BL_Byte), &(BL_Byte) {'\0'}) != BL_ContainerOPSuccessful)
+                bl_container_destroy(&string);
             return string;
         }
 
         if (currentChar == '\\') {
             int escapedChar = fgetc(file);
             if (feof(file)) {
-                containerDestroy(&string);
+                bl_container_destroy(&string);
                 return string;
             }
-            ContainerError insertionError = ContainerOPSuccessful;
+            BL_ContainerError insertionError = BL_ContainerOPSuccessful;
             if (escapedChar == 'r')
-                insertionError = containerDynamicAppend(&string, sizeof(Byte), &(Byte) {'\r'});
+                insertionError = bl_container_dynamic_append(&string, sizeof(BL_Byte), &(BL_Byte) {'\r'});
             else if (escapedChar == 'n')
-                insertionError = containerDynamicAppend(&string, sizeof(Byte), &(Byte) {'\n'});
+                insertionError = bl_container_dynamic_append(&string, sizeof(BL_Byte), &(BL_Byte) {'\n'});
             else if (escapedChar == '\"')
-                insertionError = containerDynamicAppend(&string, sizeof(Byte), &(Byte) {'\"'});
+                insertionError = bl_container_dynamic_append(&string, sizeof(BL_Byte), &(BL_Byte) {'\"'});
             else if (escapedChar == '/')
-                insertionError = containerDynamicAppend(&string, sizeof(Byte), &(Byte) {'/'});
+                insertionError = bl_container_dynamic_append(&string, sizeof(BL_Byte), &(BL_Byte) {'/'});
             else if (escapedChar == 'b')
-                insertionError = containerDynamicAppend(&string, sizeof(Byte), &(Byte) {'\b'});
+                insertionError = bl_container_dynamic_append(&string, sizeof(BL_Byte), &(BL_Byte) {'\b'});
             else if (escapedChar == 't')
-                insertionError = containerDynamicAppend(&string, sizeof(Byte), &(Byte) {'\t'});
+                insertionError = bl_container_dynamic_append(&string, sizeof(BL_Byte), &(BL_Byte) {'\t'});
             else if (escapedChar == 'f')
-                insertionError = containerDynamicAppend(&string, sizeof(Byte), &(Byte) {'\f'});
+                insertionError = bl_container_dynamic_append(&string, sizeof(BL_Byte), &(BL_Byte) {'\f'});
             else if (escapedChar == '\\')
-                insertionError = containerDynamicAppend(&string, sizeof(Byte), &(Byte) {'\\'});
+                insertionError = bl_container_dynamic_append(&string, sizeof(BL_Byte), &(BL_Byte) {'\\'});
             else if (escapedChar == 'u') {
                 Utf8Char charToInsert = internal_handleUnicodeEscape(file);
-                if (charToInsert.amountOfCharsUsed)
-                    insertionError = containerDynamicInsert(&string,
-                                                            containerSize(&string.container),
-                                                            charToInsert.amountOfCharsUsed,
-                                                            sizeof(Byte),
-                                                            &charToInsert);
-                else
-                    insertionError = ContainerOPUnsuccessful;
+                if (charToInsert.amountOfCharsUsed) {
+                    insertionError = bl_container_dynamic_insert(&string,
+                                                                 bl_container_size(&string.container),
+                                                                 charToInsert.amountOfCharsUsed,
+                                                                 sizeof(BL_Byte),
+                                                                 &charToInsert);
+                } else
+                    insertionError = BL_ContainerOPUnsuccessful;
             } else {
-                containerDestroy(&string);
+                bl_container_destroy(&string);
                 return string;
             }
 
-            if (insertionError != ContainerOPSuccessful) {
-                containerDestroy(&string);
+            if (insertionError != BL_ContainerOPSuccessful) {
+                bl_container_destroy(&string);
                 return string;
             }
             continue;
         }
 
-        if (containerDynamicAppend(&string, sizeof(Byte), &(Byte) {currentChar}) != ContainerOPSuccessful) {
-            containerDestroy(&string);
+        if (bl_container_dynamic_append(&string, sizeof(BL_Byte), &(BL_Byte) {currentChar}) != BL_ContainerOPSuccessful) {
+            bl_container_destroy(&string);
             return string;
         }
     }
 }
 
 JsonTokenStore jsonTokenizeFile(FILE* file) {
-    JsonTokenStore tokenStorage = {.dynamicContainer = containerDynamicCreateStack(0, sizeof(JsonToken), false), .maxDepth = 0};
-    if (!isValidObject(&tokenStorage.dynamicContainer.header))
+    JsonTokenStore tokenStorage = {.dynamicContainer = bl_container_dynamic_create_stack(0, sizeof(JsonToken)), .maxDepth = 0};
+    if (!bl_container_dynamic_is_valid(&tokenStorage.dynamicContainer))
         return tokenStorage;
     size_t depthCount = 0;
 
     while (1) {
-        Byte currentChar = (Byte) fgetc(file);
+        BL_Byte currentChar = (BL_Byte) fgetc(file);
         if (feof(file))
             goto ErrorExit;
 
@@ -256,37 +258,37 @@ JsonTokenStore jsonTokenizeFile(FILE* file) {
             continue;
 
         if (currentChar == ',') {
-            if (containerDynamicAppend(&tokenStorage.dynamicContainer, sizeof(JsonTokenType), &(JsonTokenType) {JsonTokenComma}) != ContainerOPSuccessful)
+            if (bl_container_dynamic_append(&tokenStorage.dynamicContainer, sizeof(JsonTokenType), &(JsonTokenType) {JsonTokenComma}) != BL_ContainerOPSuccessful)
                 goto ErrorExit;
             continue;
         }
         if (currentChar == ':') {
-            if (containerDynamicAppend(&tokenStorage.dynamicContainer, sizeof(JsonTokenType), &(JsonTokenType) {JsonTokenColon}) != ContainerOPSuccessful)
+            if (bl_container_dynamic_append(&tokenStorage.dynamicContainer, sizeof(JsonTokenType), &(JsonTokenType) {JsonTokenColon}) != BL_ContainerOPSuccessful)
                 goto ErrorExit;
             continue;
         }
         if (currentChar == '{') {
-            if (containerDynamicAppend(&tokenStorage.dynamicContainer, sizeof(JsonTokenType), &(JsonTokenType) {JsonTokenOpenCurlyBracket}) != ContainerOPSuccessful)
+            if (bl_container_dynamic_append(&tokenStorage.dynamicContainer, sizeof(JsonTokenType), &(JsonTokenType) {JsonTokenOpenCurlyBracket}) != BL_ContainerOPSuccessful)
                 goto ErrorExit;
             if (++depthCount > tokenStorage.maxDepth)
                 tokenStorage.maxDepth = depthCount;
             continue;
         }
         if (currentChar == '[') {
-            if (containerDynamicAppend(&tokenStorage.dynamicContainer, sizeof(JsonTokenType), &(JsonTokenType) {JsonTokenOpenBracket}) != ContainerOPSuccessful)
+            if (bl_container_dynamic_append(&tokenStorage.dynamicContainer, sizeof(JsonTokenType), &(JsonTokenType) {JsonTokenOpenBracket}) != BL_ContainerOPSuccessful)
                 goto ErrorExit;
             if (++depthCount > tokenStorage.maxDepth)
                 tokenStorage.maxDepth = depthCount;
             continue;
         }
         if (currentChar == ']') {
-            if (containerDynamicAppend(&tokenStorage.dynamicContainer, sizeof(JsonTokenType), &(JsonTokenType) {JsonTokenCloseBracket}) != ContainerOPSuccessful)
+            if (bl_container_dynamic_append(&tokenStorage.dynamicContainer, sizeof(JsonTokenType), &(JsonTokenType) {JsonTokenCloseBracket}) != BL_ContainerOPSuccessful)
                 goto ErrorExit;
             depthCount--;
             continue;
         }
         if (currentChar == '}') {
-            if (containerDynamicAppend(&tokenStorage.dynamicContainer, sizeof(JsonTokenType), &(JsonTokenType) {JsonTokenCloseCurlyBracket}) != ContainerOPSuccessful)
+            if (bl_container_dynamic_append(&tokenStorage.dynamicContainer, sizeof(JsonTokenType), &(JsonTokenType) {JsonTokenCloseCurlyBracket}) != BL_ContainerOPSuccessful)
                 goto ErrorExit;
             if (--depthCount == 0)
                 return tokenStorage;
@@ -294,10 +296,10 @@ JsonTokenStore jsonTokenizeFile(FILE* file) {
         }
 
         if (currentChar == '\"') {
-            String string = internal_parseUTF8String(file);
-            if (!isValidObject(&string.header))
+            BL_String string = internal_parseUTF8String(file);
+            if (!bl_container_dynamic_is_valid(&string))
                 goto ErrorExit;
-            if (containerDynamicAppend(&tokenStorage.dynamicContainer,
+            if (bl_container_dynamic_append(&tokenStorage.dynamicContainer,
                                        sizeof(JsonToken),
                                        &(JsonToken) {.tokenType      = JsonTokenString,
                                                      .additionalData = (JsonMemberValue) {.string = string}}))
@@ -309,7 +311,7 @@ JsonTokenStore jsonTokenizeFile(FILE* file) {
             double number = internal_parseNumber(currentChar == '-' ? INFINITY : (double) (currentChar - '0'), file);
             if (number == NAN)
                 goto ErrorExit;
-            if (containerDynamicAppend(&tokenStorage.dynamicContainer,
+            if (bl_container_dynamic_append(&tokenStorage.dynamicContainer,
                                        sizeof(JsonToken),
                                        &(JsonToken) {.tokenType      = JsonTokenNumber,
                                                      .additionalData = (JsonMemberValue) {.number = number}}))
@@ -327,9 +329,9 @@ JsonTokenStore jsonTokenizeFile(FILE* file) {
                 goto ErrorExit;
             if ('e' != fgetc(file))
                 goto ErrorExit;
-            if (containerDynamicAppend(&tokenStorage.dynamicContainer,
+            if (bl_container_dynamic_append(&tokenStorage.dynamicContainer,
                                        sizeof(JsonToken),
-                                       &(JsonToken) {.tokenType = JsonTokenBool, .additionalData = (JsonMemberValue) {.boolean = false}}) != ContainerOPSuccessful)
+                                       &(JsonToken) {.tokenType = JsonTokenBool, .additionalData = (JsonMemberValue) {.boolean = false}}) != BL_ContainerOPSuccessful)
                 goto ErrorExit;
         } else if (currentChar == 't') {
             if ('r' != fgetc(file))
@@ -338,9 +340,9 @@ JsonTokenStore jsonTokenizeFile(FILE* file) {
                 goto ErrorExit;
             if ('e' != fgetc(file))
                 goto ErrorExit;
-            if (containerDynamicAppend(&tokenStorage.dynamicContainer,
+            if (bl_container_dynamic_append(&tokenStorage.dynamicContainer,
                                        sizeof(JsonToken),
-                                       &(JsonToken) {.tokenType = JsonTokenBool, .additionalData = (JsonMemberValue) {.boolean = true}}) != ContainerOPSuccessful)
+                                       &(JsonToken) {.tokenType = JsonTokenBool, .additionalData = (JsonMemberValue) {.boolean = true}}) != BL_ContainerOPSuccessful)
                 goto ErrorExit;
         } else if (currentChar == 'n') {
             if ('u' != fgetc(file))
@@ -349,7 +351,7 @@ JsonTokenStore jsonTokenizeFile(FILE* file) {
                 goto ErrorExit;
             if ('l' != fgetc(file))
                 goto ErrorExit;
-            if (containerDynamicAppend(&tokenStorage.dynamicContainer, sizeof(JsonTokenType), &(JsonTokenType) {JsonTokenNull}) != ContainerOPSuccessful)
+            if (bl_container_dynamic_append(&tokenStorage.dynamicContainer, sizeof(JsonTokenType), &(JsonTokenType) {JsonTokenNull}) != BL_ContainerOPSuccessful)
                 goto ErrorExit;
         } else
             goto ErrorExit;
@@ -357,21 +359,21 @@ JsonTokenStore jsonTokenizeFile(FILE* file) {
 
 
 ErrorExit:
-    containerDynamicDestroyWithElements(&tokenStorage.dynamicContainer, internal_tokenStorageDestructor);
+    bl_container_dynamic_destroy_with_elements(&tokenStorage.dynamicContainer, internal_tokenStorageDestructor);
     return tokenStorage;
 }
 
 JsonObject jsonReadFile(FILE* file) {
     typedef struct {
         bool              isArrayScope;
-        DynamicContainer* scope;
+        BL_DynamicContainer* scope;
     } JsonStackEntry;
     JsonTokenStore tokens = jsonTokenizeFile(file);
-    if (!isValidObject(&tokens.dynamicContainer.header))
+    if (!bl_container_dynamic_is_valid(&tokens.dynamicContainer))
         return (JsonObject) {0};
 
-    Container jsonObjectStack = containerCreateStack(tokens.maxDepth, sizeof(JsonStackEntry), false);
-    if (!isValidObject(&jsonObjectStack.header)) {
+    BL_Container jsonObjectStack = bl_container_create_stack(tokens.maxDepth, sizeof(JsonStackEntry));
+    if (!bl_container_is_valid(&jsonObjectStack)) {
         internal_tokenStorageDestructor(&tokens);
         return (JsonObject) {0};
     }
@@ -383,55 +385,55 @@ JsonObject jsonReadFile(FILE* file) {
     JsonObjectMember currentWorkingMember = {0};
     JsonStackEntry   currentScope         = {0};
 
-    for (JsonToken* currentToken = containerDynamicFront(&tokens.dynamicContainer); currentToken < (JsonToken*) containerDynamicEnd(&tokens.dynamicContainer); currentToken++) {
+    for (JsonToken* currentToken = bl_container_dynamic_front(&tokens.dynamicContainer); currentToken < (JsonToken*) bl_container_dynamic_end(&tokens.dynamicContainer); currentToken++) {
         switch (currentToken->tokenType) {
         case JsonTokenOpenCurlyBracket:
             if (!expectingValue || expectingColon || expectingIdentifier)
                 goto ErrorExit;
             expectingValue           = false;
             expectingIdentifier      = true;
-            JsonObject currentObject = containerDynamicCreateStack(0, sizeof(JsonObjectMember), false);
-            if (!isValidObject((DataTypeFlags*) &currentObject))
+            JsonObject currentObject = bl_container_dynamic_create_stack(0, sizeof(JsonObjectMember));
+            if (!bl_container_dynamic_is_valid(&currentObject))
                 goto ErrorExit;
             if (!stackPointer) {
                 returnObject = currentObject;
                 currentScope = (JsonStackEntry) {.isArrayScope = false, .scope = &returnObject};
             } else if (currentScope.isArrayScope) {
-                if (containerDynamicAppend(currentScope.scope,
+                if (bl_container_dynamic_append(currentScope.scope,
                                            sizeof(JsonArrayMember),
                                            &(JsonArrayMember) {.valueType = JsonTypeObject,
-                                                               .value     = (JsonMemberValue) {.object = currentObject}}) != ContainerOPSuccessful)
+                                                               .value     = (JsonMemberValue) {.object = currentObject}}) != BL_ContainerOPSuccessful)
                     goto ErrorExit;
-                currentScope = (JsonStackEntry) {.isArrayScope = false, .scope = &((JsonArrayMember*) containerDynamicBack(currentScope.scope))->value.object};
+                currentScope = (JsonStackEntry) {.isArrayScope = false, .scope = &((JsonArrayMember*) bl_container_dynamic_back(currentScope.scope))->value.object};
             } else {
                 currentWorkingMember.value.object = currentObject;
                 currentWorkingMember.valueType    = JsonTypeObject;
-                if (containerDynamicAppend(currentScope.scope, sizeof currentWorkingMember, &currentWorkingMember) != ContainerOPSuccessful)
+                if (bl_container_dynamic_append(currentScope.scope, sizeof currentWorkingMember, &currentWorkingMember) != BL_ContainerOPSuccessful)
                     goto ErrorExit;
-                currentScope = (JsonStackEntry) {.isArrayScope = false, .scope = &((JsonObjectMember*) containerDynamicBack(currentScope.scope))->value.object};
+                currentScope = (JsonStackEntry) {.isArrayScope = false, .scope = &((JsonObjectMember*) bl_container_dynamic_back(currentScope.scope))->value.object};
             }
-            containerSet(&jsonObjectStack, stackPointer, sizeof currentScope, &currentScope);
+            bl_container_set(&jsonObjectStack, stackPointer, sizeof currentScope, &currentScope);
             stackPointer++;
             break;
         case JsonTokenOpenBracket:
             if (!stackPointer || !expectingValue || expectingColon || expectingIdentifier)
                 goto ErrorExit;
-            JsonArray newArray = containerDynamicCreateStack(0, sizeof(JsonArrayMember), false);
+            JsonArray newArray = bl_container_dynamic_create_stack(0, sizeof(JsonArrayMember));
             if (currentScope.isArrayScope) {
-                if (containerDynamicAppend(currentScope.scope,
+                if (bl_container_dynamic_append(currentScope.scope,
                                            sizeof(JsonArrayMember),
                                            &(JsonArrayMember) {.valueType = JsonTypeArray,
-                                                               .value     = (JsonMemberValue) {.array = newArray}}) != ContainerOPSuccessful)
+                                                               .value     = (JsonMemberValue) {.array = newArray}}) != BL_ContainerOPSuccessful)
                     goto ErrorExit;
-                currentScope = (JsonStackEntry) {.isArrayScope = true, .scope = &((JsonArrayMember*) containerDynamicBack(currentScope.scope))->value.array};
+                currentScope = (JsonStackEntry) {.isArrayScope = true, .scope = &((JsonArrayMember*) bl_container_dynamic_back(currentScope.scope))->value.array};
             } else {
                 currentWorkingMember.value.array = newArray;
                 currentWorkingMember.valueType   = JsonTypeArray;
-                if (containerDynamicAppend(currentScope.scope, sizeof currentWorkingMember, &currentWorkingMember) != ContainerOPSuccessful)
+                if (bl_container_dynamic_append(currentScope.scope, sizeof currentWorkingMember, &currentWorkingMember) != BL_ContainerOPSuccessful)
                     goto ErrorExit;
-                currentScope = (JsonStackEntry) {.isArrayScope = true, .scope = &((JsonObjectMember*) containerDynamicBack(currentScope.scope))->value.array};
+                currentScope = (JsonStackEntry) {.isArrayScope = true, .scope = &((JsonObjectMember*) bl_container_dynamic_back(currentScope.scope))->value.array};
             }
-            containerSet(&jsonObjectStack, stackPointer, sizeof currentScope, &currentScope);
+            bl_container_set(&jsonObjectStack, stackPointer, sizeof currentScope, &currentScope);
             stackPointer++;
             break;
 
@@ -453,23 +455,23 @@ JsonObject jsonReadFile(FILE* file) {
             if (expectingValue || expectingIdentifier || expectingColon || !stackPointer || currentScope.isArrayScope)
                 goto ErrorExit;
             stackPointer--;
-            heapSort((Container*)currentScope.scope,stringCompareAcending);
+            bl_sort_heap((BL_Container*)currentScope.scope,bl_string_compare_acending);
             if (stackPointer)
-                currentScope = *(JsonStackEntry*) containerGet(&jsonObjectStack, stackPointer - 1);
+                currentScope = *(JsonStackEntry*) bl_container_get(&jsonObjectStack, stackPointer - 1);
             break;
         case JsonTokenCloseBracket:
             if (expectingValue || expectingIdentifier || expectingColon || !stackPointer || !currentScope.isArrayScope)
                 goto ErrorExit;
             stackPointer--;
             if (stackPointer)
-                currentScope = *(JsonStackEntry*) containerGet(&jsonObjectStack, stackPointer - 1);
+                currentScope = *(JsonStackEntry*) bl_container_get(&jsonObjectStack, stackPointer - 1);
             break;
         case JsonTokenString:
             if (expectingColon || !stackPointer)
                 goto ErrorExit;
             if (expectingIdentifier) {
                 currentWorkingMember.identifier            = currentToken->additionalData.string;
-                currentToken->additionalData.string.header = 0; // Must invalidate, otherwise double free might happen at error.
+                currentToken->additionalData.string.container.header = 0; // Must invalidate, otherwise double free might happen at error.
                 expectingColon                             = true;
                 expectingIdentifier                        = false;
                 continue;
@@ -478,15 +480,15 @@ JsonObject jsonReadFile(FILE* file) {
                 goto ErrorExit;
 
             if (currentScope.isArrayScope) {
-                if (containerDynamicAppend(currentScope.scope, sizeof(JsonArrayMember), &(JsonArrayMember) {.valueType = JsonTypeString, .value = currentToken->additionalData}) != ContainerOPSuccessful)
+                if (bl_container_dynamic_append(currentScope.scope, sizeof(JsonArrayMember), &(JsonArrayMember) {.valueType = JsonTypeString, .value = currentToken->additionalData}) != BL_ContainerOPSuccessful)
                     goto ErrorExit;
             } else {
                 currentWorkingMember.value     = currentToken->additionalData;
                 currentWorkingMember.valueType = JsonTypeString;
-                if (containerDynamicAppend(currentScope.scope, sizeof currentWorkingMember, &currentWorkingMember) != ContainerOPSuccessful)
+                if (bl_container_dynamic_append(currentScope.scope, sizeof currentWorkingMember, &currentWorkingMember) != BL_ContainerOPSuccessful)
                     goto ErrorExit;
             }
-            currentToken->additionalData.string.header = 0; // Same here, otherwise double free might occur.
+            currentToken->additionalData.string.container.header = 0; // Same here, otherwise double free might occur.
             expectingValue                             = false;
             break;
         case JsonTokenBool:
@@ -494,12 +496,12 @@ JsonObject jsonReadFile(FILE* file) {
                 goto ErrorExit;
 
             if (currentScope.isArrayScope) {
-                if (containerDynamicAppend(currentScope.scope, sizeof(JsonArrayMember), &(JsonArrayMember) {.valueType = JsonTypeBoolean, .value = currentToken->additionalData}) != ContainerOPSuccessful)
+                if (bl_container_dynamic_append(currentScope.scope, sizeof(JsonArrayMember), &(JsonArrayMember) {.valueType = JsonTypeBoolean, .value = currentToken->additionalData}) != BL_ContainerOPSuccessful)
                     goto ErrorExit;
             } else {
                 currentWorkingMember.value     = currentToken->additionalData;
                 currentWorkingMember.valueType = JsonTypeBoolean;
-                if (containerDynamicAppend(currentScope.scope, sizeof currentWorkingMember, &currentWorkingMember) != ContainerOPSuccessful)
+                if (bl_container_dynamic_append(currentScope.scope, sizeof currentWorkingMember, &currentWorkingMember) != BL_ContainerOPSuccessful)
                     goto ErrorExit;
             }
             expectingValue = false;
@@ -509,11 +511,11 @@ JsonObject jsonReadFile(FILE* file) {
                 goto ErrorExit;
 
             if (currentScope.isArrayScope) {
-                if (containerDynamicAppend(currentScope.scope, sizeof(JsonArrayMember), &(JsonArrayMember) {.valueType = JsonTypeNull}) != ContainerOPSuccessful)
+                if (bl_container_dynamic_append(currentScope.scope, sizeof(JsonArrayMember), &(JsonArrayMember) {.valueType = JsonTypeNull}) != BL_ContainerOPSuccessful)
                     goto ErrorExit;
             } else {
                 currentWorkingMember.valueType = JsonTypeNull;
-                if (containerDynamicAppend(currentScope.scope, sizeof currentWorkingMember, &currentWorkingMember) != ContainerOPSuccessful)
+                if (bl_container_dynamic_append(currentScope.scope, sizeof currentWorkingMember, &currentWorkingMember) != BL_ContainerOPSuccessful)
                     goto ErrorExit;
             }
             expectingValue = false;
@@ -524,12 +526,12 @@ JsonObject jsonReadFile(FILE* file) {
                 goto ErrorExit;
 
             if (currentScope.isArrayScope) {
-                if (containerDynamicAppend(currentScope.scope, sizeof(JsonArrayMember), &(JsonArrayMember) {.valueType = JsonTypeNumber, .value = currentToken->additionalData}) != ContainerOPSuccessful)
+                if (bl_container_dynamic_append(currentScope.scope, sizeof(JsonArrayMember), &(JsonArrayMember) {.valueType = JsonTypeNumber, .value = currentToken->additionalData}) != BL_ContainerOPSuccessful)
                     goto ErrorExit;
             } else {
                 currentWorkingMember.value     = currentToken->additionalData;
                 currentWorkingMember.valueType = JsonTypeNumber;
-                if (containerDynamicAppend(currentScope.scope, sizeof currentWorkingMember, &currentWorkingMember) != ContainerOPSuccessful)
+                if (bl_container_dynamic_append(currentScope.scope, sizeof currentWorkingMember, &currentWorkingMember) != BL_ContainerOPSuccessful)
                     goto ErrorExit;
             }
             expectingValue = false;
@@ -542,16 +544,16 @@ JsonObject jsonReadFile(FILE* file) {
             goto ErrorExit;
         }
     }
-    containerDestroy(&tokens);
-    containerDestroy(&jsonObjectStack);
+    bl_container_destroy(&tokens);
+    bl_container_destroy(&jsonObjectStack);
     return returnObject;
 
 ErrorExit:
     eventCall(&JsonFileIllFormated);
     internal_tokenStorageDestructor(&tokens);
-    containerDestroy(&jsonObjectStack);
+    bl_container_destroy(&jsonObjectStack);
     jsonObjectDestroy(&returnObject);
-    containerDestroy(&currentWorkingMember.identifier);
+    bl_container_destroy(&currentWorkingMember.identifier);
     return (JsonObject) {0};
 }
 
@@ -563,5 +565,5 @@ void jsonReadFileThread(void* sharedState) {
 }
 
 FutureJsonObject* jsonReadFileAsync(ThreadPool* threadPool, size_t priority, FILE* file) {
-    return threadPoolJobAssign(threadPool,priority,jsonReadFileThread,asyncArgsFutureOffset(JsonReadFilePack),&file,sizeof(FILE*),asyncArgsOffset(JsonReadFilePack));
+    return bl_threadpool_job_assign(threadPool,priority,jsonReadFileThread,asyncArgsFutureOffset(JsonReadFilePack),&file,sizeof(FILE*),asyncArgsOffset(JsonReadFilePack));
 }

@@ -9,81 +9,80 @@
 #include <uchar.h>
 #include <wchar.h>
 
-String stringCreate(const unsigned char* string, size_t length) {
-    String allocatedString = containerDynamicCreateStack(length + 1, sizeof(char), false);
+BL_String bl_string_create(const unsigned char* string, size_t length) {
+    BL_String allocatedString = bl_container_dynamic_create_stack(length + 1, sizeof(char));
 
-    if (!isValidObject(&allocatedString.header))
+    if (!bl_container_dynamic_is_valid(&allocatedString))
         return allocatedString;
 
     memcpy(allocatedString.container.array, string, length);
     allocatedString.container.amountOfIndexes = length;
-    containerDynamicAppend(&allocatedString, sizeof (char),&(char){'\0'});
+    bl_container_dynamic_append(&allocatedString, sizeof (char),&(char){'\0'});
     return allocatedString;
 }
 
-size_t     stringLength(StringView* string) {
-    const size_t stringSize = containerSize((Container*) string);
-    return stringSize ? stringSize - 1 : 0;
+size_t     bl_string_length(BL_StringView* string) {
+    return string->amountOfIndexes - 1; // Strings always have atleast len 1.
 }
 
-inline unsigned char* stringGetChar(StringView* string, size_t index) {
-    return containerGet((const Container*) string, index);
+inline unsigned char* bl_string_get_char(BL_StringView* string, size_t index) {
+    return bl_container_get(&string->container, index);
 }
 
-ContainerError stringAppendCString(String* destString, const unsigned char* stringToInsert, size_t length) {
-    return containerDynamicInsert(destString, stringLength((StringView*)(Container*)destString), length, sizeof(*stringToInsert), stringToInsert);
+BL_ContainerError bl_string_append_cstring(BL_String* destString, const unsigned char* stringToInsert, size_t length) {
+    return bl_container_dynamic_insert(destString, bl_string_length(bl_stringview_ptr_cast(destString)), length, sizeof(*stringToInsert), stringToInsert);
 }
 
-ContainerError stringInsertSubCString(String* destString, const unsigned char* other, const size_t lenOfOther, const size_t firstIndex) {
-    return containerDynamicInsert(destString, firstIndex, lenOfOther, sizeof(*other), other);
+BL_ContainerError bl_string_insert_cstring(BL_String* destString, const unsigned char* other, const size_t lenOfOther, const size_t firstIndex) {
+    return bl_container_dynamic_insert(destString, firstIndex, lenOfOther, sizeof(*other), other);
 }
 
-ContainerError stringAppendString(String* destString, const String* stringToInsert) {
-    ContainerError errorCode = containerDynamicInsertContainer(destString, stringLength((StringView*)(Container*)destString), (Container*) stringToInsert);
-    if (errorCode != ContainerOPSuccessful)
+BL_ContainerError bl_string_append_string(BL_String* destString, const BL_StringView* stringToInsert) {
+    BL_ContainerError errorCode = bl_container_dynamic_insert_container(destString, bl_string_length(bl_stringview_ptr_cast(destString)),&stringToInsert->container);
+    if (errorCode != BL_ContainerOPSuccessful)
         return errorCode;
-    containerDynamicPop(destString);
-    return ContainerOPSuccessful;
+    bl_container_dynamic_pop(destString);
+    return BL_ContainerOPSuccessful;
 }
 
-String stringStrip(const String* string, unsigned char charToStrip, bool stripFromBack, uint64_t amountToStrip) {
+BL_String bl_string_strip(const BL_String* string, unsigned char charToStrip, bool stripFromBack, uint64_t amountToStrip) {
     if (string->container.byteSizeOfSingleElement != sizeof charToStrip) {
-        String returnString = {0};
+        BL_String returnString = {0};
         return returnString;
     }
-    String returnString = containerDynamicCreateStack(string->container.amountOfIndexes, sizeof(char), false);
-    if (!isValidObject(&returnString.header))
+    BL_String returnString = bl_container_dynamic_create_stack(string->container.amountOfIndexes, sizeof(char));
+    if (!bl_container_dynamic_is_valid(&returnString))
         return returnString;
 
     size_t amountStripped = 0;
-    for (size_t iterator = 0; iterator < stringLength((StringView*)(Container*)string); iterator++) {
-        unsigned char* currentChar = stringGetChar((StringView*)(Container*)string, (stripFromBack ? stringLength((StringView*)(Container*)string) - 1 - iterator : iterator));
+    for (size_t iterator = 0; iterator < bl_string_length((BL_StringView*)(BL_Container*)string); iterator++) {
+        unsigned char* currentChar = bl_string_get_char((BL_StringView*)(BL_Container*)string, (stripFromBack ? bl_string_length((BL_StringView*)(BL_Container*)string) - 1 - iterator : iterator));
         if ((*currentChar != charToStrip) || (amountToStrip && (amountStripped >= amountToStrip)))
-            containerDynamicAppend(&returnString, sizeof(*currentChar), currentChar);
+            bl_container_dynamic_append(&returnString, sizeof(*currentChar), currentChar);
         else
             amountStripped++;
     }
     if (stripFromBack)
-        containerReverse(&returnString.container);
-    containerDynamicAppend(&returnString,sizeof(char),&(char){'\0'});
+        bl_container_reverse(&returnString.container);
+    bl_container_dynamic_append(&returnString,sizeof(char),&(char){'\0'});
     return returnString;
 }
 
-DynamicContainer stringSplit(const StringView* string, unsigned char charToSplitOn, bool splitFromBack, uint64_t amountOfCharsToSplitAt) {
-    return stringSplitMulti(string,&charToSplitOn,1,splitFromBack,amountOfCharsToSplitAt);
+BL_DynamicContainer bl_string_split(const BL_StringView* string, unsigned char charToSplitOn, bool splitFromBack, uint64_t amountOfCharsToSplitAt) {
+    return bl_string_split_multi(string,&charToSplitOn,1,splitFromBack,amountOfCharsToSplitAt);
 }
 
-DynamicContainer stringSplitMulti(const StringView* string, const unsigned char* charsToSplitOn, size_t amountOfChars, bool splitFromBack, uint64_t amountOfCharsToSplitAt) {
-    DynamicContainer stringArray = containerDynamicCreateStack(0,sizeof(String),false);
+BL_DynamicContainer bl_string_split_multi(const BL_StringView* string, const unsigned char* charsToSplitOn, size_t amountOfChars, bool splitFromBack, uint64_t amountOfCharsToSplitAt) {
+    BL_DynamicContainer stringArray = bl_container_dynamic_create_stack(0,sizeof(BL_String));
     bool charsToSplit[256] = {0};
     for (size_t i = 0; i < amountOfChars; i++)
         charsToSplit[charsToSplitOn[i]] = true;
 
-    size_t amountSplit = 0, beginOfSubString = splitFromBack ? stringLength(string) - 1 : 0;
+    size_t amountSplit = 0, beginOfSubString = splitFromBack ? bl_string_length(string) - 1 : 0;
 
-    for (size_t i = 0; i < stringLength(string); i++) {
-        size_t currentIndexInString = splitFromBack ? stringLength(string) - 1 - i : i;
-        unsigned char currentChar = *stringGetChar(string, currentIndexInString);
+    for (size_t i = 0; i < bl_string_length(string); i++) {
+        size_t currentIndexInString = splitFromBack ? bl_string_length(string) - 1 - i : i;
+        unsigned char currentChar = *bl_string_get_char(string, currentIndexInString);
         if (!charsToSplit[currentChar])
             continue;
 
@@ -92,18 +91,18 @@ DynamicContainer stringSplitMulti(const StringView* string, const unsigned char*
             continue;
         }
 
-        String subString = stringCreate(
-            stringGetChar(string,splitFromBack ? currentIndexInString + 1 : beginOfSubString),
+        BL_String subString = bl_string_create(
+            bl_string_get_char(string,splitFromBack ? currentIndexInString + 1 : beginOfSubString),
             splitFromBack ? beginOfSubString - currentIndexInString : currentIndexInString - beginOfSubString);
 
-        if (!isValidObject((DataTypeFlags*)&subString)) {
-            containerDynamicDestroyWithElements(&stringArray,containerDestroy);
+        if (!bl_container_dynamic_is_valid(&subString)) {
+            bl_container_dynamic_destroy_with_elements(&stringArray,bl_container_destroy);
             return stringArray;
         }
 
-        if (containerDynamicAppend(&stringArray,sizeof subString, &subString) != ContainerOPSuccessful) {
-            containerDestroy(&subString);
-            containerDynamicDestroyWithElements(&stringArray,containerDestroy);
+        if (bl_container_dynamic_append(&stringArray,sizeof subString, &subString) != BL_ContainerOPSuccessful) {
+            bl_container_destroy(&subString);
+            bl_container_dynamic_destroy_with_elements(&stringArray,bl_container_destroy);
             return stringArray;
         }
 
@@ -113,56 +112,56 @@ DynamicContainer stringSplitMulti(const StringView* string, const unsigned char*
             break;
     }
 
-    if ((splitFromBack && beginOfSubString != SIZE_MAX) || (!splitFromBack && beginOfSubString != stringLength(string))) {
-        String subString;
+    if ((splitFromBack && beginOfSubString != SIZE_MAX) || (!splitFromBack && beginOfSubString != bl_string_length(string))) {
+        BL_String subString;
         if (splitFromBack)
-            subString = stringCreate(stringGetChar(string,0),beginOfSubString + 1);
+            subString = bl_string_create(bl_string_get_char(string,0),beginOfSubString + 1);
         else
-            subString = stringCreate(stringGetChar(string,beginOfSubString),stringLength(string) - beginOfSubString);
-        if (!isValidObject((DataTypeFlags*)&subString)) {
-            containerDynamicDestroyWithElements(&stringArray,containerDestroy);
+            subString = bl_string_create(bl_string_get_char(string,beginOfSubString),bl_string_length(string) - beginOfSubString);
+        if (!bl_container_dynamic_is_valid(&subString)) {
+            bl_container_dynamic_destroy_with_elements(&stringArray,bl_container_destroy);
             return stringArray;
         }
 
-        if (containerDynamicAppend(&stringArray,sizeof subString, &subString) != ContainerOPSuccessful) {
-            containerDestroy(&subString);
-            containerDynamicDestroyWithElements(&stringArray,containerDestroy);
+        if (bl_container_dynamic_append(&stringArray,sizeof subString, &subString) != BL_ContainerOPSuccessful) {
+            bl_container_destroy(&subString);
+            bl_container_dynamic_destroy_with_elements(&stringArray,bl_container_destroy);
             return stringArray;
         }
     }
 
     if (splitFromBack)
-        containerReverse((Container*)&stringArray);
+        bl_container_reverse((BL_Container*)&stringArray);
     return stringArray;
 }
 
-ContainerError stringReplace(String* destString, const String* stringToReplaceWith, size_t firstIndex) {
-    if (firstIndex > destString->container.amountOfIndexes)
-        return ContainerInvalidIndex;
-    if (*stringGetChar((StringView*)(Container*)destString,firstIndex) < 0)
-        return ContainerInvalidIndex;
+BL_ContainerError bl_string_replace(BL_String* destString, const BL_String* stringToReplaceWith, size_t firstIndex) {
+    if (firstIndex >= bl_container_dynamic_size(destString))
+        return BL_ContainerInvalidIndex;
+    if (*bl_string_get_char(bl_stringview_ptr_cast(destString),firstIndex) < 0)
+        return BL_ContainerInvalidIndex;
 
     if (stringToReplaceWith->container.amountOfIndexes > destString->container.amountOfIndexes - firstIndex - 1) {
-        if (containerDynamicReserve(destString, stringToReplaceWith->container.amountOfIndexes - destString->container.amountOfIndexes + firstIndex + 1) == ContainerAllocFailure)
-            return ContainerAllocFailure;
+        if (bl_container_dynamic_reserve(destString, stringToReplaceWith->container.amountOfIndexes - destString->container.amountOfIndexes + firstIndex + 1) == BL_ContainerAllocFailure)
+            return BL_ContainerAllocFailure;
         destString->container.amountOfIndexes = stringToReplaceWith->container.amountOfIndexes + firstIndex + 1;
     }
     for (size_t i = 0; i < stringToReplaceWith->container.amountOfIndexes; i++)
-        containerSet((Container*) destString, i + firstIndex, sizeof(char), containerGet((const Container*) stringToReplaceWith, i));
-    return ContainerOPSuccessful;
+        bl_container_set((BL_Container*) destString, i + firstIndex, sizeof(char), bl_container_get((const BL_Container*) stringToReplaceWith, i));
+    return BL_ContainerOPSuccessful;
 }
 
-bool stringCompareAcending(const void* first, const void* second) {
-    StringView* firstString = first;
-    StringView* secondString = second;
+bool bl_string_compare_acending(const void* first, const void* second) {
+    BL_StringView* firstString = first;
+    BL_StringView* secondString = second;
 
-    for (size_t i = 0; i < stringLength(firstString); i++) {
-        if (i>=stringLength(secondString))
+    for (size_t i = 0; i < bl_string_length(firstString); i++) {
+        if (i>=bl_string_length(secondString))
             return false;
         bool firstIsUpper = false;
         bool secondIsUpper = false;
-        unsigned char firstStringChar = *stringGetChar(firstString, i);
-        unsigned char secondStringChar = *stringGetChar(secondString, i);
+        unsigned char firstStringChar = *bl_string_get_char(firstString, i);
+        unsigned char secondStringChar = *bl_string_get_char(secondString, i);
         if (isupper(firstStringChar))
             firstIsUpper = true;
         if (isupper(secondStringChar))
@@ -182,17 +181,17 @@ bool stringCompareAcending(const void* first, const void* second) {
     return true;
 }
 
-bool stringCompareDecending(const void* first, const void* second) {
-    StringView* firstString = first;
-    StringView* secondString = second;
+bool bl_string_compare_decending(const void* first, const void* second) {
+    BL_StringView* firstString = first;
+    BL_StringView* secondString = second;
 
-    for (size_t i = 0; i < stringLength(firstString); i++) {
-        if (i>=stringLength(secondString))
+    for (size_t i = 0; i < bl_string_length(firstString); i++) {
+        if (i>=bl_string_length(secondString))
             return true;
         bool firstIsUpper = false;
         bool secondIsUpper = false;
-        unsigned char firstStringChar = *stringGetChar(firstString, i);
-        unsigned char secondStringChar = *stringGetChar(secondString, i);
+        unsigned char firstStringChar = *bl_string_get_char(firstString, i);
+        unsigned char secondStringChar = *bl_string_get_char(secondString, i);
         if (isupper(firstStringChar))
             firstIsUpper = true;
         if (isupper(secondStringChar))
@@ -212,49 +211,48 @@ bool stringCompareDecending(const void* first, const void* second) {
     return true;
 }
 
-bool stringEqual(const void* first, const void* second) {
-    StringView* firstString = first;
-    StringView* secondString = second;
+bool bl_string_equal(const void* first, const void* second) {
+    BL_StringView* firstString = first;
+    BL_StringView* secondString = second;
 
-    if (stringLength(firstString) != stringLength(secondString))
+    if (bl_string_length(firstString) != bl_string_length(secondString))
         return false;
 
-    return memcmp(firstString->array,secondString->array,stringLength(firstString)) == 0;
+    return memcmp(firstString->array,secondString->array,bl_string_length(firstString)) == 0;
 }
 
+BL_StringW bl_stringw_create(const wchar_t* str, size_t len) {
+    BL_StringW allocatedString = bl_container_dynamic_create_stack(len+1, sizeof(wchar_t));
 
-StringW stringWCreate(const wchar_t* str, size_t len) {
-    StringW allocatedString = containerDynamicCreateStack(len+1, sizeof(wchar_t), false);
-
-    if (!isValidObject(&allocatedString.header))
+    if (!bl_container_dynamic_is_valid(&allocatedString))
         return allocatedString;
 
     memcpy(allocatedString.container.array, str, len * sizeof(wchar_t));
     allocatedString.container.amountOfIndexes = len;
-    containerDynamicAppend(&allocatedString, sizeof(wchar_t),&(wchar_t){L'\0'});
+    bl_container_dynamic_append(&allocatedString, sizeof(wchar_t),&(wchar_t){L'\0'});
     return allocatedString;
 }
 
-StringView stringViewInit(const unsigned char* str) {
-    return (StringView) {
-        .amountOfIndexes         = strlen(str),
+BL_StringView bl_stringview_init(const unsigned char* str) {
+    return (BL_StringView) {
+        .amountOfIndexes         = strlen((char*)str),
         .array                   = str,
         .byteSizeOfSingleElement = 1,
         .header                  = ObjectFlagIsValid | ObjectFlagIsContainer};
 }
 
-StringViewW stringViewWInit(const wchar_t* str) {
-    return (StringViewW) {
+BL_StringViewW bl_stringview_w_init(const wchar_t* str) {
+    return (BL_StringViewW) {
         .amountOfIndexes         = wcslen(str),
         .array                   = str,
         .byteSizeOfSingleElement = sizeof(wchar_t),
         .header                  = ObjectFlagIsValid | ObjectFlagIsContainer};
 }
 
-StringView stringViewCast(String string) {
-    return (StringView){.container = string.container};
+BL_StringView bl_stringview_cast(BL_String string) {
+    return (BL_StringView){.container = string.container};
 }
 
-StringView* stringViewPtrCast(const String* string) {
-    return (StringView*)(Container*)string;
+BL_StringView* bl_stringview_ptr_cast(const BL_String* string) {
+    return (BL_StringView*)(BL_Container*)string;
 }

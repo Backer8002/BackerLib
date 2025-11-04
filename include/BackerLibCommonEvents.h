@@ -2,16 +2,16 @@
 #include "../Event/eventInternalHeader.h"
 
 
-static StringView InfoLogLevel = stringViewInitConstExpr("Info");
-static StringView DebugLogLevel = stringViewInitConstExpr("Debug");
-static StringView WarningLogLevel = stringViewInitConstExpr("Warning");
-static StringView ErrorLogLevel = stringViewInitConstExpr("Error");
-static StringView CriticalLogLevel = stringViewInitConstExpr("Critical");
-static StringView MemoryGroupId = stringViewInitConstExpr("Memory");
-static StringView AllocMemoryGroupId = stringViewInitConstExpr("AllocMem");
-static StringView DeallocMemoryGroupId = stringViewInitConstExpr("DeallocMem");
+static BL_StringView InfoLogLevel = stringViewInitConstExpr("Info");
+static BL_StringView DebugLogLevel = stringViewInitConstExpr("Debug");
+static BL_StringView WarningLogLevel = stringViewInitConstExpr("Warning");
+static BL_StringView ErrorLogLevel = stringViewInitConstExpr("Error");
+static BL_StringView CriticalLogLevel = stringViewInitConstExpr("Critical");
+static BL_StringView MemoryGroupId = stringViewInitConstExpr("Memory");
+static BL_StringView AllocMemoryGroupId = stringViewInitConstExpr("AllocMem");
+static BL_StringView DeallocMemoryGroupId = stringViewInitConstExpr("DeallocMem");
 
-static StringView LogUnableToAllocMemGroupIds[] = {WarningLogLevel,
+static BL_StringView LogUnableToAllocMemGroupIds[] = {WarningLogLevel,
                                                           MemoryGroupId};
 static const Event LogUnableToAllocMem = {
     .id = stringViewInitConstExpr("Unable to allocate memory"),

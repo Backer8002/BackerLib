@@ -8,24 +8,24 @@ set(CMAKE_C_STANDARD_REQUIRED ON)
 
 include_directories(BackerLibTypes INTERFACE "${PROJECT_SOURCE_DIR}/../include")
 add_library(BackerLibTypes STATIC
-        ArrayList.h
-        ArrayList.c
+        BL_ArrayList.h
+        BL_ArrayList.c
         Bitsets.c
         HashMapClosed.c
-        Queue.c
-        Queue.h
+        BL_Queue.c
+        BL_Queue.h
         BackerStrings.c
         BackerStrings.h
-        Container.c
-        Container.h
-        DynamicContainer.c
-        DynamicContainer.h
-        UnorderedContainer.c
-        UnorderedContainer.h
-        Heap.c
-        Heap.h
-        Trie.c
-        Trie.h
+        BL_Container.c
+        BL_Container.h
+        BL_DynamicContainer.c
+        BL_DynamicContainer.h
+        BL_UnorderedContainer.c
+        BL_UnorderedContainer.h
+        BL_Heap.c
+        BL_Heap.h
+        BL_Trie.c
+        BL_Trie.h
         HashMap.h
         HashMapPublicShared.c
         )
