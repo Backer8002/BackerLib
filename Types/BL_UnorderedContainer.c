@@ -126,7 +126,7 @@ static void internal_unordered_container_init(BL_UnorderedContainer* container, 
     container->maxSize                           = initialSize;
     container->container.amountOfIndexes         = 0;
     container->container.byteSizeOfSingleElement = sizeOfElements;
-    container->container.array                   = calloc(initialSize, container->container.byteSizeOfSingleElement);
+    container->container.array                   = malloc(initialSize * container->container.byteSizeOfSingleElement);
     if (!container->container.array)
         return;
     container->bitset = calloc((initialSize + 8 * sizeof *container->bitset - 1) / (8 * sizeof *container->bitset), sizeof(*container->bitset));
@@ -203,6 +203,10 @@ bool bl_unordered_container_is_valid(const BL_UnorderedContainer* container) {
 
 size_t bl_unordered_container_size(const BL_UnorderedContainer* container) {
     return container->container.amountOfIndexes;
+}
+
+size_t bl_unordered_container_index_from_ref(const BL_UnorderedContainer* container, const void* element) {
+    return bl_container_index_from_reference(&container->container, element);
 }
 
 void bl_unordered_container_destroy(void* container) {

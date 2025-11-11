@@ -11,44 +11,44 @@ namespace BackerLib {
 #define noexcept
 #endif //__cplusplus
 
-    typedef BL_String ExprAtom; // Atom will be changed at a later date to a better suitable type.
+    typedef BL_String BL_ExprAtom; // Atom will be changed at a later date to a better suitable type.
 
-    typedef struct ExprOperatorDefine {
+    typedef struct BL_ExprOperatorDefine {
         int    operatorID;
         bool   isBinaryOperator;
         bool   isUnaryOperator;
         size_t leftUnaryBinding, rightUnaryBinding, lhsBinaryBinding, rhsBinaryBinding;
-    } ExprOperatorDefine;
+    } BL_ExprOperatorDefine;
 
-    typedef struct ExprOperation ExprOperation;
+    typedef struct BL_ExprOperation BL_ExprOperation;
 
-    typedef struct ExprOperationOperand {
+    typedef struct BL_ExprOperationOperand {
         bool isAtom;
         union {
-            ExprAtom       atom;
-            ExprOperation* operation;
+            BL_ExprAtom       atom;
+            BL_ExprOperation* operation;
         };
-    } ExprOperationOperand;
+    } BL_ExprOperationOperand;
 
-    typedef struct ExprParsingToken {
+    typedef struct BL_ExprParsingToken {
         bool isAtom;
         union {
-            ExprAtom atom;
+            BL_ExprAtom atom;
             int      operatorID;
         };
-    } ExprParsingToken;
+    } BL_ExprParsingToken;
 
-    struct ExprOperation {
+    struct BL_ExprOperation {
         int  operatorID;
         bool isBinaryOperation;
         union {
             struct {
-                ExprOperationOperand unaryOperand;
+                BL_ExprOperationOperand unaryOperand;
                 bool                 unaryOperatorWasOnRight;
             } unaryOperation;
             struct {
-                ExprOperationOperand lhs;
-                ExprOperationOperand rhs;
+                BL_ExprOperationOperand lhs;
+                BL_ExprOperationOperand rhs;
             } binaryOperands;
         };
     };
@@ -60,7 +60,7 @@ namespace BackerLib {
      * @param amountOfOperators Length of operators
      * @return Valid DynamicContainer if operation was successful.
      */
-    extern BL_DynamicContainer exprTokenize(BL_StringView* expresion, const ExprOperatorDefine* operators, size_t amountOfOperators) noexcept;
+    extern BL_DynamicContainer bl_expr_tokenize(BL_StringView* expresion, const BL_ExprOperatorDefine* operators, size_t amountOfOperators) noexcept;
     /**
      * @brief Parses tokens to a valid AST of an expression, if possible from provided operators.
      * @param tokens Pointer to valid DynamicContainer of tokens
@@ -73,17 +73,19 @@ namespace BackerLib {
      * Operator pairs like a * (b + c) assuming () has the lowest priority followed by + and * will parse to a (b c + *) because of operator precedence. Recommended for tokenizers to catch this.
      * Iterating the result inorder will traverse the AST in execution order. The last element should always have operatorID set to 0.
      */
-    extern BL_DynamicContainer exprParse(const BL_DynamicContainer* tokens, const ExprOperatorDefine* operators, size_t amountOfOperators) noexcept;
+    extern BL_DynamicContainer bl_expr_parse(const BL_DynamicContainer* tokens, const BL_ExprOperatorDefine* operators, size_t amountOfOperators) noexcept;
     /**
      * @brief Prints a AST in reverse polish notation.
      * @param file Pointer to file to write to.
      * @param tree Valid pointer to result of exprParse
      */
-    extern void             exprPrint(FILE* file, const BL_DynamicContainer* tree) noexcept;
+    extern void             bl_expr_print(FILE* file, const BL_DynamicContainer* tree) noexcept;
 
 
 #ifdef __cplusplus
     }
 };
+#else
+#undef noexcept
 #endif //__cplusplus
 #endif // BACKERLIB_EXPRPARSING_H

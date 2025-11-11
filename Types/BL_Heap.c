@@ -64,7 +64,7 @@ BL_ContainerError bl_heap_insert(BL_Heap* heap, size_t sizeOfElement, const void
     if (errorCode != BL_ContainerOPSuccessful)
         return errorCode;
 
-    internal_bubble_up((BL_Container*) heap, heap->dynamicContainer.container.amountOfIndexes, heap->compare);
+    internal_bubble_up(&heap->dynamicContainer.container, heap->dynamicContainer.container.amountOfIndexes, heap->compare);
     return BL_ContainerOPSuccessful;
 }
 

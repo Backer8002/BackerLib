@@ -27,7 +27,7 @@ namespace BackerLib {
          * @return ContainerInvalidIndex if index is out of bounds
          * @return ContainerInvalidSize if element was larger than a single element in array
          */
-        extern BL_ContainerError bl_container_set(BL_Container* container,size_t index,size_t elementSize, const void* restrict element) noexcept;
+        extern BL_ContainerError bl_container_set(BL_Container* container,size_t index,size_t elementSize, const void* element) noexcept;
         /**
          * @brief Gets an element in the array.
          * @param container Pointer to valid container object

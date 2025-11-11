@@ -25,7 +25,7 @@ namespace BackerLib {
         /**
          * A non owning constant string. Existing so that it can be appended to a string or have read operations that must know the length of it.
          */
-        typedef const union BL_StringView {
+        typedef union BL_StringView {
             struct {
                 const BL_DataTypeFlags  header;
                 const uint32_t byteSizeOfSingleElement;
@@ -38,7 +38,7 @@ namespace BackerLib {
         /**
          * A non owning constant string. Existing so that it can be appended to a string or have read operations that must know the length of it.
          */
-        typedef const union BL_StringViewW {
+        typedef union BL_StringViewW {
             struct {
                 const BL_DataTypeFlags  header;
                 const uint32_t byteSizeOfSingleElement;

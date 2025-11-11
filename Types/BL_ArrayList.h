@@ -37,7 +37,7 @@ namespace BackerLib {
      * @return ContainerInvalidSize if sizeOfElement is larger than a single element in the array.
      * @return ContainerOPUnsuccessful if mutex could not be locked.
      */
-    extern BL_ContainerError arrayListGet(BL_ArrayList* arrayList, size_t index, size_t sizeOfElement, void* restrict element) noexcept;
+    extern BL_ContainerError arrayListGet(BL_ArrayList* arrayList, size_t index, size_t sizeOfElement, void* element) noexcept;
     /**
      * @brief Removes the last element from the ArrayList.
      * @param arrayList Pointer to valid ArrayList

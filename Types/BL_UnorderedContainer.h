@@ -136,6 +136,7 @@ namespace BackerLib {
      * @param container Pointer to UnorderedContainer
      */
     extern void                           bl_unordered_container_destroy(void* container) noexcept;
+    extern size_t bl_unordered_container_index_from_ref(const BL_UnorderedContainer* container, const void* element) noexcept;
     /**
      * @brief Destroys an UnorderedContainer and runs destructor on every valid element.
      * @param container Pointer to valid UnorderedContainer

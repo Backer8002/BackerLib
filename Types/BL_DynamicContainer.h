@@ -23,7 +23,7 @@ namespace BackerLib {
      * @param element Element to set
      * @return ContainerInvalidIndex if index was invalid, ContainerInvalidSize if elementSize was too large.
      */
-    extern BL_ContainerError    bl_container_dynamic_set(BL_DynamicContainer* container, size_t index, size_t elementSize, const void* restrict element) noexcept;
+    extern BL_ContainerError    bl_container_dynamic_set(BL_DynamicContainer* container, size_t index, size_t elementSize, const void* element) noexcept;
     /**
      *
      * @param container Pointer to valid DynamicContainer

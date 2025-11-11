@@ -130,7 +130,7 @@ extern void threadYield(void) noexcept;
 /**
  * @brief Exits thread.
  */
-_Noreturn extern void threadExit(void) noexcept;
+[[noreturn]] extern void threadExit(void) noexcept;
 
 /**
  * @brief Detaches thread. Thread can never be reattached after detaching.

@@ -33,7 +33,7 @@ namespace BackerLib {
      * @return ContainerInvalidSize if sizeOfElement was greater than the largest element in the heap.
      * @return ContainerAllocFailure if the heap's array could not grow.
      */
-    extern BL_ContainerError bl_heap_insert(BL_Heap* heap, size_t sizeOfElement, const void* restrict element) noexcept;
+    extern BL_ContainerError bl_heap_insert(BL_Heap* heap, size_t sizeOfElement, const void* element) noexcept;
     /**
      * @brief Uses heap sort to inplace sort the array with a given compare function.
      * Should return true if elements were in correct order.

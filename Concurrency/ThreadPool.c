@@ -1,38 +1,64 @@
 #include "ThreadPool.h"
+
 #include <BackerLibTypes.h>
+#include <assert.h>
 #include <stdlib.h>
 
 struct JobInformation {
     size_t priority;
-
-    void (*function)(void*);
+    size_t location;
 };
 
+struct Job { void (*function)(void*); size_t futureOffset;};
+
 static bool jobCompare(const void* first, const void* second) {
-    return (*(struct JobInformation**) first)->priority <= (*(struct JobInformation**) second)->priority;
+    return ((struct JobInformation*)first)->priority <= ((struct JobInformation*) second)->priority;
 }
 
 static int threadWorkerFunction(void* sharedState) {
-    while (!((ThreadPool*) sharedState)->mustExit) {
-        if (mutexLock(&((ThreadPool*) sharedState)->mutexForQueue) == ConcurrencyFailure)
+    ThreadPool* threadPool = sharedState;
+    void* jobBuffer = malloc(threadPool->orders.container.byteSizeOfSingleElement);
+    if (!jobBuffer)
+        return 1;
+    while (!threadPool->mustExit) {
+        if (mutexLock(&threadPool->mutexForQueue) == ConcurrencyFailure)
             continue;
-        struct JobInformation* const * nextOrder = bl_heap_top(&((ThreadPool*) sharedState)->jobsQueue);
-        struct JobInformation*         order     = nextOrder ? *nextOrder : NULL;
-        bl_heap_pop(&((ThreadPool*) sharedState)->jobsQueue);
-        mutexUnlock(&((ThreadPool*) sharedState)->mutexForQueue);
+        const struct JobInformation* nextOrder = bl_heap_top(&((ThreadPool*) sharedState)->jobsQueue);
+        struct JobInformation         order     = nextOrder ? *nextOrder : (struct JobInformation){0};
 
-        if (order)
-            order->function(order);
+        if (!nextOrder) {
+            mutexUnlock(&threadPool->mutexForQueue);
+            threadYield();
+            continue;
+        }
+
+        if (order.location == 0) {
+            mutexUnlock(&threadPool->mutexForQueue);
+            break;
+        }
+        void* job = bl_unordered_container_get(&((ThreadPool*)sharedState)->orders, order.location);
+        memcpy(jobBuffer,job,threadPool->orders.container.byteSizeOfSingleElement);
+        bl_heap_pop(&threadPool->jobsQueue);
+        mutexUnlock(&threadPool->mutexForQueue);
+
+        ((struct Job*)jobBuffer)->function(jobBuffer);
+
+        if (mutexLock(&threadPool->mutexForQueue) != ConcurrencySuccess)
+            continue;
+
+        job = bl_unordered_container_get(&((ThreadPool*)sharedState)->orders, order.location);
+        memcpy(job,jobBuffer,threadPool->orders.container.byteSizeOfSingleElement);
+
+        mutexUnlock(&threadPool->mutexForQueue);
     }
+    free(jobBuffer);
     return 0;
 }
 
-static void threadExitWrapper(void* sharedState) { threadExit(); }
-
 ConcurrencyError bl_threadpool_init(ThreadPool* threadPool, size_t amountOfThreads, size_t sizeOfLargestAsyncArgsPack) {
     threadPool->mustExit  = false;
-    threadPool->jobsQueue = bl_heap_create_stack(sizeof(void*), jobCompare);
-    if (bl_heap_is_valid(&threadPool->jobsQueue))
+    threadPool->jobsQueue = bl_heap_create_stack(sizeof(struct JobInformation), jobCompare);
+    if (!bl_heap_is_valid(&threadPool->jobsQueue))
         return ConcurrencyFailure;
 
     threadPool->orders = bl_unordered_container_create_stack(16, sizeOfLargestAsyncArgsPack);
@@ -65,6 +91,7 @@ ConcurrencyError bl_threadpool_init(ThreadPool* threadPool, size_t amountOfThrea
             goto ThreadPoolInitErrorPath;
     }
     threadPool->amountOfThreads = amountOfThreads;
+    bl_unordered_container_put(&threadPool->orders, sizeof(void*),&(void*){NULL});
     return ConcurrencySuccess;
 
 ThreadPoolInitErrorPath:
@@ -79,24 +106,24 @@ ThreadPoolInitErrorPath:
     return ConcurrencyFailure;
 }
 
-void* bl_threadpool_job_assign(ThreadPool* threadPool,
+size_t bl_threadpool_job_assign(ThreadPool* threadPool,
                           size_t      priority,
                           void (*     function)(void*),
                           size_t      futureOffset,
-                          void*       args, size_t argsSize, size_t argsOffset) {
+                          const void*       args, size_t argsSize, size_t argsOffset) {
     if (priority == 0 || priority == SIZE_MAX
         || argsOffset + argsSize > threadPool->orders.container.byteSizeOfSingleElement)
-        return NULL;
-    struct JobInformation jobInfo = (struct JobInformation){.priority = priority, .function = function};
+        return 0;
+    struct Job job = {.function = function,.futureOffset = futureOffset};
 
     if (mutexLock(&threadPool->mutexForQueue) == ConcurrencyFailure)
-        return NULL;
+        return 0;
 
-    BL_UnorderedContainerPutResult putResult = bl_unordered_container_put(&threadPool->orders, sizeof jobInfo, &jobInfo);
+    BL_UnorderedContainerPutResult putResult = bl_unordered_container_put(&threadPool->orders, sizeof job, &job);
 
     if (putResult.resultCode != BL_ContainerOPSuccessful) {
         mutexUnlock(&threadPool->mutexForQueue);
-        return NULL;
+        return 0;
     }
 
     void* locationOfElement = bl_unordered_container_get(&threadPool->orders, putResult.locationOfElement);
@@ -105,18 +132,16 @@ void* bl_threadpool_job_assign(ThreadPool* threadPool,
 
     memcpy((BL_Bytes) locationOfElement + argsOffset, args, argsSize);
 
-    BL_ContainerError errorCode = bl_heap_insert(&threadPool->jobsQueue, sizeof locationOfElement, &locationOfElement);
+    BL_ContainerError errorCode = bl_heap_insert(&threadPool->jobsQueue, sizeof (struct JobInformation), &(struct JobInformation){.priority = priority, .location = putResult.locationOfElement});
 
     mutexUnlock(&threadPool->mutexForQueue);
 
     if (errorCode != BL_ContainerOPSuccessful)
-        return NULL;
-    return (BL_Bytes) locationOfElement + futureOffset;
+        return 0;
+    return putResult.locationOfElement;
 }
 
 ConcurrencyError bl_threadpool_join(ThreadPool* threadPool) {
-    struct JobInformation exitCommand = {.priority = 0, .function = threadExitWrapper};
-    struct JobInformation* exitPointer = &exitCommand;
 
     if (mutexLock(&threadPool->mutexForQueue) == ConcurrencyFailure)
         return ConcurrencyFailure;
@@ -127,7 +152,7 @@ ConcurrencyError bl_threadpool_join(ThreadPool* threadPool) {
     }
 
     for (size_t i = 0; i < threadPool->amountOfThreads; i++)
-        bl_heap_insert(&threadPool->jobsQueue, sizeof(void*), &exitPointer);
+        bl_heap_insert(&threadPool->jobsQueue, sizeof(struct JobInformation), &(struct JobInformation){.priority = 0, .location = 0});
 
     if (mutexUnlock(&threadPool->mutexForQueue) == ConcurrencyFailure)
         return ConcurrencyFailure;
@@ -153,13 +178,19 @@ void bl_threadpool_exit(ThreadPool* threadPool) {
     bl_heap_destroy(&threadPool->jobsQueue);
 }
 
-bool bl_future_destroy(ThreadPool* threadPool, void* future) {
-    if (!*(FutureVoid*) future)
+void* bl_future_get(const ThreadPool* threadPool, size_t future) {
+    if (future) {
+        struct Job* order = bl_unordered_container_get(&threadPool->orders, future);
+        return (BL_Byte*)order + order->futureOffset;
+    }
+    return NULL;
+}
+
+bool bl_future_destroy(ThreadPool* threadPool, size_t future) {
+    if (!*(bool*) bl_unordered_container_get(&threadPool->orders, future))
         return false;
 
-    bl_unordered_container_remove(&threadPool->orders,
-                             ((uintptr_t) future - (uintptr_t) threadPool->orders.container.array) / threadPool->orders.container.byteSizeOfSingleElement,
-                             NULL);
+    bl_unordered_container_remove(&threadPool->orders,future,NULL);
     return true;
 }
 
@@ -184,7 +215,7 @@ static void asyncFileReadMain(void* sharedState) {
     args->future.isValid = true;
 }
 
-FutureString* bl_async_file_read(ThreadPool* threadPool, size_t priority, FILE* file) {
+size_t bl_async_file_read(ThreadPool* threadPool, size_t priority, FILE* file) {
     return bl_threadpool_job_assign(threadPool,
                                priority,
                                asyncFileReadMain,
