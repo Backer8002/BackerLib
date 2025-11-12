@@ -87,7 +87,7 @@ namespace BackerLib {
     } JsonTokenStore;
 
     static const Event JsonFileIllFormated = {
-        .id             = (BL_StringView) stringViewInitConstExpr("JsonFileIllFormated"),
+        .id             = (const BL_StringView) stringViewInitConstExpr("JsonFileIllFormated"),
         .groupIds       = &ErrorLogLevel,
         .amountOfGroups = 1};
 
@@ -122,7 +122,7 @@ namespace BackerLib {
      * @param file File to read from
      * @return NULL if job could not be amended, else pointer to future of object.
      */
-    extern FutureJsonObject* jsonReadFileAsync(ThreadPool* threadPool, size_t priority, FILE* file) noexcept;
+    extern size_t jsonReadFileAsync(ThreadPool* threadPool, size_t priority, FILE* file) noexcept;
     /**
      * @brief Writes object to file.
      * @param file File to write to
@@ -140,7 +140,7 @@ namespace BackerLib {
      * @param format Formating to use
      * @return FutureVoid indicating completeness if successful at amending job to queue, else NULL.
      */
-    extern FutureVoid*       jsonWriteFileAsync(ThreadPool* threadPool, size_t priority, FILE* file, const JsonObject* object, const JsonFormat* format) noexcept;
+    extern size_t      jsonWriteFileAsync(ThreadPool* threadPool, size_t priority, FILE* file, const JsonObject* object, const JsonFormat* format) noexcept;
     /**
      * @brief Writes a debug view of a JsonMemberValue.
      * @param file File to write to

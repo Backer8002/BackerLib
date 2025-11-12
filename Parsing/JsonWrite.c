@@ -188,7 +188,7 @@ static void jsonWriteFileThread(void* sharedState) {
     information->future = true;
 }
 
-FutureVoid* jsonWriteFileAsync(ThreadPool* threadPool, size_t priority, FILE* file, const JsonObject* object, const JsonFormat* format) {
+size_t jsonWriteFileAsync(ThreadPool* threadPool, size_t priority, FILE* file, const JsonObject* object, const JsonFormat* format) {
     return bl_threadpool_job_assign(threadPool,
         priority,
         jsonWriteFileThread,

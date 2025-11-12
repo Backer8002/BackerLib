@@ -30,8 +30,8 @@ typedef enum {
 
 typedef struct {
     EventType    eventType;
-    BL_StringView  id;
-    BL_StringView* groupIds;
+    const BL_StringView  id;
+    const BL_StringView* const groupIds;
     Thread       callerThread;
     uint32_t     amountOfGroups;
 } EventCallMain;
@@ -56,8 +56,8 @@ typedef union {
 } EventCall;
 
 typedef struct {
-    BL_StringView  id;
-    BL_StringView* groupIds;
+    const BL_StringView  id;
+    const BL_StringView* const groupIds;
     uint32_t     amountOfGroups;
 } Event;
 
