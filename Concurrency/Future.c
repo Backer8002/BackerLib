@@ -1,10 +1,10 @@
 #include "ThreadPool.h"
 
-void bl_future_await(size_t future,const ThreadPool* threadPool) { while (!*(bool*) bl_unordered_container_get(&threadPool->orders, future)) {} }
+void bl_future_await(const void* future) { while (!*(bool*)future) {} }
 
-bool bl_future_await_until(size_t future, const struct timespec* timepoint, const ThreadPool* threadPool) {
+bool bl_future_await_until(const void* future, const struct timespec* timepoint) {
     while (true) {
-        if (*(bool*) bl_unordered_container_get(&threadPool->orders, future))
+        if (*(bool*)future)
             return true;
         struct timespec currentTime;
 #if USES_PTHREAD
@@ -18,7 +18,7 @@ bool bl_future_await_until(size_t future, const struct timespec* timepoint, cons
     }
 }
 
-bool bl_future_await_for(size_t future, const struct timespec* duration, const ThreadPool* threadPool) {
+bool bl_future_await_for(const void* future, const struct timespec* duration) {
     struct timespec currentTime;
 #if USES_PTHREAD
     clock_gettime(CLOCK_REALTIME, &currentTime);
@@ -27,5 +27,5 @@ bool bl_future_await_for(size_t future, const struct timespec* duration, const T
 #endif
     return bl_future_await_until(future, &(struct timespec){
                                 .tv_sec = currentTime.tv_sec + duration->tv_sec + (currentTime.tv_nsec + duration->tv_nsec) / (long) 1e9,
-                                .tv_nsec = (currentTime.tv_nsec + duration->tv_nsec) % (long) 1e9},threadPool);
+                                .tv_nsec = (currentTime.tv_nsec + duration->tv_nsec) % (long) 1e9});
 }

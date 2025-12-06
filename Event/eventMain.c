@@ -9,7 +9,6 @@
 #include <assert.h>
 #include <inttypes.h>
 #include <signal.h>
-#include <threads.h>
 
 
 static EventHandle* mainEventHandle     = NULL;

@@ -18,8 +18,8 @@ static void internal_trie_init(BL_Trie* trie, size_t amountOfCharsToStore, size_
     trie->amountOfChars      = amountOfCharsToStore;
     trie->composeCharToIndex = composeCharToIndex;
     trie->unorderedContainer.bitset[0] |= (uint64_t)INT64_MIN;
-    trie->unorderedContainer.container.amountOfIndexes++;
-    memset(trie->unorderedContainer.container.array, 0, trie->unorderedContainer.container.byteSizeOfSingleElement);
+    bl_unordered_container_set(&trie->unorderedContainer,0,1,&(char){0});
+    memset(bl_unordered_container_front(&trie->unorderedContainer),0,trie->unorderedContainer.byteSizeOfElement);
 }
 
 BL_Trie bl_trie_create_stack(size_t amountOfCharsToStore, size_t (*composeCharToIndex)(wchar_t chr)) {
@@ -37,7 +37,7 @@ BL_Trie* bl_trie_create_heap(size_t amountOfCharsToStore, size_t (*composeCharTo
         free(trie);
         return NULL;
     }
-    trie->unorderedContainer.container.header |= ObjectFlagIsOnHeap;
+    trie->unorderedContainer.header |= ObjectFlagIsOnHeap;
     return trie;
 }
 
@@ -56,12 +56,13 @@ BL_ContainerError bl_trie_insert(BL_Trie* trie, const wchar_t* sequence, uintptr
         currentNode = currentTrieNode->childrenIndexes[trie->composeCharToIndex(currentChar)];
         if (!currentNode) {
             TrieNode                    nodeToInsert = {.data = 0};
-            BL_UnorderedContainerPutResult result       = bl_unordered_container_put(&trie->unorderedContainer, sizeof nodeToInsert, &nodeToInsert);
-            if (result.resultCode != BL_ContainerOPSuccessful)
+            void* element       = bl_unordered_container_put(&trie->unorderedContainer, sizeof nodeToInsert, &nodeToInsert);
+            if (!element)
                 return BL_ContainerAllocFailure;
-            memset(bl_unordered_container_get(&trie->unorderedContainer, result.locationOfElement), 0, trie->unorderedContainer.container.byteSizeOfSingleElement);
-            currentTrieNode->childrenIndexes[trie->composeCharToIndex(currentChar)] = result.locationOfElement;
-            currentNode                                                             = result.locationOfElement;
+            memset(element, 0, trie->unorderedContainer.byteSizeOfElement);
+            size_t index = bl_unordered_container_index_from_ref(&trie->unorderedContainer,element);
+            currentTrieNode->childrenIndexes[trie->composeCharToIndex(currentChar)] = index;
+            currentNode                                                             = index;
         }
         i++;
     }
@@ -126,7 +127,7 @@ static BL_ContainerError trieRemoveHelper(BL_Trie* trie, const wchar_t* partOfSe
 }
 
 bool bl_trie_remove(BL_Trie* trie, const wchar_t* sequence) {
-    if (trieRemoveHelper(trie, sequence, trie->unorderedContainer.container.array) == BL_ContainerInvalidIndex)
+    if (trieRemoveHelper(trie, sequence, bl_unordered_container_front(&trie->unorderedContainer)) == BL_ContainerInvalidIndex)
         return false;
     return true;
 }

@@ -63,14 +63,14 @@ namespace BackerLib {
      * @param string Pointer to valid String
      * @return Size of char array in bytes, excluding the end null terminator.
      */
-    extern size_t     bl_string_length(BL_StringView* string) noexcept;
+    extern size_t     bl_string_length(const BL_StringView* string) noexcept;
     /**
      * @brief Wrapper of containerGet
      * @param string Pointer to valid String
      * @param index Index to get char from
      * @return Pointer to char in array. NULL if invalid index.
      */
-    extern inline unsigned char*          bl_string_get_char(BL_StringView* string, size_t index) noexcept;
+    extern unsigned char*          bl_string_get_char(const BL_StringView* string, size_t index) noexcept;
     /**
      * @brief Appends stringToInsert on to destString.
      * @param destString Destination string object. Must be pointer to valid String/DynamicContainer

@@ -17,7 +17,7 @@ static bool jobCompare(const void* first, const void* second) {
 
 static int threadWorkerFunction(void* sharedState) {
     ThreadPool* threadPool = sharedState;
-    void* jobBuffer = malloc(threadPool->orders.container.byteSizeOfSingleElement);
+    void* jobBuffer = malloc(threadPool->orders.byteSizeOfElement);
     if (!jobBuffer)
         return 1;
     while (!threadPool->mustExit) {
@@ -37,7 +37,7 @@ static int threadWorkerFunction(void* sharedState) {
             break;
         }
         void* job = bl_unordered_container_get(&((ThreadPool*)sharedState)->orders, order.location);
-        memcpy(jobBuffer,job,threadPool->orders.container.byteSizeOfSingleElement);
+        memcpy(jobBuffer,job,threadPool->orders.byteSizeOfElement);
         bl_heap_pop(&threadPool->jobsQueue);
         mutexUnlock(&threadPool->mutexForQueue);
 
@@ -47,7 +47,7 @@ static int threadWorkerFunction(void* sharedState) {
             continue;
 
         job = bl_unordered_container_get(&((ThreadPool*)sharedState)->orders, order.location);
-        memcpy(job,jobBuffer,threadPool->orders.container.byteSizeOfSingleElement);
+        memcpy(job,jobBuffer,threadPool->orders.byteSizeOfElement);
 
         mutexUnlock(&threadPool->mutexForQueue);
     }
@@ -106,39 +106,37 @@ ThreadPoolInitErrorPath:
     return ConcurrencyFailure;
 }
 
-size_t bl_threadpool_job_assign(ThreadPool* threadPool,
+void* bl_threadpool_job_assign(ThreadPool* threadPool,
                           size_t      priority,
                           void (*     function)(void*),
                           size_t      futureOffset,
                           const void*       args, size_t argsSize, size_t argsOffset) {
     if (priority == 0 || priority == SIZE_MAX
-        || argsOffset + argsSize > threadPool->orders.container.byteSizeOfSingleElement)
+        || argsOffset + argsSize > threadPool->orders.byteSizeOfElement)
         return 0;
     struct Job job = {.function = function,.futureOffset = futureOffset};
 
     if (mutexLock(&threadPool->mutexForQueue) == ConcurrencyFailure)
         return 0;
 
-    BL_UnorderedContainerPutResult putResult = bl_unordered_container_put(&threadPool->orders, sizeof job, &job);
+    void* element = bl_unordered_container_put(&threadPool->orders, sizeof job, &job);
 
-    if (putResult.resultCode != BL_ContainerOPSuccessful) {
+    if (!element) {
         mutexUnlock(&threadPool->mutexForQueue);
         return 0;
     }
 
-    void* locationOfElement = bl_unordered_container_get(&threadPool->orders, putResult.locationOfElement);
+    *(FutureVoid*) ((BL_Bytes) element + futureOffset) = false;
 
-    *(FutureVoid*) ((BL_Bytes) locationOfElement + futureOffset) = false;
+    memcpy((BL_Bytes) element + argsOffset, args, argsSize);
 
-    memcpy((BL_Bytes) locationOfElement + argsOffset, args, argsSize);
-
-    BL_ContainerError errorCode = bl_heap_insert(&threadPool->jobsQueue, sizeof (struct JobInformation), &(struct JobInformation){.priority = priority, .location = putResult.locationOfElement});
+    BL_ContainerError errorCode = bl_heap_insert(&threadPool->jobsQueue, sizeof (struct JobInformation), &(struct JobInformation){.priority = priority, .location = bl_unordered_container_index_from_ref(&threadPool->orders,element)});
 
     mutexUnlock(&threadPool->mutexForQueue);
 
     if (errorCode != BL_ContainerOPSuccessful)
         return 0;
-    return putResult.locationOfElement;
+    return element;
 }
 
 ConcurrencyError bl_threadpool_join(ThreadPool* threadPool) {
@@ -186,11 +184,11 @@ void* bl_future_get(const ThreadPool* threadPool, size_t future) {
     return NULL;
 }
 
-bool bl_future_destroy(ThreadPool* threadPool, size_t future) {
-    if (!*(bool*) bl_unordered_container_get(&threadPool->orders, future))
+bool bl_future_destroy(ThreadPool* threadPool, void* future) {
+    if (!*(bool*)future)
         return false;
 
-    bl_unordered_container_remove(&threadPool->orders,future,NULL);
+    bl_unordered_container_remove(&threadPool->orders,bl_unordered_container_index_from_ref(&threadPool->orders,future),NULL);
     return true;
 }
 
@@ -215,7 +213,7 @@ static void asyncFileReadMain(void* sharedState) {
     args->future.isValid = true;
 }
 
-size_t bl_async_file_read(ThreadPool* threadPool, size_t priority, FILE* file) {
+FutureString* bl_async_file_read(ThreadPool* threadPool, size_t priority, FILE* file) {
     return bl_threadpool_job_assign(threadPool,
                                priority,
                                asyncFileReadMain,

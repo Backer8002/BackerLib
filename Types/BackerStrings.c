@@ -21,11 +21,11 @@ BL_String bl_string_create(const unsigned char* string, size_t length) {
     return allocatedString;
 }
 
-size_t     bl_string_length(BL_StringView* string) {
+size_t     bl_string_length(const BL_StringView* string) {
     return string->amountOfIndexes - 1; // Strings always have atleast len 1.
 }
 
-inline unsigned char* bl_string_get_char(BL_StringView* string, size_t index) {
+inline unsigned char* bl_string_get_char(const BL_StringView* string, size_t index) {
     return bl_container_get(&string->container, index);
 }
 
@@ -138,7 +138,7 @@ BL_DynamicContainer bl_string_split_multi(const BL_StringView* string, const uns
 BL_ContainerError bl_string_replace(BL_String* destString, const BL_String* stringToReplaceWith, size_t firstIndex) {
     if (firstIndex >= bl_container_dynamic_size(destString))
         return BL_ContainerInvalidIndex;
-    if (*bl_string_get_char(bl_stringview_ptr_cast(destString),firstIndex) < 0)
+    if (*bl_string_get_char(bl_stringview_ptr_cast(destString),firstIndex) > 127)
         return BL_ContainerInvalidIndex;
 
     if (stringToReplaceWith->container.amountOfIndexes > destString->container.amountOfIndexes - firstIndex - 1) {
@@ -152,8 +152,8 @@ BL_ContainerError bl_string_replace(BL_String* destString, const BL_String* stri
 }
 
 bool bl_string_compare_acending(const void* first, const void* second) {
-    BL_StringView* firstString = first;
-    BL_StringView* secondString = second;
+    const BL_StringView* firstString = first;
+    const BL_StringView* secondString = second;
 
     for (size_t i = 0; i < bl_string_length(firstString); i++) {
         if (i>=bl_string_length(secondString))
@@ -182,8 +182,8 @@ bool bl_string_compare_acending(const void* first, const void* second) {
 }
 
 bool bl_string_compare_decending(const void* first, const void* second) {
-    BL_StringView* firstString = first;
-    BL_StringView* secondString = second;
+    const BL_StringView* firstString = first;
+    const BL_StringView* secondString = second;
 
     for (size_t i = 0; i < bl_string_length(firstString); i++) {
         if (i>=bl_string_length(secondString))
@@ -212,8 +212,8 @@ bool bl_string_compare_decending(const void* first, const void* second) {
 }
 
 bool bl_string_equal(const void* first, const void* second) {
-    BL_StringView* firstString = first;
-    BL_StringView* secondString = second;
+    const BL_StringView* firstString = first;
+    const BL_StringView* secondString = second;
 
     if (bl_string_length(firstString) != bl_string_length(secondString))
         return false;

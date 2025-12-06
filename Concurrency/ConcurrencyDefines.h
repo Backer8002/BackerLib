@@ -26,6 +26,7 @@
 #ifdef __cplusplus
 namespace BackerLib {
     extern "C" {
+#define _Noreturn [[noreturn]]
 #else
 
 #define noexcept
@@ -130,7 +131,7 @@ extern void threadYield(void) noexcept;
 /**
  * @brief Exits thread.
  */
-[[noreturn]] extern void threadExit(void) noexcept;
+_Noreturn extern void threadExit(void) noexcept;
 
 /**
  * @brief Detaches thread. Thread can never be reattached after detaching.
@@ -207,6 +208,7 @@ extern void mutexDestroy(void* mutex) noexcept;
 
 
 #ifdef __cplusplus
+#undef _Noreturn
 }
 };
 #endif

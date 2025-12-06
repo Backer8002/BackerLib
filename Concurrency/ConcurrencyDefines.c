@@ -93,6 +93,7 @@ void threadExit(void) {
 #else
     thrd_exit(0);
 #endif
+while(true) {}
 }
 ConcurrencyError threadDetach(Thread* thread) {
 #if USES_PTHREAD

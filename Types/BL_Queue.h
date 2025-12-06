@@ -42,7 +42,6 @@ namespace BackerLib {
      * @param queue Pointer to valid Queue
      * @param elementSize Size of element to insert
      * @param element Element to insert
-     * @return ContainerInvalidSize if element was larger than the size of a single element in the queue.
      * @return ContainerAllocFailure if queue could not grow to accommodate more elements.
      */
     extern BL_ContainerError     bl_queue_enqueue(BL_Queue* queue, size_t elementSize, const void* element) noexcept;
@@ -140,7 +139,7 @@ namespace BackerLib {
      * @param offset Offset from head element
      * @return NULL if offset is results in an out-of-bounds access.
      */
-    extern inline const void* bl_dequeue_peak_front(const BL_Dequeue* dequeue, size_t offset) noexcept;
+    extern const void* bl_dequeue_peak_front(const BL_Dequeue* dequeue, size_t offset) noexcept;
 
     /**
      * @brief Returns pointer to offset element from tail element backwards in queue. 0 is tail element.

@@ -101,7 +101,7 @@ extern ConcurrencyError bl_threadpool_init(ThreadPool* threadPool, size_t amount
  * @param argsOffset args offset in asyncArgsPackType
  * @return NULL if job could not be submitted, else pointer to future as defined by asyncArgsPackType.
  */
-extern size_t bl_threadpool_job_assign(ThreadPool* threadPool, size_t priority, void (*function)(void*), size_t futureOffset, const void* args, size_t argsSize, size_t argsOffset) noexcept;
+extern void* bl_threadpool_job_assign(ThreadPool* threadPool, size_t priority, void (*function)(void*), size_t futureOffset, const void* args, size_t argsSize, size_t argsOffset) noexcept;
 
 #define threadPoolJobAssignShort(threadPool,priority,function,argsPtr,asyncArgsPackType) bl_threadpool_job_assign(()threadPool),(priority),(function),asyncArgsFutureOffset(asyncArgsPackType),(argsPtr),sizeof(*(argsPtr)),asyncArgsOffset(asyncArgsPackType))
 
@@ -125,9 +125,7 @@ extern void bl_threadpool_exit(ThreadPool* threadPool) noexcept;
  * @param file Open file with read permission
  * @return Future to file contents. Invalid String if initialization of string failed.
  */
-extern size_t bl_async_file_read(ThreadPool* threadPool, size_t priority, FILE* file) noexcept;
-
-void* bl_future_get(const ThreadPool* threadPool, size_t future);
+extern FutureString* bl_async_file_read(ThreadPool* threadPool, size_t priority, FILE* file) noexcept;
 
 /**
  * @brief Destroys future
@@ -135,13 +133,13 @@ void* bl_future_get(const ThreadPool* threadPool, size_t future);
  * @param future Pointer to Future assigned from ThreadPool
  * @return false if future was not valid and thus could not be destroyed, else true.
  */
-extern bool bl_future_destroy(ThreadPool* threadPool, size_t future) noexcept;
+extern bool bl_future_destroy(ThreadPool* threadPool, void* future) noexcept;
 
 /**
  * @brief Awaits future to be valid.
  * @param future Pointer to future
  */
-extern void bl_future_await(size_t future, const ThreadPool* threadPool) noexcept;
+extern void bl_future_await(const void* future) noexcept;
 
 /**
  * @brief Awaits future until future is valid or until timepoint.
@@ -149,7 +147,7 @@ extern void bl_future_await(size_t future, const ThreadPool* threadPool) noexcep
  * @param timepoint Point in UTC time
  * @return true if function returned due to future is valid, else false
  */
-extern bool bl_future_await_until(size_t future, const struct timespec* timepoint, const ThreadPool* threadPool) noexcept;
+extern bool bl_future_await_until(const void* future, const struct timespec* timepoint) noexcept;
 
 /**
  * @brief Await future to be valid or for a maximum of duration.
@@ -157,7 +155,7 @@ extern bool bl_future_await_until(size_t future, const struct timespec* timepoin
  * @param duration Duration to wait
  * @return true if future became valid in less than duration, else false.
  */
-extern bool bl_future_await_for(size_t future, const struct timespec* duration, const ThreadPool* threadPool) noexcept;
+extern bool bl_future_await_for(const void* future, const struct timespec* duration) noexcept;
 #ifdef __cplusplus
 }
 };
