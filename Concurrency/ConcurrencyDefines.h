@@ -49,34 +49,34 @@ typedef enum MutexType {
     MutexPlain,
     MutexRecursive,
     MutexTimed
-} MutexType;
+} BL_MutexType;
 
 /**
  * @brief Mutex type for BackerLibConcurrency. Type is defined based on available headers.
  */
-typedef struct Mutex Mutex;
+typedef struct BL_Mutex BL_Mutex;
 /**
  * @brief Thread type for BackerLibConcurrency. Type is defined based on available headers.
  */
-typedef struct Thread Thread;
+typedef struct BL_Thread BL_Thread;
 
 #if USES_PTHREAD
-struct Mutex {
+struct BL_Mutex {
     pthread_mutex_t mutex;
     bool            isValid;
 };
 
-struct Thread {
+struct BL_Thread {
     pthread_t thread;
     bool      isValid;
 };
 #else
-struct Mutex {
+struct BL_Mutex {
     mtx_t mutex;
     bool  isValid;
 };
 
-struct Thread {
+struct BL_Thread {
     thrd_t thread;
     bool   isValid;
 };
@@ -87,7 +87,7 @@ struct Thread {
  * @param thread Pointer to thread
  * @return true if thread is active, else false.
  */
-extern bool threadIsValid(const Thread* thread) noexcept;
+extern bool threadIsValid(const BL_Thread* thread) noexcept;
 
 /**
  * @brief Creates a new thread. threadIsValid will only return true for thread if function was successful.
@@ -95,14 +95,14 @@ extern bool threadIsValid(const Thread* thread) noexcept;
  * @param function Function to be executed at start of thread
  * @return Thread object.
  */
-extern Thread threadCreate(void* sharedState, int (*function)(void* sharedState)) noexcept;
+extern BL_Thread threadCreate(void* sharedState, int (*function)(void* sharedState)) noexcept;
 
 /**
  *
  * @return Returns current thread.
  * @note Always valid and cannot fail.
  */
-extern Thread threadGetCurrent(void) noexcept;
+extern BL_Thread threadGetCurrent(void) noexcept;
 
 /**
  * @brief Compares equality between first and second threads
@@ -110,7 +110,7 @@ extern Thread threadGetCurrent(void) noexcept;
  * @param second Pointer to valid thread
  * @return true if first and second are identifying the same thread, else false.
  */
-extern bool threadIsEqual(const Thread* first, const Thread* second) noexcept;
+extern bool threadIsEqual(const BL_Thread* first, const BL_Thread* second) noexcept;
 
 /**
  * @brief Function to make current thread sleep for duration.
@@ -138,34 +138,34 @@ _Noreturn extern void threadExit(void) noexcept;
  * @param thread Pointer to valid Thread
  * @return ConcurrencyFailure if thread could not be detached.
  */
-extern ConcurrencyError threadDetach(Thread* thread) noexcept;
+extern ConcurrencyError threadDetach(BL_Thread* thread) noexcept;
 
 /**
  * @brief Awaits the exit of thread and destroys it.
  * @param thread Pointer to valid Thread
  * @return ConcurrencyFailure if thread could not be joined.
  */
-extern ConcurrencyError threadJoin(Thread* thread) noexcept;
+extern ConcurrencyError threadJoin(BL_Thread* thread) noexcept;
 
 /**
  * @param mutex Pointer to Mutex
  * @return true if mutex is valid, else false.
  */
-extern bool mutexIsValid(const Mutex* mutex) noexcept;
+extern bool mutexIsValid(const BL_Mutex* mutex) noexcept;
 
 /**
  * @brief Creates a new Mutex. Is invalid if operation fails otherwise valid.
  * @param mutexType Type of mutex to use
  * @return Mutex object.
  */
-extern Mutex mutexCreate(MutexType mutexType) noexcept;
+extern BL_Mutex mutexCreate(BL_MutexType mutexType) noexcept;
 
 /**
  * @brief Locks a valid mutex. Awaits if mutex is already locked.
  * @param mutex Pointer to valid mutex
  * @return ConcurrencyFailure if mutex could not be locked.
  */
-extern ConcurrencyError mutexLock(Mutex* mutex) noexcept;
+extern ConcurrencyError mutexLock(BL_Mutex* mutex) noexcept;
 
 /**
  * @brief Locks a valid mutex. Does not await a locked mutex.
@@ -173,7 +173,7 @@ extern ConcurrencyError mutexLock(Mutex* mutex) noexcept;
  * @return ConcurrenyBusy if mutex was locked.
  * @return ConcurrencyFailure if mutex could not be locked.
  */
-extern ConcurrencyError mutexTryLock(Mutex* mutex) noexcept;
+extern ConcurrencyError mutexTryLock(BL_Mutex* mutex) noexcept;
 
 /**
  * @brief Locks valid mutex. Awaits locked mutex until timepoint in UTC time.
@@ -182,7 +182,7 @@ extern ConcurrencyError mutexTryLock(Mutex* mutex) noexcept;
  * @return ConcurrencyBusy if timePoint has passed.
  * @return ConcurrencyFailure if mutex could not be locked.
  */
-extern ConcurrencyError mutexTimeLock(Mutex* mutex, const struct timespec* timepoint) noexcept;
+extern ConcurrencyError mutexTimeLock(BL_Mutex* mutex, const struct timespec* timepoint) noexcept;
 
 /**
  * @brief Locks valid mutex. Awaits locked mutex for timeToWait.
@@ -191,14 +191,14 @@ extern ConcurrencyError mutexTimeLock(Mutex* mutex, const struct timespec* timep
  * @return ConcurrencyBusy if waited time is more than or equal to timeToWait.
  * @return ConcurrencyFailure if mutex could not be locked.
  */
-extern ConcurrencyError mutexTimeLockRelative(Mutex* mutex, const struct timespec* timeToWait) noexcept;
+extern ConcurrencyError mutexTimeLockRelative(BL_Mutex* mutex, const struct timespec* timeToWait) noexcept;
 
 /**
  * @brief Unlocks mutex.
  * @param mutex Pointer to valid mutex
  * @return ConcurrencyFailure if mutex could not be unlocked.
  */
-extern ConcurrencyError mutexUnlock(Mutex* mutex) noexcept;
+extern ConcurrencyError mutexUnlock(BL_Mutex* mutex) noexcept;
 
 /**
  * @brief Destroys mutex. It is no longer valid, but if it is heap allocated, still allocated.

@@ -1,0 +1,150 @@
+#include "Logging_Internal.h"
+#include <BackerLibTypes.h>
+#include <BackerLibConcurrency.h>
+#include <stdarg.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+
+#define TRACE_CHAR 0xf8
+#define DEBUG_CHAR 0xf9
+#define INFO_CHAR 0xfa
+#define WARN_CHAR 0xfb
+#define ERROR_CHAR 0xfc
+#define CRITICAL_CHAR 0xfd
+
+struct LogFile {
+    uint8_t flags;
+    FILE* file;
+};
+
+static struct {
+    BL_DynamicContainer files;
+    BL_Mutex logMutex;
+    bool isInited;
+} LoggingInfo = {0};
+
+static void internal_cleanup(void) {
+    if (!LoggingInfo.isInited)
+        return;
+
+    for (struct LogFile* file = bl_container_dynamic_front(&LoggingInfo.files); file; file = bl_container_dynamic_next(&LoggingInfo.files, file)) {
+        if (!(BL_LOG_IS_STD_STREAM & file->flags))
+            fclose(file->file);
+    }
+}
+
+void bl_log(const char* format, ...) {
+    va_list args;
+    va_start(args,format);
+    bl_vlog(format, args);
+    va_end(args);
+}
+
+void bl_vlog(const char* format,va_list args) {
+    if(!LoggingInfo.isInited)
+        return;
+
+    size_t availableSpace = BL_LOGGING_BUFFERSIZE - logBuffer.bytesWriten;
+    if (availableSpace == 0) {
+        bl_log_flush();
+        availableSpace = BL_LOGGING_BUFFERSIZE;
+    }
+    va_list argsCopy;
+    va_copy(argsCopy,args);
+    size_t bytesNeeded = vsnprintf((char*)logBuffer.buffer + logBuffer.bytesWriten, availableSpace, format, argsCopy);
+
+    if (availableSpace >= bytesNeeded) {
+        logBuffer.bytesWriten += bytesNeeded;
+        return;
+    }
+
+    bl_log_flush();
+
+    if (bytesNeeded <= BL_LOGGING_BUFFERSIZE) {
+        logBuffer.bytesWriten = bytesNeeded;
+        vsnprintf((char*)logBuffer.buffer, BL_LOGGING_BUFFERSIZE, format, args);
+        return;
+    }
+
+    char* buffer = malloc(bytesNeeded);
+    if(!buffer)
+        return;
+
+    vsnprintf((char*)logBuffer.buffer, bytesNeeded, format, args);
+
+    bl_internal_write_log(buffer, bytesNeeded);
+    
+    free(buffer);
+}
+
+void bl_assert(bool condition, const char *format, ...) {
+    if (!condition) {
+        va_list args;
+        va_start(args, format);
+        bl_vlog(format,args);
+        va_end(args);
+    }
+}
+
+void bl_internal_write_log(const char* buffer,size_t amountToWrite) {
+    if (mutexLock(&LoggingInfo.logMutex) != ConcurrencySuccess)
+        return;
+    const char* beginOfString = buffer;
+    uint8_t flags = 0;
+
+    for (size_t i = 0; i < amountToWrite; i++) {
+        if((unsigned char)buffer[i] < 0xf8) {
+            if (i != amountToWrite - 1)
+                continue;
+            i++;
+        }
+
+        size_t length = i - (uintptr_t)beginOfString + (uintptr_t)buffer;
+
+        for (struct LogFile* file = bl_container_dynamic_front(&LoggingInfo.files); file; file = bl_container_dynamic_next(&LoggingInfo.files, file)) {
+            if (file->flags & flags)
+                fwrite(beginOfString, length, 1, file->file);
+        }
+
+        if (i != amountToWrite) {
+            flags = 0x1 << ((unsigned char)buffer[i] - 0xf8);
+            beginOfString = buffer + i + 1;
+        }
+    }
+    mutexUnlock(&LoggingInfo.logMutex);
+}
+
+void bl_log_flush(void) {
+    if(!LoggingInfo.isInited)
+        return;
+    bl_internal_write_log((char*)logBuffer.buffer, logBuffer.bytesWriten);
+    logBuffer.bytesWriten = 0;
+}
+
+
+
+BL_ContainerError bl_log_init(void) {
+    if (LoggingInfo.isInited)
+        return BL_ContainerOPSuccessful;
+
+    LoggingInfo.logMutex = mutexCreate(MutexPlain);
+
+    if (!mutexIsValid(&LoggingInfo.logMutex))
+        return BL_ContainerAllocFailure;
+
+    LoggingInfo.files = bl_container_dynamic_create_stack(0, sizeof(struct LogFile));
+    atexit(internal_cleanup);
+    return BL_ContainerOPSuccessful;
+}
+
+BL_ContainerError bl_log_register(FILE *file, uint8_t flags) {
+    if (!LoggingInfo.isInited)
+        return BL_ContainerOPUnsuccessful;
+    if (mutexLock(&LoggingInfo.logMutex) != ConcurrencySuccess)
+        return BL_ContainerAllocFailure;
+    BL_ContainerError statusCode = bl_container_dynamic_append(&LoggingInfo.files, sizeof(struct LogFile), &(struct LogFile){.flags = flags,.file = file});
+    mutexUnlock(&LoggingInfo.logMutex);
+    return statusCode;
+}

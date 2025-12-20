@@ -18,7 +18,7 @@ namespace BackerLib {
      */
     typedef struct BL_ArrayList {
             BL_DynamicContainer dynamicContainer;
-            Mutex            mutex;
+            BL_Mutex            mutex;
     } BL_ArrayList;
 
     /**

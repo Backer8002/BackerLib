@@ -16,7 +16,7 @@ namespace BackerLib {
  * @param T Type to make future of
  * @note Use in conjunction with typedef.
  */
-#define Future(T) struct {bool isValid;T future;}
+#define Future(T) struct {volatile bool isValid;volatile T future;}
 
 /**
  * @brief Assembles type compatible with threadpool.
@@ -32,14 +32,14 @@ namespace BackerLib {
 */
 #define asyncArgsFutureOffset(asyncArgsPackType) offsetof(asyncArgsPackType,future)
 
-typedef struct ThreadPool {
+typedef struct BL_ThreadPool {
     BL_Heap               jobsQueue;
     BL_UnorderedContainer orders;
-    Mutex              mutexForQueue;
-    Thread*            threads;
+    BL_Mutex              mutexForQueue;
+    BL_Thread*            threads;
     size_t             amountOfThreads;
     bool               mustExit;
-} ThreadPool;
+} BL_ThreadPool;
 
 /**
  * @brief Special type of Future which does not contain a type.
@@ -80,7 +80,7 @@ typedef Future(BL_Hashmap) FutureHashMap;
 
 typedef asyncArgsPackType(FutureString, FILE*) AsyncFileReadArg;
 
-extern bool bl_threadpool_is_valid(const ThreadPool* threadPool) noexcept;
+extern bool bl_threadpool_is_valid(const BL_ThreadPool* threadPool) noexcept;
 
 /**
  * @brief Initlizes ThreadPool. Use isValidObject to check validity.
@@ -88,7 +88,7 @@ extern bool bl_threadpool_is_valid(const ThreadPool* threadPool) noexcept;
  * @param amountOfThreads Amount of threads to use in ThreadPool
  * @param sizeOfLargestAsyncArgsPack The size of the largest asyncArgsPack this threadpool can accept.
  */
-extern ConcurrencyError bl_threadpool_init(ThreadPool* threadPool, size_t amountOfThreads, size_t sizeOfLargestAsyncArgsPack) noexcept;
+extern ConcurrencyError bl_threadpool_init(BL_ThreadPool* threadPool, size_t amountOfThreads, size_t sizeOfLargestAsyncArgsPack) noexcept;
 
 /**
  * @brief Assigns a job to the threadpool.
@@ -101,7 +101,7 @@ extern ConcurrencyError bl_threadpool_init(ThreadPool* threadPool, size_t amount
  * @param argsOffset args offset in asyncArgsPackType
  * @return NULL if job could not be submitted, else pointer to future as defined by asyncArgsPackType.
  */
-extern void* bl_threadpool_job_assign(ThreadPool* threadPool, size_t priority, void (*function)(void*), size_t futureOffset, const void* args, size_t argsSize, size_t argsOffset) noexcept;
+extern void* bl_threadpool_job_assign(BL_ThreadPool* threadPool, size_t priority, void (*function)(void*), size_t futureOffset, const void* args, size_t argsSize, size_t argsOffset) noexcept;
 
 #define threadPoolJobAssignShort(threadPool,priority,function,argsPtr,asyncArgsPackType) bl_threadpool_job_assign(()threadPool),(priority),(function),asyncArgsFutureOffset(asyncArgsPackType),(argsPtr),sizeof(*(argsPtr)),asyncArgsOffset(asyncArgsPackType))
 
@@ -110,13 +110,13 @@ extern void* bl_threadpool_job_assign(ThreadPool* threadPool, size_t priority, v
  * @param threadPool Pointer to valid ThreadPool
  * @return ConcurrencyFailure if request could not be honored, due to issues with allocation or mutex locking.
  */
-extern ConcurrencyError bl_threadpool_join(ThreadPool* threadPool) noexcept;
+extern ConcurrencyError bl_threadpool_join(BL_ThreadPool* threadPool) noexcept;
 
 /**
  * @brief Threads quit after finishing what they currently work with. Awaits threads to exit.
  * @param threadPool Pointer to valid ThreadPool
  */
-extern void bl_threadpool_exit(ThreadPool* threadPool) noexcept;
+extern void bl_threadpool_exit(BL_ThreadPool* threadPool) noexcept;
 
 /**
  * @brief Reads file asyncronusly to String.
@@ -125,7 +125,7 @@ extern void bl_threadpool_exit(ThreadPool* threadPool) noexcept;
  * @param file Open file with read permission
  * @return Future to file contents. Invalid String if initialization of string failed.
  */
-extern FutureString* bl_async_file_read(ThreadPool* threadPool, size_t priority, FILE* file) noexcept;
+extern FutureString* bl_async_file_read(BL_ThreadPool* threadPool, size_t priority, FILE* file) noexcept;
 
 /**
  * @brief Destroys future
@@ -133,7 +133,7 @@ extern FutureString* bl_async_file_read(ThreadPool* threadPool, size_t priority,
  * @param future Pointer to Future assigned from ThreadPool
  * @return false if future was not valid and thus could not be destroyed, else true.
  */
-extern bool bl_future_destroy(ThreadPool* threadPool, void* future) noexcept;
+extern bool bl_future_destroy(BL_ThreadPool* threadPool, void* future) noexcept;
 
 /**
  * @brief Awaits future to be valid.

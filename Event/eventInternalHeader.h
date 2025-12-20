@@ -32,7 +32,7 @@ typedef struct {
     EventType    eventType;
     const BL_StringView  id;
     const BL_StringView* const groupIds;
-    Thread       callerThread;
+    BL_Thread       callerThread;
     uint32_t     amountOfGroups;
 } EventCallMain;
 
@@ -84,8 +84,8 @@ typedef union {
 typedef struct {
     BL_ArrayList     eventQueue;
     BL_Hashmap eventSubscribers;
-    Thread        eventThread;
-    Mutex        mutexForSubscriber;
+    BL_Thread        eventThread;
+    BL_Mutex        mutexForSubscriber;
     bool           shouldQuit;
 } EventHandle;
 
