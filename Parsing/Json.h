@@ -87,7 +87,7 @@ namespace BackerLib {
     } JsonTokenStore;
 
     static const Event JsonFileIllFormated = {
-        .id             = (const BL_StringView) stringViewInitConstExpr("JsonFileIllFormated"),
+        .id             = stringViewInitConstExpr("JsonFileIllFormated"),
         .groupIds       = &ErrorLogLevel,
         .amountOfGroups = 1};
 

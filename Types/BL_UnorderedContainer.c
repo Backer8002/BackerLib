@@ -30,7 +30,7 @@ void* bl_unordered_container_put(BL_UnorderedContainer* container, size_t sizeOf
         return NULL;
 
     if (container->amountOfElements/BL_UNORDERED_CONTAINER_PAGE_SIZE_IN_AMOUNT == container->amountOfPages) {
-        void* newArr = realloc(container->pages, (container->amountOfPages * 2 + 1) * sizeof *(container->pages));
+        void** newArr = (void**)realloc((void*)container->pages, (container->amountOfPages * 2 + 1) * sizeof *(container->pages));
         if (!newArr)
             return NULL;
         container->pages = newArr;
@@ -40,7 +40,7 @@ void* bl_unordered_container_put(BL_UnorderedContainer* container, size_t sizeOf
         container->bitset = newBitSet;
 
         for (size_t i = container->amountOfPages; i < container->amountOfPages*2 + 1; i++) {
-            void* page = malloc(container->byteSizeOfElement * BL_UNORDERED_CONTAINER_PAGE_SIZE_IN_AMOUNT);
+            void* page = malloc((size_t)container->byteSizeOfElement * BL_UNORDERED_CONTAINER_PAGE_SIZE_IN_AMOUNT);
             if (!page) {
                 for (size_t j = container->amountOfPages; j < i; j++)
                     free(container->pages[j]);
@@ -129,12 +129,12 @@ static void internal_unordered_container_init(BL_UnorderedContainer* container, 
     container->amountOfPages                     = (initialSize + BL_UNORDERED_CONTAINER_PAGE_SIZE_IN_AMOUNT - 1)/BL_UNORDERED_CONTAINER_PAGE_SIZE_IN_AMOUNT;
     container->amountOfElements         = 0;
     container->byteSizeOfElement = sizeOfElements;
-    container->pages                  = malloc(container->amountOfPages * sizeof *container->pages);
+    container->pages                  = (void**)malloc(container->amountOfPages * sizeof *container->pages);
     if (!container->pages)
         return;
     container->bitset = calloc((initialSize + 8 * sizeof *container->bitset - 1) / (8 * sizeof *container->bitset), sizeof(*container->bitset));
     if (!container->bitset) {
-        free(container->pages);
+        free((void*)container->pages);
         return;
     }
 
@@ -143,7 +143,7 @@ static void internal_unordered_container_init(BL_UnorderedContainer* container, 
         if(!page) {
             for(size_t j = 0; j < i; j++)
                 free(container->pages[j]);
-            free(container->pages);
+            free((void*)container->pages);
             free(container->bitset);
             return;
         }
@@ -203,7 +203,7 @@ void* bl_unordered_container_prev(const BL_UnorderedContainer* container, const 
 void* bl_unordered_container_back(const BL_UnorderedContainer* container) {
     if (container->pages[0] == NULL)
         return NULL;
-    return bl_unordered_container_prev(container,(BL_Bytes)container->pages[container->amountOfPages-1] + container->byteSizeOfElement * BL_UNORDERED_CONTAINER_PAGE_SIZE_IN_AMOUNT);
+    return bl_unordered_container_prev(container,(BL_Bytes)container->pages[container->amountOfPages-1] + (size_t)container->byteSizeOfElement * BL_UNORDERED_CONTAINER_PAGE_SIZE_IN_AMOUNT);
 }
 
 void* bl_unordered_container_end(const BL_UnorderedContainer* container) {
@@ -235,7 +235,7 @@ void bl_unordered_container_destroy(void* container) {
     free(((BL_UnorderedContainer*) container)->bitset);
     for (size_t i = 0; i < ((BL_UnorderedContainer*)container)->amountOfPages; i++)
         free(((BL_UnorderedContainer*)container)->pages[i]);
-    free(((BL_UnorderedContainer*) container)->pages);
+    free((void*)((BL_UnorderedContainer*) container)->pages);
     if (((BL_UnorderedContainer*) container)->header & ObjectFlagIsOnHeap)
         free(container);
     else

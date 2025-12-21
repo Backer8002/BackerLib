@@ -1,4 +1,5 @@
-#pragma once
+#ifndef BL_TYPESMAIN_H
+#define BL_TYPESMAIN_H
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -33,4 +34,5 @@ namespace BackerLib {
 #ifdef __cplusplus
     }
 };
+#endif
 #endif

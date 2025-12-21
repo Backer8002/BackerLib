@@ -565,5 +565,5 @@ void jsonReadFileThread(void* sharedState) {
 }
 
 FutureJsonObject*  jsonReadFileAsync(BL_ThreadPool* threadPool, size_t priority, FILE* file) {
-    return bl_threadpool_job_assign(threadPool,priority,jsonReadFileThread,asyncArgsFutureOffset(JsonReadFilePack),&file,sizeof(FILE*),asyncArgsOffset(JsonReadFilePack));
+    return bl_threadpool_job_assign(threadPool,priority,jsonReadFileThread,asyncArgsFutureOffset(JsonReadFilePack),(void*)&file,sizeof(FILE*),asyncArgsOffset(JsonReadFilePack));
 }

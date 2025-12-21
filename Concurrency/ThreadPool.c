@@ -21,6 +21,7 @@ static int threadWorkerFunction(void* sharedState) {
     void* jobBuffer = malloc(threadPool->orders.byteSizeOfElement);
     if (!jobBuffer)
         return 1;
+    bl_log_info_location("Finished starting thread %li",1);
     while (!threadPool->mustExit) {
         if (mutexLock(&threadPool->mutexForQueue) == ConcurrencyFailure)
             continue;
@@ -93,7 +94,7 @@ ConcurrencyError bl_threadpool_init(BL_ThreadPool* threadPool, size_t amountOfTh
             goto ThreadPoolInitErrorPath;
     }
     threadPool->amountOfThreads = amountOfThreads;
-    bl_unordered_container_put(&threadPool->orders, sizeof(void*),&(void*){NULL});
+    bl_unordered_container_put(&threadPool->orders, sizeof(void*),(void*)&(void*){NULL});
     return ConcurrencySuccess;
 
 ThreadPoolInitErrorPath:
@@ -197,13 +198,13 @@ bool bl_future_destroy(BL_ThreadPool* threadPool, void* future) {
 static void asyncFileReadMain(void* sharedState) {
     AsyncFileReadArg* args = sharedState;
 
-    rewind(args->args);
+    fseek(args->args,0,SEEK_SET);
     fseek(args->args, 0,SEEK_END);
     size_t fileSize = ftell(args->args);
-    rewind(args->args);
+    fseek(args->args,0,SEEK_SET);
 
     args->future.future = bl_container_dynamic_create_stack(fileSize, sizeof(char));
-    if (!bl_container_dynamic_is_valid(&args->future.future)) {
+    if (!bl_container_dynamic_is_valid((BL_DynamicContainer*)&args->future.future)) {
         args->future.isValid = true;
         return;
     }
@@ -220,7 +221,7 @@ FutureString* bl_async_file_read(BL_ThreadPool* threadPool, size_t priority, FIL
                                priority,
                                asyncFileReadMain,
                                asyncArgsFutureOffset(AsyncFileReadArg),
-                               &file, sizeof file,asyncArgsOffset(AsyncFileReadArg));
+                               (void*)&file, sizeof(FILE*),asyncArgsOffset(AsyncFileReadArg));
 }
 
 bool bl_threadpool_is_valid(const BL_ThreadPool* threadPool) {

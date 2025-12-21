@@ -23,6 +23,13 @@ namespace BackerLib {
 #define BL_LOGLEVEL_CRITICAL 0x20
 #define BL_LOG_IS_STD_STREAM 0x80
 
+#define TRACE_CHAR 0xf8
+#define DEBUG_CHAR 0xf9
+#define INFO_CHAR 0xfa
+#define WARN_CHAR 0xfb
+#define ERROR_CHAR 0xfc
+#define CRITICAL_CHAR 0xfd
+
 
 typedef struct BL_LogBuffer {
     unsigned char buffer[BL_LOGGING_BUFFERSIZE];

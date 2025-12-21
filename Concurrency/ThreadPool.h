@@ -103,7 +103,7 @@ extern ConcurrencyError bl_threadpool_init(BL_ThreadPool* threadPool, size_t amo
  */
 extern void* bl_threadpool_job_assign(BL_ThreadPool* threadPool, size_t priority, void (*function)(void*), size_t futureOffset, const void* args, size_t argsSize, size_t argsOffset) noexcept;
 
-#define threadPoolJobAssignShort(threadPool,priority,function,argsPtr,asyncArgsPackType) bl_threadpool_job_assign(()threadPool),(priority),(function),asyncArgsFutureOffset(asyncArgsPackType),(argsPtr),sizeof(*(argsPtr)),asyncArgsOffset(asyncArgsPackType))
+#define threadPoolJobAssignShort(threadPool,priority,function,argsPtr,asyncArgsPackType) bl_threadpool_job_assign((threadPool),(priority),(function),asyncArgsFutureOffset(asyncArgsPackType),(argsPtr),sizeof(*(argsPtr)),asyncArgsOffset(asyncArgsPackType))
 
 /**
  * @brief Ammends exit requests for all threads with the lowest priority. Awaits threads to exit.

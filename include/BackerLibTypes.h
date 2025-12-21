@@ -1,4 +1,5 @@
-#pragma once
+#ifndef BL_TYPES
+#define BL_TYPES
 
 #include "../Types/BL_ArrayList.h"
 #include "../Types/BL_Container.h"
@@ -10,3 +11,5 @@
 #include "../Types/BackerStrings.h"
 #include "../Types/HashMap.h"
 #include "../Types/TypesMain.h"
+
+#endif

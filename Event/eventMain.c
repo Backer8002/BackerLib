@@ -175,12 +175,12 @@ int internal_eventMainLoop(EventHandle* eventHandle) {
 
         for (EventCall* currentCall = eventHandle->eventQueue.dynamicContainer.container.array; currentCall < ((EventCall*) eventHandle->eventQueue.dynamicContainer.container.array + eventHandle->eventQueue.dynamicContainer.container.amountOfIndexes); currentCall++) {
             EventSubscriber* mainSubscriber = bl_hashmap_get(&eventHandle->eventSubscribers, sizeof(BL_StringView), &currentCall->eventCallMain.id);
-            if (mainSubscriber == NULL) {} else { if (internal_invokeSubscriber(currentCall, currentCall->eventCallMain.id, mainSubscriber) != EventOperationSuccess); }
+            if (mainSubscriber == NULL) {} else { if (internal_invokeSubscriber(currentCall, currentCall->eventCallMain.id, mainSubscriber) != EventOperationSuccess){} }
 
             for (uint32_t groupCallIterator = 0; groupCallIterator < currentCall->eventCallMain.amountOfGroups; groupCallIterator++) {
                 EventSubscriber* groupSubscriber = bl_hashmap_get(&eventHandle->eventSubscribers, sizeof(BL_StringView), currentCall->eventCallMain.groupIds + groupCallIterator);
                 if (groupSubscriber == NULL) { continue; }
-                if (internal_invokeSubscriber(currentCall, currentCall->eventCallMain.groupIds[groupCallIterator], groupSubscriber) != EventOperationSuccess);
+                if (internal_invokeSubscriber(currentCall, currentCall->eventCallMain.groupIds[groupCallIterator], groupSubscriber) != EventOperationSuccess) {}
             }
         }
 

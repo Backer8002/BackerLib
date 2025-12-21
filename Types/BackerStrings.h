@@ -167,18 +167,18 @@ namespace BackerLib {
 /**
  * @param cString Any valid constexpr char[] or literal
  */
-#define stringViewInitConstExpr(cString)     {.amountOfIndexes = sizeof(cString), .array = (unsigned char*)cString, .byteSizeOfSingleElement = 1, .header = ObjectFlagIsValid | ObjectFlagIsContainer}
+#define stringViewInitConstExpr(cString)     {.amountOfIndexes = sizeof(cString), .array = (const unsigned char*)(cString), .byteSizeOfSingleElement = 1, .header = ObjectFlagIsValid | ObjectFlagIsContainer}
 /**
  * @param wideString Any valid constexpr wchar_t[] or literal
  */
-#define stringViewWInitConstExpr(wideString) {.amountOfIndexes = sizeof(wideString), .array = wideString, .byteSizeOfSingleElement = sizeof(wchar_t), .header = ObjectFlagIsValid | ObjectFlagIsContainer}
+#define stringViewWInitConstExpr(wideString) {.amountOfIndexes = sizeof(wideString), .array = (wideString), .byteSizeOfSingleElement = sizeof(wchar_t), .header = ObjectFlagIsValid | ObjectFlagIsContainer}
 
     /**
      *
      * @param str Any valid C-string
      * @return StringView Object with len counted.
      */
-    extern BL_StringView bl_stringview_init(const unsigned char* str) noexcept;
+    extern BL_StringView bl_stringview_init(const char* str) noexcept;
     /**
      *
      * @param str Any valid Wide C-string

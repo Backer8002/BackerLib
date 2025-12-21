@@ -85,7 +85,7 @@ BL_ArrayList* arrayListCreateHeap(size_t initialSize, size_t elementSize ) {
     arrayList->dynamicContainer.container.header |= ObjectFlagIsOnHeap;
     arrayList->mutex = mutexCreate(MutexPlain);
     if (!mutexIsValid(&arrayList->mutex)) {
-        bl_container_destroy(&arrayList);
+        bl_container_destroy((void*)&arrayList);
         return arrayList;
     }
     arrayList->dynamicContainer.container.header |= ObjectFlagMutexExists;

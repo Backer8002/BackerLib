@@ -58,14 +58,14 @@ void bl_container_reverse(BL_Container* container) {
     if (container->amountOfIndexes < 2)
         return;
 
-    uintptr_t front = (uintptr_t) container->array;
-    uintptr_t end   = (uintptr_t) container->array + (container->amountOfIndexes - 1) * container->byteSizeOfSingleElement;
+    BL_Byte* front = (BL_Byte*)container->array;
+    BL_Byte* end   = (BL_Byte*)container->array + (container->amountOfIndexes - 1) * container->byteSizeOfSingleElement;
 
-    while (front < end) {
+    while ((uintptr_t)front < (uintptr_t)end) {
         for (size_t i = 0; i < container->byteSizeOfSingleElement; i++) {
-            *(BL_Byte*) (front + i) ^= *(BL_Byte*) (end + i);
-            *(BL_Byte*) (end + i) ^= *(BL_Byte*) (front + i);
-            *(BL_Byte*) (front + i) ^= *(BL_Byte*) (end + i);
+            front[i] ^= end[i];
+            end[i] ^= front[i];
+            front[i] ^= end[i];
         }
         front += container->byteSizeOfSingleElement;
         end -= container->byteSizeOfSingleElement;

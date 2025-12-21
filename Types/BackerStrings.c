@@ -233,10 +233,10 @@ BL_StringW bl_stringw_create(const wchar_t* str, size_t len) {
     return allocatedString;
 }
 
-BL_StringView bl_stringview_init(const unsigned char* str) {
+BL_StringView bl_stringview_init(const char* str) {
     return (BL_StringView) {
-        .amountOfIndexes         = strlen((char*)str),
-        .array                   = str,
+        .amountOfIndexes         = strlen(str),
+        .array                   = (unsigned char*)str,
         .byteSizeOfSingleElement = 1,
         .header                  = ObjectFlagIsValid | ObjectFlagIsContainer};
 }

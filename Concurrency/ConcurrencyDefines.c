@@ -1,6 +1,11 @@
 #include "ConcurrencyDefines.h"
 #include <stdbool.h>
 
+#ifdef USES_PTHREAD
+#include<pthread.h>
+#else
+#include<threads.h>
+#endif
 
 bool threadIsValid(const BL_Thread* thread) { return thread->isValid; }
 
@@ -44,7 +49,7 @@ BL_Thread threadCreate(void* sharedState, int (*function)(void* sharedState)) {
 
 BL_Thread threadGetCurrent(void) {
 #if USES_PTHREAD
-    return (Thread){.thread = pthread_self(), .isValid = true};
+    return (BL_Thread){.thread = pthread_self(), .isValid = true};
 #else
     return (BL_Thread){.thread = thrd_current(), .isValid = true};
 #endif

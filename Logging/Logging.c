@@ -7,13 +7,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#define TRACE_CHAR 0xf8
-#define DEBUG_CHAR 0xf9
-#define INFO_CHAR 0xfa
-#define WARN_CHAR 0xfb
-#define ERROR_CHAR 0xfc
-#define CRITICAL_CHAR 0xfd
-
 struct LogFile {
     uint8_t flags;
     FILE* file;
@@ -72,7 +65,7 @@ void bl_vlog(const char* format,va_list args) {
     if(!buffer)
         return;
 
-    vsnprintf((char*)logBuffer.buffer, bytesNeeded, format, args);
+    vsnprintf(buffer, bytesNeeded, format, args);
 
     bl_internal_write_log(buffer, bytesNeeded);
     
