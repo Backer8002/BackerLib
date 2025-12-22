@@ -5,6 +5,7 @@
 #include<BackerLibConcurrency.h>
 #include<stdbool.h>
 #include <stdarg.h>
+#include <time.h>
 #include <stdint.h>
 
 #ifdef __cplusplus
@@ -15,6 +16,7 @@ namespace BackerLib {
 #endif
 
 #define BL_LOGGING_BUFFERSIZE 5000
+
 #define BL_LOGLEVEL_TRACE 0x1
 #define BL_LOGLEVEL_DEBUG 0x2
 #define BL_LOGLEVEL_INFO 0x4
@@ -30,15 +32,7 @@ namespace BackerLib {
 #define ERROR_CHAR 0xfc
 #define CRITICAL_CHAR 0xfd
 
-
-typedef struct BL_LogBuffer {
-    unsigned char buffer[BL_LOGGING_BUFFERSIZE];
-    size_t bytesWriten;
-} BL_LogBuffer;
-
-thread_local extern BL_LogBuffer logBuffer;
-
-
+extern time_t bl_beginTime;
 
 void bl_log(const char* format,...) noexcept;
 

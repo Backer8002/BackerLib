@@ -21,7 +21,7 @@ static int threadWorkerFunction(void* sharedState) {
     void* jobBuffer = malloc(threadPool->orders.byteSizeOfElement);
     if (!jobBuffer)
         return 1;
-    bl_log_info_location("Finished starting thread %li",1);
+    bl_log_debug_location("Finished starting thread %li",threadGetCurrent().thread);
     while (!threadPool->mustExit) {
         if (mutexLock(&threadPool->mutexForQueue) == ConcurrencyFailure)
             continue;
@@ -139,7 +139,7 @@ void* bl_threadpool_job_assign(BL_ThreadPool* threadPool,
 
     if (errorCode != BL_ContainerOPSuccessful)
         return 0;
-    return element;
+    return (BL_Bytes)element + futureOffset;
 }
 
 ConcurrencyError bl_threadpool_join(BL_ThreadPool* threadPool) {

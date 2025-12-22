@@ -16,7 +16,7 @@
 
 #if USES_PTHREAD
 #include <pthread.h>
-#if __STDC_VERSION__ < 202311l
+#if __STDC_VERSION__ < 202311l && !defined(__cplusplus)
 #define thread_local _Thread_local
 #endif
 #else

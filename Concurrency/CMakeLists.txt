@@ -16,5 +16,5 @@ add_library(BackerLibConcurrency STATIC
 target_include_directories(BackerLibConcurrency BEFORE INTERFACE "${PROJECT_SOURCE_DIR}/../include")
 target_include_directories(BackerLibConcurrency BEFORE PUBLIC "${PROJECT_BINARY_DIR}/..")
 
-add_dependencies(BackerLibConcurrency BackerLibTypes)
-target_link_libraries(BackerLibConcurrency LINK_PUBLIC BackerLibTypes)
+add_dependencies(BackerLibConcurrency BackerLibTypes BackerLibLogging)
+target_link_libraries(BackerLibConcurrency LINK_PUBLIC BackerLibTypes BackerLibLogging)

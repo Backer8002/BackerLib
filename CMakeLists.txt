@@ -7,6 +7,8 @@ configure_file(BackerLibVersion.h.in BackerLibVersion.h)
 set(CMAKE_C_STANDARD 17)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 
+add_compile_definitions(BL_LOGGING_INFO BL_LOGGING_TRACE BL_LOGGING_DEBUG BL_LOGGING_WARN BL_LOGGING_ERROR BL_LOGGING_CRITICAL)
+
 if (MSVC)
     add_compile_options(/Wall /JMC /experimental:c11atomics)
 else ()

@@ -34,7 +34,8 @@ void* bl_unordered_container_put(BL_UnorderedContainer* container, size_t sizeOf
         if (!newArr)
             return NULL;
         container->pages = newArr;
-        uint64_t* newBitSet         = realloc(container->bitset, sizeof *container->bitset * ((container->amountOfPages * 2 + 1) * BL_UNORDERED_CONTAINER_PAGE_SIZE_IN_AMOUNT + 8 * sizeof*container->bitset - 1) / (8 * sizeof *container->bitset));
+        size_t newSizeOfBitset = sizeof *container->bitset *(((container->amountOfPages * 2 + 1) * BL_UNORDERED_CONTAINER_PAGE_SIZE_IN_AMOUNT + 8 * sizeof*container->bitset - 1) / (8 * sizeof *container->bitset));
+        uint64_t* newBitSet         = realloc(container->bitset, newSizeOfBitset);
         if (!newBitSet)
             return NULL;
         container->bitset = newBitSet;
@@ -132,7 +133,7 @@ static void internal_unordered_container_init(BL_UnorderedContainer* container, 
     container->pages                  = (void**)malloc(container->amountOfPages * sizeof *container->pages);
     if (!container->pages)
         return;
-    container->bitset = calloc((initialSize + 8 * sizeof *container->bitset - 1) / (8 * sizeof *container->bitset), sizeof(*container->bitset));
+    container->bitset = calloc(((initialSize + BL_UNORDERED_CONTAINER_PAGE_SIZE_IN_AMOUNT-1) / BL_UNORDERED_CONTAINER_PAGE_SIZE_IN_AMOUNT * BL_UNORDERED_CONTAINER_PAGE_SIZE_IN_AMOUNT + 8 * sizeof *container->bitset - 1) / (8 * sizeof *container->bitset), sizeof(*container->bitset));
     if (!container->bitset) {
         free((void*)container->pages);
         return;

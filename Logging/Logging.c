@@ -6,11 +6,21 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <time.h>
 
 struct LogFile {
     uint8_t flags;
     FILE* file;
 };
+
+typedef struct BL_LogBuffer {
+    unsigned char buffer[BL_LOGGING_BUFFERSIZE];
+    size_t bytesWriten;
+} BL_LogBuffer;
+
+static thread_local BL_LogBuffer logBuffer;
+
+time_t bl_beginTime = 0;
 
 static struct {
     BL_DynamicContainer files;
@@ -97,8 +107,10 @@ void bl_internal_write_log(const char* buffer,size_t amountToWrite) {
         size_t length = i - (uintptr_t)beginOfString + (uintptr_t)buffer;
 
         for (struct LogFile* file = bl_container_dynamic_front(&LoggingInfo.files); file; file = bl_container_dynamic_next(&LoggingInfo.files, file)) {
-            if (file->flags & flags)
+            if (file->flags & flags) {
                 fwrite(beginOfString, length, 1, file->file);
+                fputc('\n',file->file);
+            }
         }
 
         if (i != amountToWrite) {
@@ -121,6 +133,8 @@ void bl_log_flush(void) {
 BL_ContainerError bl_log_init(void) {
     if (LoggingInfo.isInited)
         return BL_ContainerOPSuccessful;
+    LoggingInfo.isInited = true;
+    bl_beginTime = time(NULL);
 
     LoggingInfo.logMutex = mutexCreate(MutexPlain);
 
