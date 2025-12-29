@@ -1,6 +1,5 @@
 #include "TypesMain.h"
-
-
+#include "BackerStrings.h"
 #include <stdarg.h>
 #include <stdint.h>
 
@@ -23,4 +22,9 @@ uint64_t bl_hashfunction_defualt(size_t amountOfVars, ...) {
 
 uint64_t bl_hashfunction_defualt_single_var(const void* element, size_t size) {
     return bl_hashfunction_defualt(1, size, element);
+}
+
+uint64_t bl_hashfunction_string_view(const void* element) {
+    const BL_StringView* sv = element;
+    return bl_hashfunction_defualt_single_var(sv->array,sv->amountOfIndexes);
 }

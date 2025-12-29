@@ -1,6 +1,6 @@
 #include "ExprParsing.h"
 
-#include <BackerLibEvent.h>
+#include <BackerLibLogging.h>
 #include <BackerLibTypes.h>
 #include <ctype.h>
 #include <stdio.h>
@@ -80,7 +80,7 @@ BL_DynamicContainer bl_expr_parse(const BL_DynamicContainer* tokens, const BL_Ex
     if (bl_container_size((BL_Container*) tokens) == 1) {
         BL_ExprParsingToken* token = bl_container_dynamic_front(tokens);
         if (!token->isAtom) {
-            LogError("A sole operator is not permitted");
+            bl_log_debug("A sole operator is not permitted");
             bl_container_destroy(&tree);
             return tree;
         }
@@ -112,14 +112,14 @@ BL_ExprOperation* internal_expr_parse(const BL_DynamicContainer* tokens, BL_Expr
 
     for (BL_ExprParsingToken* currentTokenLocal = *currentTokenGlobal; currentTokenLocal; currentTokenLocal = bl_container_dynamic_next(tokens, currentTokenLocal)) {
         if (currentTokenLocal->isAtom && prevTokenWasAtom) {
-            LogError("An atom cannot follow an atom without at binary operator in between.");
+            bl_log_debug("An atom cannot follow an atom without at binary operator in between.");
             *currentTokenGlobal = (BL_ExprParsingToken*) bl_container_dynamic_back(tokens);
             return NULL;
         }
 
         if (currentTokenLocal->isAtom) {
             if (!hasSeenBinaryOp) {
-                LogError("A binary operator must exist between atoms");
+                bl_log_debug("A binary operator must exist between atoms");
                 *currentTokenGlobal = (BL_ExprParsingToken*) bl_container_dynamic_back(tokens);
                 return NULL;
             }
@@ -129,7 +129,7 @@ BL_ExprOperation* internal_expr_parse(const BL_DynamicContainer* tokens, BL_Expr
         }
         BL_ExprOperatorDefine currentOperator = internal_get_operator(operators, amountOfOperators, currentTokenLocal->operatorID);
         if (!currentOperator.isUnaryOperator && hasSeenBinaryOp) {
-            LogError("Two binary operators cannot exist between two atoms");
+            bl_log_debug("Two binary operators cannot exist between two atoms");
             *currentTokenGlobal = (BL_ExprParsingToken*) bl_container_dynamic_back(tokens);
             return NULL;
         }
@@ -144,7 +144,7 @@ BL_ExprOperation* internal_expr_parse(const BL_DynamicContainer* tokens, BL_Expr
 
             if (!hasSeenBinaryOp && currentOperator.leftUnaryBinding) {
                 if (!previousOperation && !prevTokenWasAtom) { // TODO: Fix so that this will not fail if it is the first operation in all cases
-                    LogError("A left binding unary operator must bind to an atom, but no such has been provided before it.");
+                    bl_log_debug("A left binding unary operator must bind to an atom, but no such has been provided before it.");
                     *currentTokenGlobal = bl_container_dynamic_back(tokens);
                     return NULL;
                 }
@@ -164,7 +164,7 @@ BL_ExprOperation* internal_expr_parse(const BL_DynamicContainer* tokens, BL_Expr
             }
 
             if (!currentOperator.rightUnaryBinding) {
-                LogError("A left binding operator with no right unary binding cannot be used as a right binding unary operator.");
+                bl_log_debug("A left binding operator with no right unary binding cannot be used as a right binding unary operator.");
                 *currentTokenGlobal = bl_container_dynamic_back(tokens);
                 return NULL;
             }

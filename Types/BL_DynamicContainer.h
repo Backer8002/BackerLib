@@ -138,7 +138,7 @@ namespace BackerLib {
      */
     extern BL_ContainerError    bl_container_dynamic_append(BL_DynamicContainer* container, size_t sizeOfElement, const void* element) noexcept;
     /**
-     * @brief Creates a DynamicContainer on the stack. Use isValidObject to check validity.
+     * @brief Creates a DynamicContainer on the stack. Use is_valid to check validity. A container of initial size 0 is always valid.
      * @param initialSize Initial size of internal array
      * @param elementSize Size of the largest element to be stored in array
      */

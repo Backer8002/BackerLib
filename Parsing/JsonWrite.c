@@ -1,5 +1,5 @@
 #include "Json.h"
-#include <BackerLibEvent.h>
+#include <BackerLibLogging.h>
 #include <BackerLibTypes.h>
 #include <stdio.h>
 
@@ -90,7 +90,7 @@ static void jsonWriteArray(FILE* file, const JsonArray* array, const JsonFormat*
             internal_printJsonString(file, &currentMember->value.string);
             break;
         default:
-            LogError("Uninitialized JSON found.");
+            bl_log_warn("Uninitialized JSON found.");
             break;
         }
         if (currentMember != bl_container_dynamic_back(array)) {
@@ -153,7 +153,7 @@ static void jsonWriteObject(FILE* file, const JsonObject* object, const JsonForm
             internal_printJsonString(file, &currentMember->value.string);
             break;
         default:
-            LogError("Uninitialized JSON found.");
+            bl_log_warn("Uninitialized JSON found.");
             break;
         }
         if (currentMember != bl_container_dynamic_back(object)) {
