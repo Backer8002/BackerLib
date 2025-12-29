@@ -17,42 +17,19 @@ typedef struct HashArrayNode {
     BL_Byte data[];
 } HashArrayNode;
 
-static bool internal_memcmp_key(size_t keySize, const void* key, const void* otherKey, bool isDataTypeFlagsQualified);
-
-static bool internal_memcmp_key(size_t keySize, const void* key, const void* otherKey, bool isDataTypeFlagsQualified) {
-    if (!otherKey || !key)
-        return false;
-    if (isDataTypeFlagsQualified) {
-        if (*(BL_DataTypeFlags*) key != *(BL_DataTypeFlags*) otherKey)
-            return false;
-        if ((*(BL_DataTypeFlags*) key & ObjectFlagIsContainer) && (*(BL_DataTypeFlags*) key & ObjectFlagIsNotContinuous) == 0) {
-            if (((BL_Container*) key)->amountOfIndexes != ((BL_Container*) otherKey)->amountOfIndexes || ((BL_Container*) key)->byteSizeOfSingleElement != ((BL_Container*) otherKey)->byteSizeOfSingleElement)
-                return false;
-            for (size_t i = 0; i < ((BL_Container*) key)->amountOfIndexes; i++) {
-                if (memcmp((BL_Bytes) ((BL_Container*) key)->array + ((BL_Container*) key)->byteSizeOfSingleElement,
-                           (BL_Bytes) ((BL_Container*) otherKey)->array + ((BL_Container*) key)->byteSizeOfSingleElement,
-                           ((BL_Container*) key)->byteSizeOfSingleElement) != 0)
-                    return false;
-            }
-            return true;
-        }
-    }
-    if (memcmp(key, otherKey, keySize) != 0)
-        return false;
-    return true;
-}
-
 static inline void internal_hashMapInit(
     BL_Hashmap* hashMap,
-    size_t initialSize, size_t keySize, size_t elementSize, bool keyIsDataTypeFlags,
-    uint64_t (*hashFunction)(const void* element, size_t elementSize)) {
+    size_t initialSize, size_t keySize, size_t elementSize, bool (*compare)(const void*, const void*),
+    uint64_t (*hashFunction)(const void* element)) {
 
+    hashMap->unorderedContainer.header = 0;
+
+    if (!compare || !hashFunction)
+        return;
     if (!initialSize)
         initialSize = 1;
-    if (hashFunction == NULL)
-        hashMap->hashFunction = bl_hashfunction_defualt_single_var;
-    else
-        hashMap->hashFunction = hashFunction;
+    hashMap->hashFunction                = hashFunction;
+    hashMap->compare                     = compare;
     size_t sizeOfSingelLinkedListElement = sizeof(HashArrayNode) + keySize + ((keySize % alignof(max_align_t)) ? (alignof(max_align_t) - keySize % alignof(max_align_t)) : 0) + elementSize + ((elementSize % alignof(max_align_t)) ? (alignof(max_align_t) - elementSize % alignof(max_align_t)) : 0);
     hashMap->elementOffset               = sizeof(HashArrayNode) + keySize + ((keySize % alignof(max_align_t)) ? (alignof(max_align_t) - keySize % alignof(max_align_t)) : 0);
     hashMap->unorderedContainer          = bl_unordered_container_create_stack(initialSize + 1, sizeOfSingelLinkedListElement); // 0 will be invalid index
@@ -67,37 +44,29 @@ static inline void internal_hashMapInit(
     }
     hashMap->lengthOfHashArray = initialSize;
     hashMap->keySize           = keySize;
-    hashMap->unorderedContainer.header |= (keyIsDataTypeFlags ? FlagHashMapKeyIsDataTypeFlags : 0);
     hashMap->unorderedContainer.bitset[0] |= UINT64_MAX - (uint64_t) INT64_MAX;
     hashMap->unorderedContainer.amountOfElements++; // Use 0 as invalid index
 }
 
-BL_Hashmap bl_hashmap_create_stack(size_t initialSize, size_t keySize, size_t elementSize, bool keyIsDataTypeFlags,
-                           uint64_t (*hashFunction)(const void* element, size_t elementSize)) {
+BL_Hashmap bl_hashmap_create_stack(size_t initialSize, size_t keySize, size_t elementSize, bool (*compare)(const void* first, const void* second),
+                                   uint64_t (*hashFunction)(const void* element)) {
     BL_Hashmap hashMap;
-    internal_hashMapInit(&hashMap, initialSize, keySize, elementSize, keyIsDataTypeFlags, hashFunction);
+    internal_hashMapInit(&hashMap, initialSize, keySize, elementSize, compare, hashFunction);
     return hashMap;
 }
 
-BL_Hashmap* bl_hashmap_create_heap(size_t initialSize, size_t keySize, size_t elementSize, bool keyIsDataTypeFlags,
-                           uint64_t (*hashFunction)(const void* element, size_t elementSize)) {
+BL_Hashmap* bl_hashmap_create_heap(size_t initialSize, size_t keySize, size_t elementSize, bool (*compare)(const void* first, const void* second),
+                                   uint64_t (*hashFunction)(const void* element)) {
     BL_Hashmap* hashMap = malloc(sizeof(*hashMap));
     if (hashMap == NULL)
         return NULL;
-    internal_hashMapInit(hashMap, initialSize, keySize, elementSize, keyIsDataTypeFlags, hashFunction);
+    internal_hashMapInit(hashMap, initialSize, keySize, elementSize, compare, hashFunction);
     if (!bl_hashmap_is_valid(hashMap)) {
         free(hashMap);
         return NULL;
     }
     hashMap->unorderedContainer.header |= ObjectFlagIsOnHeap;
     return hashMap;
-}
-
-static uint64_t internal_hashmap_hash_singel_var(size_t elementSize, const void* element, bool elementIsDataTypeFlags, uint64_t (*hashFunction)(const void* element, size_t elementSize)) {
-    if (elementIsDataTypeFlags && (*(BL_DataTypeFlags*) element & ObjectFlagIsContainer) && (*(BL_DataTypeFlags*) element & ObjectFlagIsNotContinuous) == 0)
-        return hashFunction(((BL_Container*) element)->array, ((BL_Container*) element)->byteSizeOfSingleElement * ((BL_Container*) element)->amountOfIndexes);
-
-    return hashFunction(element, elementSize);
 }
 
 static BL_ContainerError internal_rehash(BL_Hashmap* hashMap, size_t newSize) {
@@ -112,11 +81,7 @@ static BL_ContainerError internal_rehash(BL_Hashmap* hashMap, size_t newSize) {
             oldNext                    = next;
             HashArrayNode* currentNode = bl_unordered_container_get(&hashMap->unorderedContainer, next);
             next                       = currentNode->next;
-            uint64_t newHash           = internal_hashmap_hash_singel_var(hashMap->keySize,
-                                                                       &currentNode->data,
-                                                             (hashMap->unorderedContainer.header & FlagHashMapKeyIsDataTypeFlags) ? true : false,
-                                                                       hashMap->hashFunction) %
-                               newSize;
+            uint64_t newHash           = hashMap->hashFunction(&currentNode->data) % newSize;
             currentNode->next     = newHashArray[newHash];
             newHashArray[newHash] = oldNext;
         }
@@ -130,55 +95,41 @@ static BL_ContainerError internal_rehash(BL_Hashmap* hashMap, size_t newSize) {
 BL_ContainerError bl_hashmap_insert(BL_Hashmap* hashMap, size_t sizeOfKey, const void* key, size_t sizeOfElement, const void* element) {
     if (sizeOfElement > hashMap->unorderedContainer.byteSizeOfElement - hashMap->elementOffset || sizeOfKey != hashMap->keySize)
         return BL_ContainerInvalidSize;
-    uint64_t hash = internal_hashmap_hash_singel_var(sizeOfKey,
-                                                  key,
-                                                  (hashMap->unorderedContainer.header & FlagHashMapKeyIsDataTypeFlags) ? true : false,
-                                                  hashMap->hashFunction) %
-                    hashMap->lengthOfHashArray;
+    uint64_t hash = hashMap->hashFunction(key) % hashMap->lengthOfHashArray;
 
     size_t  iterator = 1;
     size_t* hashNode = hashMap->hashArray + hash;
 
     while (*hashNode) {
-        if (internal_memcmp_key(sizeOfKey,
-                               key,
-                               &((HashArrayNode*) bl_unordered_container_get(&hashMap->unorderedContainer, *hashNode))->data,
-                               (hashMap->unorderedContainer.header & FlagHashMapKeyIsDataTypeFlags) ? true : false))
+        if (hashMap->compare(key,&((HashArrayNode*) bl_unordered_container_get(&hashMap->unorderedContainer, *hashNode))->data))
             return BL_ContainerOPUnsuccessful;
 
         hashNode = bl_unordered_container_get(&hashMap->unorderedContainer, *hashNode);
         iterator++;
     }
 
-    HashArrayNode               node   = {.next = hashMap->hashArray[hash]};
+    HashArrayNode  node        = {.next = hashMap->hashArray[hash]};
     HashArrayNode* objectPlace = bl_unordered_container_put(&hashMap->unorderedContainer, sizeof(node), &node);
     if (!objectPlace)
         return BL_ContainerAllocFailure;
-    size_t objectIndex = bl_unordered_container_index_from_ref(&hashMap->unorderedContainer,objectPlace);
-    hashMap->hashArray[hash]       = objectIndex;
+    size_t objectIndex       = bl_unordered_container_index_from_ref(&hashMap->unorderedContainer, objectPlace);
+    hashMap->hashArray[hash] = objectIndex;
     memcpy((BL_Bytes) &objectPlace->data, key, sizeOfKey);
     if (element)
         memcpy((BL_Bytes) objectPlace + hashMap->elementOffset, element, sizeOfElement);
 
-    if ((float) bl_unordered_container_size(&hashMap->unorderedContainer)/ (float) hashMap->lengthOfHashArray >= HASHMAP_MAX_LOADFACTOR || iterator >= HASHMAP_MAX_DEPTH)
+    if ((float) bl_unordered_container_size(&hashMap->unorderedContainer) / (float) hashMap->lengthOfHashArray >= HASHMAP_MAX_LOADFACTOR || iterator >= HASHMAP_MAX_DEPTH)
         return internal_rehash(hashMap, hashMap->lengthOfHashArray * 2 + 1);
     return BL_ContainerOPSuccessful;
 }
 
 static HashArrayNode* internal_hashArrayGetFromKey(const BL_Hashmap* hashMap, const void* key) {
-    uint64_t hash = internal_hashmap_hash_singel_var(hashMap->keySize,
-                                                  key,
-                                                  (hashMap->unorderedContainer.header & FlagHashMapKeyIsDataTypeFlags) ? true : false,
-                                                  hashMap->hashFunction) %
-                    hashMap->lengthOfHashArray;
+    uint64_t hash = hashMap->hashFunction(key) % hashMap->lengthOfHashArray;
 
     size_t hashNode = hashMap->hashArray[hash];
     while (hashNode) {
         HashArrayNode* nodeInContainer = bl_unordered_container_get(&hashMap->unorderedContainer, hashNode);
-        if (internal_memcmp_key(hashMap->keySize,
-                               key,
-                               &nodeInContainer->data,
-                               (hashMap->unorderedContainer.header & FlagHashMapKeyIsDataTypeFlags) ? true : false))
+        if (hashMap->compare(&nodeInContainer->data,key))
             return nodeInContainer;
         hashNode = nodeInContainer->next;
     }
@@ -202,7 +153,7 @@ BL_ContainerError bl_hashmap_remove(BL_Hashmap* hashMap, size_t sizeOfKey, const
     if (sizeOfKey != hashMap->keySize)
         return BL_ContainerInvalidSize;
 
-    uint64_t       hash            = internal_hashmap_hash_singel_var(sizeOfKey, key, (hashMap->unorderedContainer.header & FlagHashMapKeyIsDataTypeFlags) ? true : false, hashMap->hashFunction) % hashMap->lengthOfHashArray;
+    uint64_t       hash            = hashMap->hashFunction(key) % hashMap->lengthOfHashArray;
 
     size_t         hashNode        = hashMap->hashArray[hash];
     HashArrayNode* currentHashNode = NULL;
@@ -211,7 +162,7 @@ BL_ContainerError bl_hashmap_remove(BL_Hashmap* hashMap, size_t sizeOfKey, const
         currentHashNode = bl_unordered_container_get(&hashMap->unorderedContainer, hashNode);
         if (!currentHashNode)
             return BL_ContainerOPUnsuccessful;
-        if (internal_memcmp_key(sizeOfKey, key, currentHashNode->data, (hashMap->unorderedContainer.header & FlagHashMapKeyIsDataTypeFlags) ? true : false))
+        if (hashMap->compare(key, &currentHashNode->data))
             goto HashMapRemoveHandleDestruct;
         prevHashNode = hashNode;
         hashNode     = currentHashNode->next;

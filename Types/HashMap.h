@@ -1,9 +1,9 @@
 #ifndef HashMap_h_
 #define HashMap_h_
 
+#include "BL_UnorderedContainer.h"
 #include "TypesMain.h"
 #include <stdarg.h>
-#include "BL_UnorderedContainer.h"
 #include <stddef.h>
 #include <stdint.h>
 
@@ -98,7 +98,8 @@ namespace BackerLib {
 
     typedef struct BL_HashmapClosed {
         BL_UnorderedContainer unorderedContainer;
-        uint64_t (*hashFunction)(const void* element, size_t elementSize);
+        uint64_t (*hashFunction)(const void* element);
+        bool (*compare)(const void*, const void*);
         size_t* hashArray;
         size_t  lengthOfHashArray;
         size_t  keySize;
@@ -115,24 +116,24 @@ namespace BackerLib {
      * @param initialSize Initial amount of elements to store
      * @param keySize Size of Key
      * @param elementSize Maximum size of element to store
-     * @param keyIsDataTypeFlags Can Key* be cast to DataTypeFlags*
+     * @param compare Callback to compare equality of keys
      * @param hashFunction Callback to hash a key
      * @return HashMap on the stack.
      */
-    extern BL_Hashmap           bl_hashmap_create_stack(size_t initialSize, size_t keySize, size_t elementSize, bool keyIsDataTypeFlags,
-                                                uint64_t (*hashFunction)(const void* element, size_t elementSize)) noexcept;
+    BL_Hashmap               bl_hashmap_create_stack(size_t initialSize, size_t keySize, size_t elementSize, bool (*compare)(const void* first, const void* second),
+                                                     uint64_t (*hashFunction)(const void* element)) noexcept;
 
     /**
      * @brief Creates an HashMap on the heap.
      * @param initialSize Initial amount of elements to store
      * @param keySize Size of Key
      * @param elementSize Maximum size of element to store
-     * @param keyIsDataTypeFlags Can Key* be cast to DataTypeFlags*
+     * @param compare Callbak to compare equality of keys
      * @param hashFunction Callback to hash a key
      * @return NULL if allocation failed.
      */
-    extern BL_Hashmap*          bl_hashmap_create_heap(size_t initialSize, size_t keySize, size_t elementSize, bool keyIsDataTypeFlags,
-                                               uint64_t (*hashFunction)(const void* element, size_t elementSize)) noexcept;
+    BL_Hashmap*              bl_hashmap_create_heap(size_t initialSize, size_t keySize, size_t elementSize, bool (*compare)(const void* first, const void* second),
+                                                    uint64_t (*hashFunction)(const void* element)) noexcept;
 
     /**
      * @brief Hash function. Defualt for the HashMap implementations.
@@ -148,6 +149,8 @@ namespace BackerLib {
      * @return Hash
      */
     extern uint64_t          bl_hashfunction_defualt_single_var(const void* element, size_t size) noexcept;
+
+    extern uint64_t bl_hashfunction_string_view(const void* element) noexcept;
 
     /**
      * @brief Inserts element into hashMap using key.
@@ -210,7 +213,7 @@ namespace BackerLib {
      */
     extern void              bl_hashmap_destroy(BL_Hashmap* hashMap, void (*keyDestructor)(void* object), void (*elementDestructor)(void* object)) noexcept;
 
-    extern bool bl_hashmap_is_valid(const BL_Hashmap* hashMap);
+    extern bool              bl_hashmap_is_valid(const BL_Hashmap* hashMap);
 #ifdef __cplusplus
     }
 };

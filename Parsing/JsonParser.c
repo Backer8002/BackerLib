@@ -1,7 +1,8 @@
 #include "Json.h"
-#include <BackerLibEvent.h>
+#include <BackerLibLogging.h>
 #include <ctype.h>
 #include <math.h>
+#include <stdlib.h>
 #include <stdbool.h>
 #include <stdio.h>
 
@@ -536,11 +537,8 @@ JsonObject jsonReadFile(FILE* file) {
             }
             expectingValue = false;
             break;
-        case JsonTokenInvalid:
-            LogError("This token shall never appear.");
-            goto ErrorExit;
         default:
-            LogError("How did we get this token?");
+            bl_log_debug("How did we get this token? %i",currentToken->tokenType);
             goto ErrorExit;
         }
     }
@@ -549,7 +547,7 @@ JsonObject jsonReadFile(FILE* file) {
     return returnObject;
 
 ErrorExit:
-    eventCall(&JsonFileIllFormated);
+    bl_log_warn("Illformated JSON found while reading file.");
     internal_tokenStorageDestructor(&tokens);
     bl_container_destroy(&jsonObjectStack);
     jsonObjectDestroy(&returnObject);

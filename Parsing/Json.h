@@ -2,7 +2,6 @@
 #define JSONPARSER_H
 
 #include <BackerLibConcurrency.h>
-#include <BackerLibEvent.h>
 #include <BackerLibTypes.h>
 #include <stdbool.h>
 #include <stddef.h>
@@ -85,11 +84,6 @@ namespace BackerLib {
         BL_DynamicContainer dynamicContainer;
         size_t           maxDepth;
     } JsonTokenStore;
-
-    static const Event JsonFileIllFormated = {
-        .id             = stringViewInitConstExpr("JsonFileIllFormated"),
-        .groupIds       = &ErrorLogLevel,
-        .amountOfGroups = 1};
 
 
     typedef Future(JsonObject) FutureJsonObject;

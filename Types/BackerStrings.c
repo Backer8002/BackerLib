@@ -155,6 +155,9 @@ bool bl_string_compare_acending(const void* first, const void* second) {
     const BL_StringView* firstString = first;
     const BL_StringView* secondString = second;
 
+    if(!first || !second)
+        return false;
+
     for (size_t i = 0; i < bl_string_length(firstString); i++) {
         if (i>=bl_string_length(secondString))
             return false;
@@ -185,6 +188,9 @@ bool bl_string_compare_decending(const void* first, const void* second) {
     const BL_StringView* firstString = first;
     const BL_StringView* secondString = second;
 
+    if(!first || !second)
+        return false;
+
     for (size_t i = 0; i < bl_string_length(firstString); i++) {
         if (i>=bl_string_length(secondString))
             return true;
@@ -214,6 +220,9 @@ bool bl_string_compare_decending(const void* first, const void* second) {
 bool bl_string_equal(const void* first, const void* second) {
     const BL_StringView* firstString = first;
     const BL_StringView* secondString = second;
+
+    if(!first || !second)
+        return false;
 
     if (bl_string_length(firstString) != bl_string_length(secondString))
         return false;

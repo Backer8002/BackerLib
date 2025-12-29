@@ -33,20 +33,40 @@ namespace BackerLib {
 #define CRITICAL_CHAR 0xfd
 
 extern time_t bl_beginTime;
-
+/**
+ * @brief Saves a log to the buffer. Should begin with one of the chars above.
+ * @param format Format string for va_args
+ */
 void bl_log(const char* format,...) noexcept;
-
+/**
+ * @brief Saves a log to the buffer.Should begin with one of the chars above.
+ * @param format Format string for args
+ * @param args for format string
+ */
 void bl_vlog(const char* format, va_list args) noexcept;
-
+/**
+ * @brief Runs bl_vlog if condition is false.
+ */
 void bl_assert(bool condition,const char* format,...) noexcept;
-
+/**
+ * @private
+ * @brief Writes buffer to file streams.
+ */
 void bl_internal_write_log(const char* buffer,size_t amountToWrite) noexcept;
-
-void bl_log_flush(void);
-
-BL_ContainerError bl_log_init(void);
-
-BL_ContainerError bl_log_register(FILE* file,uint8_t flags);
+/**
+ * @brief Flushes internal buffer. Like fflush but for logs buffer.
+ */
+void bl_log_flush(void) noexcept;
+/**
+ * @brief Intializes logging. It is not thread safe. Returns Bl_ContainerOPSuccess on successful initialization.
+ */
+BL_ContainerError bl_log_init(void) noexcept;
+/**
+ * @brief Registers file for logging and takes ownership of it.
+ * @param file to register
+ * @param flags Either BL_LOGLEVEL_* for loglevels to write to file or BL_LOG_IS_STD_STREAM to indicate that it is either stdout or stderr.
+ */
+BL_ContainerError bl_log_register(FILE* file,uint8_t flags) noexcept;
 
 #ifdef __cplusplus
     }
