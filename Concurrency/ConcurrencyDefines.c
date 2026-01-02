@@ -1,7 +1,7 @@
 #include "ConcurrencyDefines.h"
 #include <stdbool.h>
 
-#ifdef USES_PTHREAD
+#if USES_PTHREAD
 #include<pthread.h>
 #else
 #include<threads.h>

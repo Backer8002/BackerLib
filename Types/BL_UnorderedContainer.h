@@ -42,7 +42,7 @@ namespace BackerLib {
      */
     extern BL_ContainerError              bl_unordered_container_set(BL_UnorderedContainer* container, size_t index, size_t sizeOfElement, const void* element) noexcept;
     /**
-     * @brief Like unorderedContainerSet this sets an element at an index. Though this only sets the element if it is not yet set.
+     * @brief Like bl_unordered_container_set this sets an element at an index. Though this only sets the element if it is not yet set.
      * Index may not be larger than the internal container.
      * @param container Pointer to valid UnorderedContainer
      * @param index Index to set at

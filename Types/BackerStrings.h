@@ -65,7 +65,7 @@ namespace BackerLib {
      */
     extern size_t     bl_string_length(const BL_StringView* string) noexcept;
     /**
-     * @brief Wrapper of containerGet
+     * @brief Wrapper of bl_container_get
      * @param string Pointer to valid String
      * @param index Index to get char from
      * @return Pointer to char in array. NULL if invalid index.

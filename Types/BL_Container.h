@@ -46,7 +46,7 @@ namespace BackerLib {
          */
         extern BL_Container bl_container_get_subarray(const BL_Container* container, size_t firstIndex, size_t lastIndex,bool copyInReverse) noexcept;
         /**
-         * @brief Wrapper of containerGetSubArray(container,0,size,false)
+         * @brief Wrapper of bl_container_get_subarray(container,0,size,false)
          * @param container Pointer to valid Container
          * @return Invalid container if allocation failed.
          */

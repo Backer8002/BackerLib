@@ -199,7 +199,7 @@ BL_ContainerError bl_hashmap_replace(BL_Hashmap* hashMap, size_t sizeOfKey, cons
 }
 
 void bl_hashmap_destroy(BL_Hashmap* hashMap, void (*keyDestructor)(void* key), void (*elementDestructor)(void* element)) {
-    if (!(BL_DataTypeFlags*) hashMap)
+    if (!hashMap)
         return;
     for (size_t i = 1; i < bl_unordered_container_size(&hashMap->unorderedContainer); i++) {
         HashArrayNode* element = bl_unordered_container_get((BL_UnorderedContainer*) hashMap, i);
