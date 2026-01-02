@@ -6,6 +6,10 @@ project(BackerLibTypes LANGUAGES C VERSION 0.1)
 set(CMAKE_C_STANDARD 17)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 
+if (MSVC)
+    add_compile_definitions(max_align_t=size_t)
+endif()
+
 include_directories(BackerLibTypes INTERFACE "${PROJECT_SOURCE_DIR}/../include")
 add_library(BackerLibTypes STATIC
         BL_ArrayList.h

@@ -231,7 +231,7 @@ size_t bl_unordered_container_index_from_ref(const BL_UnorderedContainer* contai
 }
 
 void bl_unordered_container_destroy(void* container) {
-    if (bl_unordered_container_is_valid(container))
+    if (!bl_unordered_container_is_valid(container))
         return;
     free(((BL_UnorderedContainer*) container)->bitset);
     for (size_t i = 0; i < ((BL_UnorderedContainer*)container)->amountOfPages; i++)

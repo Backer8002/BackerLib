@@ -56,7 +56,7 @@ void bl_vlog(const char* format, va_list args) {
     }
     va_list argsCopy;
     va_copy(argsCopy, args);
-    size_t bytesNeeded = vsnprintf((char*) logBuffer.buffer + logBuffer.bytesWriten, availableSpace, format, argsCopy);
+    size_t bytesNeeded = vsnprintf((char*) logBuffer.buffer + logBuffer.bytesWriten, availableSpace, format, argsCopy) + 1;
 
     if (availableSpace >= bytesNeeded) {
         logBuffer.bytesWriten += bytesNeeded;
@@ -113,7 +113,7 @@ void bl_internal_write_log(const char* buffer, size_t amountToWrite) {
             }
         }
 
-        if (i != amountToWrite) {
+        if (i < amountToWrite) {
             flags         = 0x1 << ((unsigned char) buffer[i] - 0xf8);
             beginOfString = buffer + i + 1;
         }

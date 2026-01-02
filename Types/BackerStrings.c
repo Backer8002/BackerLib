@@ -86,6 +86,9 @@ BL_DynamicContainer bl_string_split_multi(const BL_StringView* string, const uns
         if (!charsToSplit[currentChar])
             continue;
 
+        if (amountOfCharsToSplitAt && ++amountSplit > amountOfCharsToSplitAt)
+            break;
+
         if (beginOfSubString == currentIndexInString) {
             beginOfSubString += splitFromBack ? -1 : 1;
             continue;
@@ -107,9 +110,6 @@ BL_DynamicContainer bl_string_split_multi(const BL_StringView* string, const uns
         }
 
         beginOfSubString = currentIndexInString + (splitFromBack ? -1 : 1);
-
-        if (amountOfCharsToSplitAt && amountSplit++ > amountOfCharsToSplitAt)
-            break;
     }
 
     if ((splitFromBack && beginOfSubString != SIZE_MAX) || (!splitFromBack && beginOfSubString != bl_string_length(string))) {
