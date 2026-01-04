@@ -16,21 +16,21 @@ namespace BackerLib {
  * @param T Type to make future of
  * @note Use in conjunction with typedef.
  */
-#define Future(T) struct {volatile bool isValid;volatile T future;}
+#define BL_Future(T) struct {volatile bool isValid;volatile T future;}
 
 /**
  * @brief Assembles type compatible with threadpool.
  * @note Use in conjunction with typedef.
  */
-#define asyncArgsPackType(FutureType,ArgsStructType) struct {struct{void(*operation)(void*); size_t futureOffset;}; FutureType future; ArgsStructType args;}
+#define BL_AsyncArgsType(FutureType,ArgsStructType) struct {struct{void(*operation)(void*); size_t futureOffset;}; FutureType future; ArgsStructType args;}
 /**
  * @brief Gets offset of ArgsStructType in a asyncArgsType.
  */
-#define asyncArgsOffset(asyncArgsPackType) offsetof(asyncArgsPackType,args)
+#define bl_async_args_offset(asyncArgsPackType) offsetof(asyncArgsPackType,args)
 /**
-* @brief Gets offset of Future type in a asyncArgsType.
+* @brief Gets offset of BL_Future type in a asyncArgsType.
 */
-#define asyncArgsFutureOffset(asyncArgsPackType) offsetof(asyncArgsPackType,future)
+#define bl_async_args_future_offset(asyncArgsPackType) offsetof(asyncArgsPackType,future)
 
 typedef struct BL_ThreadPool {
     BL_Heap               jobsQueue;
@@ -42,43 +42,43 @@ typedef struct BL_ThreadPool {
 } BL_ThreadPool;
 
 /**
- * @brief Special type of Future which does not contain a type.
+ * @brief Special type of BL_Future which does not contain a type.
  */
-typedef bool FutureVoid;
+typedef bool BL_FutureVoid;
 
-typedef Future(char) FutureChar;
+typedef BL_Future(char) BL_FutureChar;
 
-typedef Future(unsigned char) FutureUChar;
+typedef BL_Future(unsigned char) BL_FutureUChar;
 
-typedef Future(signed char) FutureSChar;
+typedef BL_Future(signed char) BL_FutureSChar;
 
-typedef Future(short) FutureShort;
+typedef BL_Future(short) BL_FutureShort;
 
-typedef Future(unsigned short) FutureUShort;
+typedef BL_Future(unsigned short) BL_FutureUShort;
 
-typedef Future(int) FutureInt;
+typedef BL_Future(int) BL_FutureInt;
 
-typedef Future(unsigned int) FutureUInt;
+typedef BL_Future(unsigned) BL_FutureUInt;
 
-typedef Future(long) FutureLong;
+typedef BL_Future(long) BL_FutureLong;
 
-typedef Future(unsigned long) FutureULong;
+typedef BL_Future(unsigned long) BL_FutureULong;
 
-typedef Future(long long) FutureLongLong;
+typedef BL_Future(long long) BL_FutureLongLong;
 
-typedef Future(unsigned long long) FutureULongLong;
+typedef BL_Future(unsigned long long) BL_FutureULongLong;
 
-typedef Future(BL_Container) FutureContainer;
+typedef BL_Future(BL_Container) BL_FutureContainer;
 
-typedef Future(BL_DynamicContainer) FutureDynamicContainer;
+typedef BL_Future(BL_DynamicContainer) BL_FutureDynamicContainer;
 
-typedef Future(BL_String) FutureString;
+typedef BL_Future(BL_String) BL_FutureString;
 
-typedef Future(BL_UnorderedContainer) FutureUnorderedContainer;
+typedef BL_Future(BL_UnorderedContainer) BL_FutureUnorderedContainer;
 
-typedef Future(BL_Hashmap) FutureHashMap;
+typedef BL_Future(BL_Hashmap) BL_FutureHashMap;
 
-typedef asyncArgsPackType(FutureString, FILE*) AsyncFileReadArg;
+typedef BL_AsyncArgsType(BL_FutureString, FILE*) BL_AsyncFileReadArg;
 
 extern bool bl_threadpool_is_valid(const BL_ThreadPool* threadPool) noexcept;
 
@@ -88,7 +88,7 @@ extern bool bl_threadpool_is_valid(const BL_ThreadPool* threadPool) noexcept;
  * @param amountOfThreads Amount of threads to use in ThreadPool
  * @param sizeOfLargestAsyncArgsPack The size of the largest asyncArgsPack this threadpool can accept.
  */
-extern ConcurrencyError bl_threadpool_init(BL_ThreadPool* threadPool, size_t amountOfThreads, size_t sizeOfLargestAsyncArgsPack) noexcept;
+extern BL_ConcurrencyError bl_threadpool_init(BL_ThreadPool* threadPool, size_t amountOfThreads, size_t sizeOfLargestAsyncArgsPack) noexcept;
 
 /**
  * @brief Assigns a job to the threadpool.
@@ -103,14 +103,14 @@ extern ConcurrencyError bl_threadpool_init(BL_ThreadPool* threadPool, size_t amo
  */
 extern void* bl_threadpool_job_assign(BL_ThreadPool* threadPool, size_t priority, void (*function)(void*), size_t futureOffset, const void* args, size_t argsSize, size_t argsOffset) noexcept;
 
-#define threadPoolJobAssignShort(threadPool,priority,function,argsPtr,asyncArgsPackType) bl_threadpool_job_assign((threadPool),(priority),(function),asyncArgsFutureOffset(asyncArgsPackType),(argsPtr),sizeof(*(argsPtr)),asyncArgsOffset(asyncArgsPackType))
+#define bl_threadpool_job_assign_short(threadPool,priority,function,argsPtr,asyncArgsPackType) bl_threadpool_job_assign((threadPool),(priority),(function),bl_async_args_future_offset(asyncArgsPackType),(argsPtr),sizeof(*(argsPtr)),bl_async_args_offset(asyncArgsPackType))
 
 /**
  * @brief Ammends exit requests for all threads with the lowest priority. Awaits threads to exit.
  * @param threadPool Pointer to valid ThreadPool
- * @return ConcurrencyFailure if request could not be honored, due to issues with allocation or mutex locking.
+ * @return BL_ConcurrencyFailure if request could not be honored, due to issues with allocation or mutex locking.
  */
-extern ConcurrencyError bl_threadpool_join(BL_ThreadPool* threadPool) noexcept;
+extern BL_ConcurrencyError bl_threadpool_join(BL_ThreadPool* threadPool) noexcept;
 
 /**
  * @brief Threads quit after finishing what they currently work with. Awaits threads to exit.
@@ -125,12 +125,12 @@ extern void bl_threadpool_exit(BL_ThreadPool* threadPool) noexcept;
  * @param file Open file with read permission
  * @return Future to file contents. Invalid String if initialization of string failed.
  */
-extern FutureString* bl_async_file_read(BL_ThreadPool* threadPool, size_t priority, FILE* file) noexcept;
+extern BL_FutureString* bl_async_file_read(BL_ThreadPool* threadPool, size_t priority, FILE* file) noexcept;
 
 /**
  * @brief Destroys future
  * @param threadPool Pointer to valid ThreadPool
- * @param future Pointer to Future assigned from ThreadPool
+ * @param future Pointer to BL_Future assigned from ThreadPool
  * @return false if future was not valid and thus could not be destroyed, else true.
  */
 extern bool bl_future_destroy(BL_ThreadPool* threadPool, void* future) noexcept;

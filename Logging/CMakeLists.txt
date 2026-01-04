@@ -6,5 +6,6 @@ add_library(BackerLibLogging STATIC Logging.c Logging.h Logging_Internal.h)
 
 target_include_directories(BackerLibLogging BEFORE INTERFACE "${PROJECT_SOURCE_DIR}/../include")
 
-add_dependencies(BackerLibLogging BackerLibTypes)
-target_link_libraries(BackerLibLogging BackerLibTypes)
+add_dependencies(BackerLibLogging BackerLibConcurrency)
+
+target_link_libraries(BackerLibLogging BackerLibConcurrency)

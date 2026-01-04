@@ -15,60 +15,61 @@ static struct {
 } EventInfo = {0};
 
 static int internal_thread_function(void* sharedState) {
+    sharedState = sharedState;
     while (!EventInfo.shouldExit) {
-        if (mutexLock(&EventInfo.mutex) != ConcurrencySuccess) {
-            threadYield();
+        if (bl_mutex_lock(&EventInfo.mutex) != BL_ConcurrencySuccess) {
+            bl_thread_yield();
             continue;
         }
 
         void (**functionPtr)(void) = bl_container_dynamic_back(&EventInfo.jobs);
         void (*function)(void)     = functionPtr ? *functionPtr : NULL;
 
-        mutexUnlock(&EventInfo.mutex);
+        bl_mutex_unlock(&EventInfo.mutex);
 
         if (function)
             function();
         else
-            threadYield();
+            bl_thread_yield();
     }
     return 0;
 }
 
 static void internal_destroy_global_invokable(void* func) {
-    ((void (*)(void)) func)();
+    (*(void (**)(void)) func)();
 }
 
 static void internal_cleanup(void) {
     EventInfo.shouldExit = true;
     for (BL_Thread* thread = bl_container_dynamic_front(&EventInfo.threads); thread; thread = bl_container_dynamic_next(&EventInfo.threads, thread))
-        threadJoin(thread);
+        bl_thread_join(thread);
     bl_container_dynamic_destroy(&EventInfo.threads);
     bl_container_dynamic_destroy_with_elements(&EventInfo.jobs,internal_destroy_global_invokable);
     bl_hashmap_destroy(&EventInfo.eventMap,NULL,bl_event_destroy);
-    mutexDestroy(&EventInfo.mutex);
+    bl_mutex_destroy(&EventInfo.mutex);
 }
 
 BL_ContainerError bl_event_global_init(void) {
     if (EventInfo.isInited)
         return BL_ContainerOPSuccessful;
 
-    EventInfo.mutex = mutexCreate(MutexPlain);
+    EventInfo.mutex = bl_mutex_create(BL_MutexPlain);
 
-    if (!mutexIsValid(&EventInfo.mutex))
+    if (!bl_mutex_is_valid(&EventInfo.mutex))
         return BL_ContainerAllocFailure;
     
-    EventInfo.eventMutex = mutexCreate(MutexPlain);
+    EventInfo.eventMutex = bl_mutex_create(BL_MutexPlain);
 
-    if (!mutexIsValid(&EventInfo.eventMutex)) {
-        mutexDestroy(&EventInfo.mutex);
+    if (!bl_mutex_is_valid(&EventInfo.eventMutex)) {
+        bl_mutex_destroy(&EventInfo.mutex);
         return BL_ContainerAllocFailure;
     }
 
     EventInfo.eventMap = bl_hashmap_create_stack(0, sizeof(BL_StringView), sizeof(BL_Event), bl_string_equal, bl_hashfunction_string_view);
 
     if (!bl_hashmap_is_valid(&EventInfo.eventMap)) {
-        mutexDestroy(&EventInfo.mutex);
-        mutexDestroy(&EventInfo.eventMutex);
+        bl_mutex_destroy(&EventInfo.mutex);
+        bl_mutex_destroy(&EventInfo.eventMutex);
         return BL_ContainerAllocFailure;
     }
 
@@ -84,12 +85,12 @@ BL_ContainerError bl_event_global_register(const BL_StringView* eventName, const
     if (!EventInfo.isInited)
         return BL_ContainerOPUnsuccessful;
 
-    if (mutexLock(&EventInfo.eventMutex) != ConcurrencySuccess)
+    if (bl_mutex_lock(&EventInfo.eventMutex) != BL_ConcurrencySuccess)
         return BL_ContainerOPUnsuccessful;
 
     BL_ContainerError errorCode = bl_hashmap_insert(&EventInfo.eventMap, sizeof *eventName, eventName, sizeof *event, event);
 
-    mutexUnlock(&EventInfo.eventMutex);
+    bl_mutex_unlock(&EventInfo.eventMutex);
 
     return errorCode;
 }
@@ -98,7 +99,7 @@ BL_ContainerError bl_event_global_register_func(const BL_StringView* eventName, 
     if (!EventInfo.isInited)
         return BL_ContainerOPUnsuccessful;
 
-    if (mutexLock(&EventInfo.eventMutex) != ConcurrencySuccess)
+    if (bl_mutex_lock(&EventInfo.eventMutex) != BL_ConcurrencySuccess)
         return BL_ContainerOPUnsuccessful;
 
     BL_ContainerError errorCode = BL_ContainerOPSuccessful;
@@ -125,7 +126,7 @@ BL_ContainerError bl_event_global_register_func(const BL_StringView* eventName, 
 
     Exit:;
 
-    mutexUnlock(&EventInfo.eventMutex);
+    bl_mutex_unlock(&EventInfo.eventMutex);
 
     return errorCode;
 }
@@ -133,10 +134,10 @@ BL_ContainerError bl_event_global_register_func(const BL_StringView* eventName, 
 BL_ContainerError bl_event_global_unregister(const BL_StringView* eventName) {
     if (!EventInfo.isInited)
         return BL_ContainerOPSuccessful;
-    if (mutexLock(&EventInfo.eventMutex) != ConcurrencySuccess)
+    if (bl_mutex_lock(&EventInfo.eventMutex) != BL_ConcurrencySuccess)
         return BL_ContainerOPUnsuccessful;
     bl_hashmap_remove(&EventInfo.eventMap, sizeof *eventName, eventName, NULL, bl_event_destroy);
-    mutexUnlock(&EventInfo.eventMutex);
+    bl_mutex_unlock(&EventInfo.eventMutex);
     return BL_ContainerOPSuccessful;
 }
 
@@ -144,7 +145,7 @@ BL_ContainerError bl_event_global_unregister_func(const BL_StringView* eventName
     if (!EventInfo.isInited)
         return BL_ContainerOPSuccessful;
 
-    if (mutexLock(&EventInfo.eventMutex) != ConcurrencySuccess)
+    if (bl_mutex_lock(&EventInfo.eventMutex) != BL_ConcurrencySuccess)
         return BL_ContainerOPUnsuccessful;
 
     BL_Event* event = bl_hashmap_get(&EventInfo.eventMap, sizeof *eventName, eventName);
@@ -158,7 +159,7 @@ BL_ContainerError bl_event_global_unregister_func(const BL_StringView* eventName
         bl_hashmap_remove(&EventInfo.eventMap, sizeof *eventName, eventName, NULL, bl_event_destroy);
 
     Exit:;
-    mutexUnlock(&EventInfo.eventMutex);
+    bl_mutex_unlock(&EventInfo.eventMutex);
     return BL_ContainerOPSuccessful;
 }
 
@@ -195,30 +196,30 @@ BL_ContainerError bl_event_global_invoke(const BL_StringView* eventName) {
     if (!EventInfo.isInited)
         return BL_ContainerOPUnsuccessful;
 
-    if (mutexLock(&EventInfo.eventMutex) != ConcurrencySuccess)
+    if (bl_mutex_lock(&EventInfo.eventMutex) != BL_ConcurrencySuccess)
         return BL_ContainerOPUnsuccessful;
 
     BL_Event* event = bl_hashmap_get(&EventInfo.eventMap, sizeof *eventName, eventName);
 
     if (!event) {
-        mutexUnlock(&EventInfo.eventMutex);
+        bl_mutex_unlock(&EventInfo.eventMutex);
         return BL_ContainerInvalidIndex;
     }
 
-    if (mutexLock(&EventInfo.mutex) != ConcurrencySuccess) {
-        mutexUnlock(&EventInfo.eventMutex);
+    if (bl_mutex_lock(&EventInfo.mutex) != BL_ConcurrencySuccess) {
+        bl_mutex_unlock(&EventInfo.eventMutex);
         return BL_ContainerOPUnsuccessful;
     }
 
     if (bl_container_dynamic_reserve(&EventInfo.jobs, bl_container_dynamic_size(&event->functions)) != BL_ContainerOPSuccessful) {
-        mutexUnlock(&EventInfo.eventMutex);
-        mutexUnlock(&EventInfo.mutex);
+        bl_mutex_unlock(&EventInfo.eventMutex);
+        bl_mutex_unlock(&EventInfo.mutex);
         return BL_ContainerAllocFailure;
     }
 
     bl_container_dynamic_insert_container(&EventInfo.jobs, bl_container_dynamic_size(&EventInfo.jobs), bl_container_const_ptr_cast_dynamic_container(&event->functions));
 
-    mutexUnlock(&EventInfo.eventMutex);
+    bl_mutex_unlock(&EventInfo.eventMutex);
 
     if (bl_container_dynamic_is_empty(&EventInfo.threads) || bl_container_dynamic_size(&EventInfo.jobs) / bl_container_dynamic_size(&EventInfo.threads) > BL_EVENT_MAX_JOBS_PER_THREAD) {
         size_t amountOfThreadsToAdd = (bl_container_dynamic_size(&EventInfo.jobs) + BL_EVENT_MAX_JOBS_PER_THREAD - 1) / BL_EVENT_MAX_JOBS_PER_THREAD - bl_container_dynamic_size(&EventInfo.threads);
@@ -227,14 +228,14 @@ BL_ContainerError bl_event_global_invoke(const BL_StringView* eventName) {
             goto Exit;
 
         for (size_t i = 0; i < amountOfThreadsToAdd; i++) {
-            BL_Thread thread = threadCreate(NULL, internal_thread_function);
-            if (!threadIsValid(&thread))
+            BL_Thread thread = bl_thread_create(NULL, internal_thread_function);
+            if (!bl_thread_is_valid(&thread))
                 goto Exit;
             bl_container_dynamic_append(&EventInfo.threads, sizeof thread, &thread);
         }
     }
 Exit:;
-    mutexUnlock(&EventInfo.mutex);
+    bl_mutex_unlock(&EventInfo.mutex);
 
     return BL_ContainerOPSuccessful;
 }

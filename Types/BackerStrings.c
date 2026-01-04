@@ -5,6 +5,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include <stdio.h>
 #include <string.h>
 #include <uchar.h>
 #include <wchar.h>
@@ -228,6 +229,24 @@ bool bl_string_equal(const void* first, const void* second) {
         return false;
 
     return memcmp(firstString->array,secondString->array,bl_string_length(firstString)) == 0;
+}
+
+BL_String bl_getline(FILE* file) {
+    BL_String string = bl_container_dynamic_create_stack(0,1);
+    int currentChar = 0;
+    do {
+        currentChar = fgetc(file);
+        if (currentChar == EOF)
+            break;
+
+        if (bl_container_dynamic_append(&string,1,&(unsigned char){currentChar}) != BL_ContainerOPSuccessful) {
+            bl_container_dynamic_destroy(&string);
+            return string;
+        }
+    } while(currentChar != '\n');
+    if (bl_container_dynamic_append(&string,1,&(unsigned char){'\0'}) != BL_ContainerOPSuccessful)
+        bl_container_dynamic_destroy(&string);
+    return string;
 }
 
 BL_StringW bl_stringw_create(const wchar_t* str, size_t len) {

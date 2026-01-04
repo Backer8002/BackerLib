@@ -11,9 +11,9 @@ extern "C" {
 #define noexcept
 #endif // __cplusplus
 
-extern uint64_t factorial(uint32_t number) noexcept;
-extern uint64_t partialFactorial(uint32_t startOfFactorial,uint32_t number) noexcept;
-extern uint64_t nChooseK(uint32_t n, uint32_t k) noexcept;
+extern uint64_t bl_math_factorial(uint32_t number) noexcept;
+extern uint64_t bl_math_factorial_partial(uint32_t startOfFactorial,uint32_t number) noexcept;
+extern uint64_t bl_math_permutation(uint32_t n, uint32_t k) noexcept;
 
 #ifdef __cplusplus
 }

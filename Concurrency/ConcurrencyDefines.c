@@ -7,7 +7,7 @@
 #include<threads.h>
 #endif
 
-bool threadIsValid(const BL_Thread* thread) { return thread->isValid; }
+bool bl_thread_is_valid(const BL_Thread* thread) { return thread->isValid; }
 
 #if USES_PTHREAD
 
@@ -23,7 +23,7 @@ static inline void* internal_pthreadThreadInitFunc(void* sharedState) {
 
 #endif
 
-BL_Thread threadCreate(void* sharedState, int (*function)(void* sharedState)) {
+BL_Thread bl_thread_create(void* sharedState, int (*function)(void* sharedState)) {
     BL_Thread threadToUse = {.isValid = false};
 #if USES_PTHREAD
 
@@ -47,7 +47,7 @@ BL_Thread threadCreate(void* sharedState, int (*function)(void* sharedState)) {
     return threadToUse;
 }
 
-BL_Thread threadGetCurrent(void) {
+BL_Thread bl_thread_get_current(void) {
 #if USES_PTHREAD
     return (BL_Thread){.thread = pthread_self(), .isValid = true};
 #else
@@ -55,7 +55,7 @@ BL_Thread threadGetCurrent(void) {
 #endif
 }
 
-bool threadIsEqual(const BL_Thread* first, const BL_Thread* second) {
+bool bl_thread_is_equal(const BL_Thread* first, const BL_Thread* second) {
 #if USES_PTHREAD
 
     return pthread_equal(first->thread, second->thread);
@@ -67,24 +67,24 @@ bool threadIsEqual(const BL_Thread* first, const BL_Thread* second) {
 #endif
 }
 
-ConcurrencyError threadSleep(const struct timespec* duration, struct timespec* remaining) {
+BL_ConcurrencyError bl_thread_sleep(const struct timespec* duration, struct timespec* remaining) {
 #if USES_PTHREAD
     if (nanosleep(duration, remaining) == 0)
-        return ConcurrencySuccess;
+        return BL_ConcurrencySuccess;
     if (errno == EINTR)
-        return ConcurrencyInterrupt;
-    return ConcurrencyFailure;
+        return BL_ConcurrencyInterrupt;
+    return BL_ConcurrencyFailure;
 #else
     int errorCode = thrd_sleep(duration, remaining);
     if (errorCode == 0)
-        return ConcurrencySuccess;
+        return BL_ConcurrencySuccess;
     if (errorCode == -1)
-        return ConcurrencyInterrupt;
-    return ConcurrencyFailure;
+        return BL_ConcurrencyInterrupt;
+    return BL_ConcurrencyFailure;
 #endif
 }
 
-void threadYield(void) {
+void bl_thread_yield(void) {
 #if USES_PTHREAD
     sched_yield();
 #else
@@ -92,7 +92,7 @@ void threadYield(void) {
 #endif
 }
 
-void threadExit(void) {
+void bl_thread_exit(void) {
 #if USES_PTHREAD
     pthread_exit(NULL);
 #else
@@ -100,51 +100,51 @@ void threadExit(void) {
 #endif
 while(true) {}
 }
-ConcurrencyError threadDetach(BL_Thread* thread) {
+BL_ConcurrencyError bl_thread_detach(BL_Thread* thread) {
 #if USES_PTHREAD
 
     if (pthread_detach(thread->thread))
-        return ConcurrencyFailure;
-    return ConcurrencySuccess;
+        return BL_ConcurrencyFailure;
+    return BL_ConcurrencySuccess;
 
 #else
 
     if (thrd_detach(thread->thread) != thrd_success)
-        return ConcurrencyFailure;
-    return ConcurrencySuccess;
+        return BL_ConcurrencyFailure;
+    return BL_ConcurrencySuccess;
 
 #endif
 }
-ConcurrencyError threadJoin(BL_Thread* thread) {
+BL_ConcurrencyError bl_thread_join(BL_Thread* thread) {
 #if USES_PTHREAD
 
     if (pthread_join(thread->thread, NULL) != 0)
-        return ConcurrencyFailure;
+        return BL_ConcurrencyFailure;
 
 #else
 
     if (thrd_join(thread->thread, NULL) != thrd_success)
-        return ConcurrencyFailure;
+        return BL_ConcurrencyFailure;
 
 #endif
 
     thread->isValid = false;
-    return ConcurrencySuccess;
+    return BL_ConcurrencySuccess;
 }
-bool mutexIsValid(const BL_Mutex* mutex) {
+bool bl_mutex_is_valid(const BL_Mutex* mutex) {
     return mutex->isValid;
 }
 
-BL_Mutex mutexCreate(BL_MutexType mutexType) {
+BL_Mutex bl_mutex_create(BL_MutexType mutexType) {
     BL_Mutex returnValue = {.isValid = false};
 #if USES_PTHREAD
     pthread_mutex_t mutex;
-    if (mutexType != MutexPlain) {
+    if (mutexType != BL_MutexPlain) {
         pthread_mutexattr_t mutexAttribute;
         if (pthread_mutexattr_init(&mutexAttribute))
             return returnValue;
         pthread_mutexattr_settype(&mutexAttribute,
-                                  mutexType == MutexRecursive ? PTHREAD_MUTEX_RECURSIVE : PTHREAD_MUTEX_TIMED_NP);
+                                  mutexType == BL_MutexRecursive ? PTHREAD_MUTEX_RECURSIVE : PTHREAD_MUTEX_TIMED_NP);
         int errorCode = pthread_mutex_init(&mutex, &mutexAttribute);
         pthread_mutexattr_destroy(&mutexAttribute);
         if (errorCode)
@@ -152,7 +152,7 @@ BL_Mutex mutexCreate(BL_MutexType mutexType) {
     } else { mutex = (pthread_mutex_t) PTHREAD_MUTEX_INITIALIZER; }
 #else
     mtx_t mutex;
-    if (mtx_init(&mutex, mutexType == MutexPlain ? mtx_plain : mutexType == MutexRecursive ? mtx_recursive : mtx_timed)
+    if (mtx_init(&mutex, mutexType == BL_MutexPlain ? mtx_plain : mutexType == BL_MutexRecursive ? mtx_recursive : mtx_timed)
         != thrd_success)
         return returnValue;
 #endif
@@ -160,80 +160,80 @@ BL_Mutex mutexCreate(BL_MutexType mutexType) {
     return returnValue;
 }
 
-ConcurrencyError mutexLock(BL_Mutex* mutex) {
+BL_ConcurrencyError bl_mutex_lock(BL_Mutex* mutex) {
 #if USES_PTHREAD
     if (pthread_mutex_lock(&mutex->mutex))
-        return ConcurrencyFailure;
-    return ConcurrencySuccess;
+        return BL_ConcurrencyFailure;
+    return BL_ConcurrencySuccess;
 #else
     if (mtx_lock(&mutex->mutex) != thrd_success)
-        return ConcurrencyFailure;
-    return ConcurrencySuccess;
+        return BL_ConcurrencyFailure;
+    return BL_ConcurrencySuccess;
 #endif
 }
 
-ConcurrencyError mutexTryLock(BL_Mutex* mutex) {
+BL_ConcurrencyError bl_mutex_lock_try(BL_Mutex* mutex) {
 #if USES_PTHREAD
     int errorCode = pthread_mutex_trylock(&mutex->mutex);
     if (errorCode == EBUSY)
-        return ConcurrencyBusy;
+        return BL_ConcurrencyBusy;
     if (errorCode)
-        return ConcurrencyFailure;
-    return ConcurrencySuccess;
+        return BL_ConcurrencyFailure;
+    return BL_ConcurrencySuccess;
 #else
     int errorCode = mtx_trylock(&mutex->mutex);
     if (errorCode == thrd_success)
-        return ConcurrencySuccess;
+        return BL_ConcurrencySuccess;
     if (errorCode == thrd_busy)
-        return ConcurrencyBusy;
-    return ConcurrencyFailure;
+        return BL_ConcurrencyBusy;
+    return BL_ConcurrencyFailure;
 #endif
 }
 
-ConcurrencyError mutexTimeLock(BL_Mutex* mutex, const struct timespec* timepoint) {
+BL_ConcurrencyError bl_mutex_lock_time(BL_Mutex* mutex, const struct timespec* timepoint) {
 #if USES_PTHREAD
     int errorCode = pthread_mutex_timedlock(&mutex->mutex, timepoint);
     if (errorCode == ETIMEDOUT)
-        return ConcurrencyBusy;
+        return BL_ConcurrencyBusy;
     if (errorCode)
-        return ConcurrencyFailure;
-    return ConcurrencySuccess;
+        return BL_ConcurrencyFailure;
+    return BL_ConcurrencySuccess;
 #else
     int errorCode = mtx_timedlock(&mutex->mutex, timepoint);
     if (errorCode == thrd_success)
-        return ConcurrencySuccess;
+        return BL_ConcurrencySuccess;
     if (errorCode == thrd_timedout)
-        return ConcurrencyBusy;
-    return ConcurrencyFailure;
+        return BL_ConcurrencyBusy;
+    return BL_ConcurrencyFailure;
 #endif
 }
 
-ConcurrencyError mutexTimeLockRelative(BL_Mutex* mutex, const struct timespec* timeToWait) {
+BL_ConcurrencyError mutex_lock_time_relative(BL_Mutex* mutex, const struct timespec* timeToWait) {
     struct timespec currentTime;
 #if USES_PTHREAD
     clock_gettime(CLOCK_REALTIME, &currentTime);
 #else
     timespec_get(&currentTime, TIME_UTC);
 #endif
-    return mutexTimeLock(mutex,
+    return bl_mutex_lock_time(mutex,
                          &(struct timespec){
                              .tv_sec = currentTime.tv_sec + timeToWait->tv_sec + (currentTime.tv_nsec + timeToWait->tv_nsec) / (long) 1e9,
                              .tv_nsec = (currentTime.tv_nsec + timeToWait->tv_nsec) % (long) 1e9});
 }
 
-ConcurrencyError mutexUnlock(BL_Mutex* mutex) {
+BL_ConcurrencyError bl_mutex_unlock(BL_Mutex* mutex) {
 #if USES_PTHREAD
     if (pthread_mutex_unlock(&mutex->mutex))
-        return ConcurrencyFailure;
-    return ConcurrencySuccess;
+        return BL_ConcurrencyFailure;
+    return BL_ConcurrencySuccess;
 #else
     if (mtx_unlock(&mutex->mutex) != thrd_success)
-        return ConcurrencyFailure;
-    return ConcurrencySuccess;
+        return BL_ConcurrencyFailure;
+    return BL_ConcurrencySuccess;
 #endif
 }
 
-void mutexDestroy(void* mutex) {
+void bl_mutex_destroy(void* mutex) {
     if (((BL_Mutex*) mutex)->isValid) {
 #if USES_PTHREAD
         pthread_mutex_destroy(mutex);

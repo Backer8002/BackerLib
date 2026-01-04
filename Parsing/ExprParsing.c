@@ -92,6 +92,7 @@ BL_DynamicContainer bl_expr_parse(const BL_DynamicContainer* tokens, const BL_Ex
 
     BL_ExprOperation* result = internal_expr_parse(tokens, &(BL_ExprParsingToken*) {bl_container_dynamic_front(tokens)}, &tree, 0, true, operators, amountOfOperators);
     if (!result) {
+        bl_log_trace_location("Failed to parse expresion");
         bl_container_destroy(&tree);
         return tree;
     }
@@ -107,8 +108,10 @@ BL_ExprOperation* internal_expr_parse(const BL_DynamicContainer* tokens, BL_Expr
 
     BL_ExprOperation* previousOperation = NULL;
 
-    if (*currentTokenGlobal >= (BL_ExprParsingToken*) bl_container_dynamic_end(tokens))
+    if (*currentTokenGlobal >= (BL_ExprParsingToken*) bl_container_dynamic_end(tokens)) {
+        bl_log_trace_location("Read to end of expresion");
         return NULL;
+    }
 
     for (BL_ExprParsingToken* currentTokenLocal = *currentTokenGlobal; currentTokenLocal; currentTokenLocal = bl_container_dynamic_next(tokens, currentTokenLocal)) {
         if (currentTokenLocal->isAtom && prevTokenWasAtom) {
@@ -137,12 +140,13 @@ BL_ExprOperation* internal_expr_parse(const BL_DynamicContainer* tokens, BL_Expr
 
 
         if ((currentOperator.isUnaryOperator && currentOperator.isBinaryOperator && hasSeenBinaryOp) || (currentOperator.isUnaryOperator && !currentOperator.isBinaryOperator)) {
-            if (currentOperator.leftUnaryBinding && currentOperator.leftUnaryBinding <= currentBindingPower) {
-                *currentTokenGlobal = currentTokenLocal - 1 - (prevTokenWasAtom ? 1 : 0);
-                return previousOperation;
-            }
 
             if (!hasSeenBinaryOp && currentOperator.leftUnaryBinding) {
+                if (currentOperator.leftUnaryBinding <= currentBindingPower) {
+                    *currentTokenGlobal = currentTokenLocal - 1 - (prevTokenWasAtom ? 1 : 0);
+                    return previousOperation;
+                }
+
                 if (!previousOperation && !prevTokenWasAtom) { // TODO: Fix so that this will not fail if it is the first operation in all cases
                     bl_log_debug("A left binding unary operator must bind to an atom, but no such has been provided before it.");
                     *currentTokenGlobal = bl_container_dynamic_back(tokens);
@@ -184,8 +188,10 @@ BL_ExprOperation* internal_expr_parse(const BL_DynamicContainer* tokens, BL_Expr
                                                   .unaryOperatorWasOnRight = false}});
             } else {
                 BL_ExprParsingToken* nextToken = bl_container_dynamic_next(tokens, currentTokenLocal);
-                if (!nextToken || !nextToken->isAtom)
+                if (!nextToken || !nextToken->isAtom) {
+                    bl_log_trace_location("Expected atom");
                     return NULL;
+                }
                 bl_container_dynamic_append(tree,
                                        sizeof(BL_ExprOperation),
                                        &(BL_ExprOperation) {
@@ -219,8 +225,10 @@ BL_ExprOperation* internal_expr_parse(const BL_DynamicContainer* tokens, BL_Expr
         BL_ExprOperation* rhsOperation = internal_expr_parse(tokens, &currentTokenLocal, tree, currentOperator.rhsBinaryBinding, hasSeenBinaryOp, operators, amountOfOperators);
         if (!rhsOperation) {
             BL_ExprParsingToken* nextToken = bl_container_dynamic_next(tokens, currentTokenLocal);
-            if (!nextToken || !nextToken->isAtom)
+            if (!nextToken || !nextToken->isAtom) {
+                bl_log_trace_location("Expected atom");
                 return NULL;
+            }
             rhs = (BL_ExprOperationOperand) {.isAtom = true, .atom = nextToken->atom};
         } else
             rhs = (BL_ExprOperationOperand) {.isAtom = false, .operation = rhsOperation};
@@ -250,7 +258,7 @@ static BL_ExprOperatorDefine internal_get_operator(const BL_ExprOperatorDefine* 
 }
 
 static void internal_expr_print(FILE* file, const BL_ExprOperation* operation) {
-    fputc('(',file);
+    //fputc('(',file);
     if (operation->isBinaryOperation) {
         if (!operation->binaryOperands.lhs.isAtom)
             internal_expr_print(file, operation->binaryOperands.lhs.operation);
@@ -278,7 +286,7 @@ static void internal_expr_print(FILE* file, const BL_ExprOperation* operation) {
         if (operation->unaryOperation.unaryOperatorWasOnRight)
             fputc(operation->operatorID, file);
     }
-    fputc(')',file);
+    //fputc(')',file);
 }
 
 void bl_expr_print(FILE* file, const BL_DynamicContainer* tree) {
