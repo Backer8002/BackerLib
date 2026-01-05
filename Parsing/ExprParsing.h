@@ -68,10 +68,10 @@ namespace BackerLib {
      * @param amountOfOperators Length of operators
      * @return Valid DynamicContainer if expression could be parsed.
      * @note Result cannot free internal memory allocations as the atoms internal array uses memory to that of the atoms in token. Instead, freeing the atoms in tokens should free them to aviod double frees.
-     * @note A current bug were an expression like a + b! cannot be parsed if ! has higher prescience than +. The solution is to surround b in lower binding unary operators.
-     * The function will always choose the first binary operator as the binary operator between functions.
+     * @note
+     * The function will always choose the last binary operator possible as the binary operator between atoms.
      * Operator pairs like a * (b + c) assuming () has the lowest priority followed by + and * will parse to a (b c + *) because of operator precedence. Recommended for tokenizers to catch this.
-     * Iterating the result inorder will traverse the AST in execution order. The last element should always have operatorID set to 0.
+     * Iterating the result inorder will traverse the AST in execution order. The last element always has operatorID set to 0.
      */
     extern BL_DynamicContainer bl_expr_parse(const BL_DynamicContainer* tokens, const BL_ExprOperatorDefine* operators, size_t amountOfOperators) noexcept;
     /**
