@@ -172,11 +172,11 @@ namespace BackerLib {
 /**
  * @param cString Any valid constexpr char[] or literal
  */
-#define stringViewInitConstExpr(cString)     {.amountOfIndexes = sizeof(cString), .array = (const unsigned char*)(cString), .byteSizeOfSingleElement = 1, .header = ObjectFlagIsValid | ObjectFlagIsContainer}
+#define bl_stringview_init_constexpr(cString)     {.amountOfIndexes = sizeof(cString), .array = (const unsigned char*)(cString), .byteSizeOfSingleElement = 1, .header = ObjectFlagIsValid | ObjectFlagIsContainer}
 /**
  * @param wideString Any valid constexpr wchar_t[] or literal
  */
-#define stringViewWInitConstExpr(wideString) {.amountOfIndexes = sizeof(wideString), .array = (wideString), .byteSizeOfSingleElement = sizeof(wchar_t), .header = ObjectFlagIsValid | ObjectFlagIsContainer}
+#define bl_stringviewW_init_constexpr(wideString) {.amountOfIndexes = sizeof(wideString), .array = (wideString), .byteSizeOfSingleElement = sizeof(wchar_t), .header = ObjectFlagIsValid | ObjectFlagIsContainer}
 
     /**
      *

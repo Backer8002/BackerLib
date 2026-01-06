@@ -178,7 +178,7 @@ static void internal_container_dynamic_init(BL_DynamicContainer* container, size
 
 BL_DynamicContainer bl_dynamic_container_cast_container(BL_Container container) {
     BL_DynamicContainer containerToReturn = {.container = container, .containerMaxSize = container.amountOfIndexes};
-    container.header |= ObjectFlagIsDynamicContainer;
+    containerToReturn.container.header |= ObjectFlagIsDynamicContainer;
     return containerToReturn;
 }
 

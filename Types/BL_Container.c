@@ -32,7 +32,8 @@ static void internal_containerInit(BL_Container* container, size_t size, size_t 
 
 
 BL_Container bl_container_get_subarray(const BL_Container* container, size_t firstIndex, size_t lastIndex, bool copyInReverse) {
-    if (container->amountOfIndexes <= lastIndex || firstIndex > lastIndex) {
+    size_t containerLen = container->amountOfIndexes;
+    if (containerLen <= lastIndex || firstIndex > lastIndex) {
         BL_Container newContainer = {0};
         return newContainer;
     }
@@ -51,7 +52,7 @@ BL_Container bl_container_get_subarray(const BL_Container* container, size_t fir
 }
 
 BL_Container bl_container_copy(const BL_Container* container) {
-    return bl_container_get_subarray(container,0,container->amountOfIndexes,false);
+    return bl_container_get_subarray(container,0,container->amountOfIndexes - 1,false);
 }
 
 void bl_container_reverse(BL_Container* container) {

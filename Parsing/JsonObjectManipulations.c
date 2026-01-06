@@ -1,5 +1,7 @@
 #include "Json.h"
 #include <BackerLibTypes.h>
+#include <BackerLibLogging.h>
+#include <stdio.h>
 
 static BL_JsonMemberValue jsonCopyValue(const BL_JsonMemberValue* value, BL_JsonMemberType valueType) {
     switch (valueType) {
@@ -51,11 +53,8 @@ BL_JsonObjectMember* bl_json_object_get(const BL_JsonObject* jsonObject, BL_Stri
 }
 
 BL_ContainerError bl_json_object_add(BL_JsonObject* jsonObject, BL_StringView* string, BL_JsonMemberType valueType, const BL_JsonMemberValue* value) {
-    BL_String stringToUse = bl_dynamic_container_cast_container(
-        bl_container_get_subarray((const BL_Container*) string,
-                             0,
-                             bl_container_size((const BL_Container*) string) - 1,
-                             false));
+    bl_assert_debug(string->array, "Expected string");
+    BL_String stringToUse = bl_dynamic_container_cast_container(bl_container_copy(&string->container));
     if (!bl_container_dynamic_is_valid(&stringToUse))
         return BL_ContainerAllocFailure;
     BL_JsonMemberValue valueToUse = jsonCopyValue(value, valueType);

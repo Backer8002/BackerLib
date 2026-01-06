@@ -13,7 +13,9 @@ add_library(BackerLibParsing STATIC
         JsonWrite.c
         JsonObjectManipulations.c
         ExprParsing.c
-        ExprParsing.h)
+        ExprParsing.h
+        Args.c
+        Args.h)
 
 target_include_directories(BackerLibParsing INTERFACE "${PROJECT_SOURCE_DIR}/../include")
 find_library(MATH_LIB m)
