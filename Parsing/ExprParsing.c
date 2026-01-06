@@ -92,8 +92,23 @@ BL_DynamicContainer bl_expr_parse(const BL_DynamicContainer* tokens, const BL_Ex
         bl_container_dynamic_append(&tree, sizeof(BL_ExprOperation), &(BL_ExprOperation) {.operatorID = '\0', .isBinaryOperation = false, .unaryOperation = {.unaryOperand = operand, .unaryOperatorWasOnRight = false}});
         return tree;
     }
-    if (!internal_get_next_binary_op(tokens, bl_container_dynamic_front(tokens), operators, amountOfOperators))
-        goto ErrorPath;
+    BL_ExprParsingToken* iterator = bl_container_dynamic_front(tokens);
+    while(true) {
+        if (!iterator) {
+            bl_log_debug_location("An expresion of only operators is not permited.");
+            goto ErrorPath;
+        }
+        if (iterator->isAtom)
+            break;
+
+        BL_ExprOperatorDefine currentOperator = internal_get_operator(operators, amountOfOperators, iterator->operatorID);
+        if (currentOperator.isBinaryOperator && (!currentOperator.isUnaryOperator || !currentOperator.rightUnaryBinding)) {
+            bl_log_debug_location("Unexpected operator at begin of expresion.");
+            goto ErrorPath;
+        }
+
+        iterator = bl_container_dynamic_next(tokens, iterator);
+    }
     BL_ExprParsingToken* tempPtr = NULL;
     BL_ExprOperation*    result  = internal_expr_parse(tokens, &(BL_ExprParsingToken*) {bl_container_dynamic_front(tokens)}, &tree, 0, &tempPtr, operators, amountOfOperators);
     if (!result)
@@ -125,6 +140,10 @@ static BL_ExprParsingToken* internal_get_next_binary_op(const BL_DynamicContaine
         if (nextToken->isAtom) {
             if (forcedLeftbindingOperatorFoundAfter) {
                 bl_log_debug_location("No left binding operator can exist after rightmost binary operator.");
+                return NULL;
+            }
+            if (nextBinary == begin) {
+                bl_log_debug_location("A binary operator must exist between two atoms.");
                 return NULL;
             }
             return nextBinary;
@@ -172,7 +191,6 @@ BL_ExprOperation* internal_expr_parse(const BL_DynamicContainer* tokens, BL_Expr
                                       BL_DynamicContainer* tree,
                                       size_t currentBindingPower, BL_ExprParsingToken** nextBinaryOp,
                                       const BL_ExprOperatorDefine* operators, size_t amountOfOperators) {
-    bool                 prevTokenWasAtom  = false;
     BL_ExprOperation*    previousOperation = NULL;
     BL_ExprParsingToken* lastAtom          = NULL;
 
@@ -183,13 +201,6 @@ BL_ExprOperation* internal_expr_parse(const BL_DynamicContainer* tokens, BL_Expr
 
     for (BL_ExprParsingToken* currentTokenLocal = *currentTokenGlobal; currentTokenLocal; currentTokenLocal = bl_container_dynamic_next(tokens, currentTokenLocal)) {
         if (currentTokenLocal->isAtom) {
-            if (prevTokenWasAtom) {
-                bl_log_debug("An atom cannot follow an atom without at binary operator in between.");
-                *currentTokenGlobal = (BL_ExprParsingToken*) bl_container_dynamic_back(tokens);
-                return NULL;
-            }
-
-            prevTokenWasAtom = true;
             lastAtom         = currentTokenLocal;
             *nextBinaryOp    = internal_get_next_binary_op(tokens, currentTokenLocal, operators, amountOfOperators);
             if (!*nextBinaryOp) {
@@ -233,16 +244,10 @@ BL_ExprOperation* internal_expr_parse(const BL_DynamicContainer* tokens, BL_Expr
                                                                     .rhs = rhs}};
             bl_container_dynamic_append(tree, sizeof nextOperation, &nextOperation);
             previousOperation = bl_container_dynamic_back(tree);
-            prevTokenWasAtom  = false;
         } else if ((uintptr_t) currentTokenLocal < (uintptr_t) *nextBinaryOp) {
             if (currentOperator.leftUnaryBinding <= currentBindingPower) {
                 *currentTokenGlobal = currentTokenLocal - 1;
                 return previousOperation;
-            }
-            if (!previousOperation && !prevTokenWasAtom) {
-                bl_log_debug("A left binding unary operator must bind to an atom or an operation, but no such has been provided before it.");
-                *currentTokenGlobal = bl_container_dynamic_back(tokens);
-                return NULL;
             }
 
             BL_ExprOperationOperand operand   = !previousOperation
@@ -256,7 +261,6 @@ BL_ExprOperation* internal_expr_parse(const BL_DynamicContainer* tokens, BL_Expr
                               .unaryOperatorWasOnRight = true}};
             bl_container_dynamic_append(tree, sizeof operation, &operation);
             previousOperation = bl_container_dynamic_back(tree);
-            prevTokenWasAtom  = false;
         } else {
             currentTokenLocal           = bl_container_dynamic_next(tokens, currentTokenLocal);
             BL_ExprOperation* operation = internal_expr_parse(tokens, &currentTokenLocal, tree, currentOperator.rightUnaryBinding, nextBinaryOp, operators, amountOfOperators);
@@ -290,7 +294,6 @@ BL_ExprOperation* internal_expr_parse(const BL_DynamicContainer* tokens, BL_Expr
             }
 
             previousOperation = bl_container_dynamic_back(tree);
-            prevTokenWasAtom  = false;
         }
     }
     *currentTokenGlobal = (BL_ExprParsingToken*) bl_container_dynamic_back(tokens);
