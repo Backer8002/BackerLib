@@ -4,59 +4,59 @@
 #include <stdlib.h>
 
 bool arrayListClear(BL_ArrayList* arrayList) {
-    if (mutexLock(&arrayList->mutex) == ConcurrencyFailure)
+    if (bl_mutex_lock(&arrayList->mutex) == BL_ConcurrencyFailure)
         return false;
     bl_container_dynamic_clear((BL_DynamicContainer*) arrayList);
-    mutexUnlock(&arrayList->mutex);
+    bl_mutex_unlock(&arrayList->mutex);
     return true;
 }
 
 BL_ContainerError arrayListGet(BL_ArrayList* arrayList, size_t index, size_t sizeOfElement, void* restrict element) {
-    if (mutexLock(&arrayList->mutex) == ConcurrencyFailure)
+    if (bl_mutex_lock(&arrayList->mutex) == BL_ConcurrencyFailure)
         return BL_ContainerOPUnsuccessful;
     void* elementToGet = bl_container_get((BL_Container*) arrayList, index);
     if (!elementToGet) {
-        mutexUnlock(&arrayList->mutex);
+        bl_mutex_unlock(&arrayList->mutex);
         return BL_ContainerInvalidIndex;
     }
     if (arrayList->dynamicContainer.container.byteSizeOfSingleElement < sizeOfElement) {
-        mutexUnlock(&arrayList->mutex);
+        bl_mutex_unlock(&arrayList->mutex);
         return BL_ContainerInvalidSize;
     }
     memcpy(element, elementToGet, sizeOfElement);
-    mutexUnlock(&arrayList->mutex);
+    bl_mutex_unlock(&arrayList->mutex);
     return BL_ContainerOPSuccessful;
 }
 
 BL_ContainerError arrayListPop(BL_ArrayList* arrayList) {
-    if (mutexLock(&arrayList->mutex) == ConcurrencyFailure)
+    if (bl_mutex_lock(&arrayList->mutex) == BL_ConcurrencyFailure)
         return BL_ContainerOPUnsuccessful;
     BL_ContainerError result = bl_container_dynamic_pop((BL_DynamicContainer*) arrayList);
-    mutexUnlock(&arrayList->mutex);
+    bl_mutex_unlock(&arrayList->mutex);
     return result;
 }
 
 BL_ContainerError arrayListRemove(BL_ArrayList* arrayList, size_t index, size_t lastIndex) {
-    if (mutexLock(&arrayList->mutex) == ConcurrencyFailure)
+    if (bl_mutex_lock(&arrayList->mutex) == BL_ConcurrencyFailure)
         return BL_ContainerOPUnsuccessful;
     BL_ContainerError result = bl_container_dynamic_remove((BL_DynamicContainer*) arrayList, index, lastIndex);
-    mutexUnlock(&arrayList->mutex);
+    bl_mutex_unlock(&arrayList->mutex);
     return result;
 }
 
 BL_ContainerError arrayListInsert(BL_ArrayList* arrayList, size_t index, size_t amountOfElements, size_t sizeOfElement, const void* elements) {
-    if (mutexLock(&arrayList->mutex) == ConcurrencyFailure)
+    if (bl_mutex_lock(&arrayList->mutex) == BL_ConcurrencyFailure)
         return BL_ContainerOPUnsuccessful;
     BL_ContainerError result = bl_container_dynamic_insert((BL_DynamicContainer*) arrayList, index, amountOfElements, sizeOfElement, elements);
-    mutexUnlock(&arrayList->mutex);
+    bl_mutex_unlock(&arrayList->mutex);
     return result;
 }
 
 BL_ContainerError arrayListSet(BL_ArrayList* arrayList, size_t index, size_t elementSize, const void* element) {
-    if (mutexLock(&arrayList->mutex) == ConcurrencyFailure)
+    if (bl_mutex_lock(&arrayList->mutex) == BL_ConcurrencyFailure)
         return BL_ContainerOPUnsuccessful;
     BL_ContainerError result = bl_container_set((BL_Container*) arrayList, index, elementSize, element);
-    mutexUnlock(&arrayList->mutex);
+    bl_mutex_unlock(&arrayList->mutex);
     return result;
 }
 
@@ -64,8 +64,8 @@ BL_ArrayList arrayListCreateStack(size_t initialSize, size_t elementSize) {
     BL_ArrayList arrayList = {.dynamicContainer = bl_container_dynamic_create_stack(initialSize, elementSize)};
     if (!bl_container_dynamic_is_valid(&arrayList.dynamicContainer))
         return arrayList;
-    arrayList.mutex = mutexCreate(MutexPlain);
-    if (!mutexIsValid(&arrayList.mutex)) {
+    arrayList.mutex = bl_mutex_create(BL_MutexPlain);
+    if (!bl_mutex_is_valid(&arrayList.mutex)) {
         bl_container_destroy(&arrayList);
         return arrayList;
     }
@@ -83,8 +83,8 @@ BL_ArrayList* arrayListCreateHeap(size_t initialSize, size_t elementSize ) {
         return NULL;
     }
     arrayList->dynamicContainer.container.header |= ObjectFlagIsOnHeap;
-    arrayList->mutex = mutexCreate(MutexPlain);
-    if (!mutexIsValid(&arrayList->mutex)) {
+    arrayList->mutex = bl_mutex_create(BL_MutexPlain);
+    if (!bl_mutex_is_valid(&arrayList->mutex)) {
         bl_container_destroy((void*)&arrayList);
         return arrayList;
     }
@@ -94,12 +94,12 @@ BL_ArrayList* arrayListCreateHeap(size_t initialSize, size_t elementSize ) {
 
 void arrayListDestroy(void* arrayList) {
     if (!bl_container_dynamic_is_valid(&((BL_ArrayList*)arrayList)->dynamicContainer)) {
-        mutexDestroy(&((BL_ArrayList*) arrayList)->mutex);
+        bl_mutex_destroy(&((BL_ArrayList*) arrayList)->mutex);
         bl_container_destroy(&((BL_ArrayList*)arrayList)->dynamicContainer.container);
     }
 }
 
 void arrayListDestroyWithElements(BL_ArrayList* arrayList, void(elementDestructor)(void* element)) {
-    mutexDestroy(&arrayList->mutex);
+    bl_mutex_destroy(&arrayList->mutex);
     bl_container_dynamic_destroy_with_elements(&arrayList->dynamicContainer, elementDestructor);
 }

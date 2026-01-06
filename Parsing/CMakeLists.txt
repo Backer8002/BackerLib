@@ -16,10 +16,10 @@ add_library(BackerLibParsing STATIC
         ExprParsing.h)
 
 target_include_directories(BackerLibParsing INTERFACE "${PROJECT_SOURCE_DIR}/../include")
-add_dependencies(BackerLibParsing BackerLibTypes BackerLibEvent BackerLibConcurrency)
 find_library(MATH_LIB m)
+add_dependencies(BackerLibParsing BackerLibLogging BackerLibTypes BackerLibConcurrency)
 if(MATH_LIB)
-    target_link_libraries(BackerLibParsing LINK_PUBLIC ${MATH_LIB} BackerLibTypes BackerLibLogging BackerLibConcurrency)
+    target_link_libraries(BackerLibParsing LINK_PUBLIC ${MATH_LIB} BackerLibLogging BackerLibTypes BackerLibConcurrency)
 else ()
-    target_link_libraries(BackerLibParsing LINK_PUBLIC BackerLibTypes BackerLibLogging BackerLibConcurrency)
+    target_link_libraries(BackerLibParsing LINK_PUBLIC BackerLibLogging BackerLibTypes BackerLibConcurrency)
 endif ()

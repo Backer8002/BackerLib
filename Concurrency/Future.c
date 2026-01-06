@@ -1,6 +1,6 @@
 #include "ThreadPool.h"
 
-void bl_future_await(const void* future) { while (!*(bool*)future) {threadYield();} }
+void bl_future_await(const void* future) { while (!*(bool*)future) {bl_thread_yield();} }
 
 bool bl_future_await_until(const void* future, const struct timespec* timepoint) {
     while (true) {
@@ -15,7 +15,7 @@ bool bl_future_await_until(const void* future, const struct timespec* timepoint)
         if (currentTime.tv_sec > timepoint->tv_sec ||
             (currentTime.tv_sec == timepoint->tv_sec && currentTime.tv_nsec > timepoint->tv_nsec))
             return false;
-        threadYield();
+        bl_thread_yield();
     }
 }
 

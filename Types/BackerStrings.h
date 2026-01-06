@@ -6,6 +6,7 @@
 #include "BL_DynamicContainer.h"
 #include <stddef.h>
 #include <string.h>
+#include <stdio.h>
 #include <uchar.h>
 #include <wchar.h>
 
@@ -154,7 +155,11 @@ namespace BackerLib {
      * @return true if strings are equal, else false.
      */
     extern bool bl_string_equal(const void* first, const void* second) noexcept;
-
+    /**
+     * @brief Reads input from file until EOF or \\n.
+     * @returns Invalid string if allocation of string fails.
+     */
+    extern BL_String bl_getline(FILE* file) noexcept;
     /**
      * @brief Creates a StringW that contains a copy of str param. If str is a CString it is not length checked with strlen, instead function will copy len indicies.
      * @param str Valid wchar_t array or Wide C-String

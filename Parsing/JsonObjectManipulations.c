@@ -1,36 +1,36 @@
 #include "Json.h"
 #include <BackerLibTypes.h>
 
-static JsonMemberValue jsonCopyValue(const JsonMemberValue* value, JsonMemberType valueType) {
+static BL_JsonMemberValue jsonCopyValue(const BL_JsonMemberValue* value, BL_JsonMemberType valueType) {
     switch (valueType) {
     case JsonTypeString:
-        return (JsonMemberValue) {.string = bl_string_create(bl_container_dynamic_front(&value->string),
+        return (BL_JsonMemberValue) {.string = bl_string_create(bl_container_dynamic_front(&value->string),
             bl_string_length(bl_stringview_ptr_cast(&value->string)))};
         break;
     case JsonTypeArray:
-        return (JsonMemberValue) {.array = jsonArrayCopy(&value->array)};
+        return (BL_JsonMemberValue) {.array = bl_json_array_copy(&value->array)};
         break;
     case JsonTypeObject:
-        return (JsonMemberValue) {.object = jsonObjectCopy(&value->object)};
+        return (BL_JsonMemberValue) {.object = bl_json_object_copy(&value->object)};
         break;
     default:
         return *value;
     }
 }
 
-static bool jsonCopyValueHasFailed(const JsonMemberValue* value, JsonMemberType valueType) {
+static bool jsonCopyValueHasFailed(const BL_JsonMemberValue* value, BL_JsonMemberType valueType) {
     if ((valueType == JsonTypeString || valueType == JsonTypeArray || valueType == JsonTypeObject) && !bl_container_dynamic_is_valid(&value->object))
         return true;
     return false;
 }
 
-JsonObject       jsonObjectCreate(void) { return bl_container_dynamic_create_stack(0, sizeof(JsonObjectMember)); }
+BL_JsonObject       bl_json_object_create(void) { return bl_container_dynamic_create_stack(0, sizeof(BL_JsonObjectMember)); }
 
-JsonArray        jsonArrayCreate(void) { return bl_container_dynamic_create_stack(0, sizeof(JsonArrayMember)); }
+BL_JsonArray        bl_json_array_create(void) { return bl_container_dynamic_create_stack(0, sizeof(BL_JsonArrayMember)); }
 
-JsonArrayMember* jsonArrayMemberGet(const JsonArray* jsonArray, size_t index) { return bl_container_get((BL_Container*) jsonArray, index); }
+BL_JsonArrayMember* bl_json_array_get(const BL_JsonArray* jsonArray, size_t index) { return bl_container_get((BL_Container*) jsonArray, index); }
 
-JsonObjectMember* jsonObjectMemberGet(const JsonObject* jsonObject, BL_StringView* string) {
+BL_JsonObjectMember* bl_json_object_get(const BL_JsonObject* jsonObject, BL_StringView* string) {
     size_t begin = 0;
     size_t end   = bl_container_size((const BL_Container*) jsonObject);
     while (end - begin > 1) {
@@ -50,7 +50,7 @@ JsonObjectMember* jsonObjectMemberGet(const JsonObject* jsonObject, BL_StringVie
     return NULL;
 }
 
-BL_ContainerError jsonObjectAdd(JsonObject* jsonObject, BL_StringView* string, JsonMemberType valueType, const JsonMemberValue* value) {
+BL_ContainerError bl_json_object_add(BL_JsonObject* jsonObject, BL_StringView* string, BL_JsonMemberType valueType, const BL_JsonMemberValue* value) {
     BL_String stringToUse = bl_dynamic_container_cast_container(
         bl_container_get_subarray((const BL_Container*) string,
                              0,
@@ -58,20 +58,20 @@ BL_ContainerError jsonObjectAdd(JsonObject* jsonObject, BL_StringView* string, J
                              false));
     if (!bl_container_dynamic_is_valid(&stringToUse))
         return BL_ContainerAllocFailure;
-    JsonMemberValue valueToUse = jsonCopyValue(value, valueType);
+    BL_JsonMemberValue valueToUse = jsonCopyValue(value, valueType);
     if (jsonCopyValueHasFailed(&valueToUse, valueType)) {
         bl_container_destroy(&stringToUse);
         return BL_ContainerAllocFailure;
     }
 
-    if (bl_container_dynamic_append(jsonObject, sizeof(JsonObjectMember), &(JsonObjectMember) {.identifier = stringToUse, .value = valueToUse, .valueType = valueType}) != BL_ContainerOPSuccessful) {
+    if (bl_container_dynamic_append(jsonObject, sizeof(BL_JsonObjectMember), &(BL_JsonObjectMember) {.identifier = stringToUse, .value = valueToUse, .valueType = valueType}) != BL_ContainerOPSuccessful) {
         bl_container_destroy(&stringToUse);
         switch (valueType) {
         case JsonTypeArray:
-            jsonArrayDestroy(&valueToUse);
+            bl_json_array_destroy(&valueToUse);
             break;
         case JsonTypeObject:
-            jsonObjectDestroy(&valueToUse);
+            bl_json_object_destroy(&valueToUse);
             break;
         case JsonTypeString:
             bl_container_destroy(&valueToUse);
@@ -85,27 +85,27 @@ BL_ContainerError jsonObjectAdd(JsonObject* jsonObject, BL_StringView* string, J
     return BL_ContainerOPSuccessful;
 }
 
-BL_ContainerError jsonArrayAdd(JsonArray* jsonArray, JsonMemberType valueType, const JsonMemberValue* value) {
-    return jsonArrayAddAtIndex(jsonArray, bl_container_size((BL_Container*) jsonArray), valueType, value);
+BL_ContainerError bl_json_array_add(BL_JsonArray* jsonArray, BL_JsonMemberType valueType, const BL_JsonMemberValue* value) {
+    return bl_json_array_add_at_index(jsonArray, bl_container_size((BL_Container*) jsonArray), valueType, value);
 }
 
-BL_ContainerError jsonArrayAddAtIndex(JsonArray* jsonArray, size_t index, JsonMemberType valueType, const JsonMemberValue* value) {
-    JsonMemberValue valueToUse = jsonCopyValue(value, valueType);
+BL_ContainerError bl_json_array_add_at_index(BL_JsonArray* jsonArray, size_t index, BL_JsonMemberType valueType, const BL_JsonMemberValue* value) {
+    BL_JsonMemberValue valueToUse = jsonCopyValue(value, valueType);
     if (jsonCopyValueHasFailed(&valueToUse, valueType))
         return BL_ContainerAllocFailure;
-    return bl_container_dynamic_insert(jsonArray, index, 1, sizeof(JsonArrayMember), &(JsonArrayMember) {.valueType = valueType, .value = valueToUse});
+    return bl_container_dynamic_insert(jsonArray, index, 1, sizeof(BL_JsonArrayMember), &(BL_JsonArrayMember) {.valueType = valueType, .value = valueToUse});
 }
 
-void jsonObjectRemove(JsonObject* jsonObject, JsonObjectMember* member) {
+void bl_json_object_remove(BL_JsonObject* jsonObject, BL_JsonObjectMember* member) {
 
     bl_container_destroy(&member->identifier);
 
     switch (member->valueType) {
     case JsonTypeArray:
-        jsonArrayDestroy(&member->value);
+        bl_json_array_destroy(&member->value);
         break;
     case JsonTypeObject:
-        jsonObjectDestroy(&member->value);
+        bl_json_object_destroy(&member->value);
         break;
     case JsonTypeString:
         bl_container_destroy(&member->value);
@@ -117,18 +117,18 @@ void jsonObjectRemove(JsonObject* jsonObject, JsonObjectMember* member) {
     bl_container_dynamic_remove(jsonObject, indexInBaseObject, indexInBaseObject);
 }
 
-bool jsonArrayRemove(JsonArray* jsonArray, size_t index) {
+bool bl_json_array_remove(BL_JsonArray* jsonArray, size_t index) {
     if (index >= bl_container_size((BL_Container*) jsonArray))
         return false;
 
-    JsonArrayMember* jsonArrayMember = jsonArrayMemberGet(jsonArray, index);
+    BL_JsonArrayMember* jsonArrayMember = bl_json_array_get(jsonArray, index);
 
     switch (jsonArrayMember->valueType) {
     case JsonTypeArray:
-        jsonArrayDestroy(&jsonArrayMember->value);
+        bl_json_array_destroy(&jsonArrayMember->value);
         break;
     case JsonTypeObject:
-        jsonObjectDestroy(&jsonArrayMember->value);
+        bl_json_object_destroy(&jsonArrayMember->value);
         break;
     case JsonTypeString:
         bl_container_destroy(&jsonArrayMember->value);
@@ -141,16 +141,16 @@ bool jsonArrayRemove(JsonArray* jsonArray, size_t index) {
     return true;
 }
 
-JsonArray jsonArrayCopy(const JsonArray* jsonArray) {
-    JsonArray newArray = bl_dynamic_container_cast_container(
+BL_JsonArray bl_json_array_copy(const BL_JsonArray* jsonArray) {
+    BL_JsonArray newArray = bl_dynamic_container_cast_container(
         bl_container_get_subarray((const BL_Container*) jsonArray,
                              0,
                              bl_container_size((const BL_Container*) jsonArray) - 1,
                              false));
     if (!bl_container_dynamic_is_valid(&newArray))
         return newArray;
-    JsonArrayMember* jsonArrayMember = NULL;
-    for (jsonArrayMember = bl_container_dynamic_front(&newArray); jsonArrayMember < (JsonArrayMember*)bl_container_dynamic_end(&newArray); jsonArrayMember++) {
+    BL_JsonArrayMember* jsonArrayMember = NULL;
+    for (jsonArrayMember = bl_container_dynamic_front(&newArray); jsonArrayMember < (BL_JsonArrayMember*)bl_container_dynamic_end(&newArray); jsonArrayMember++) {
         jsonArrayMember->value = jsonCopyValue(&jsonArrayMember->value, jsonArrayMember->valueType);
         if (jsonCopyValueHasFailed(&jsonArrayMember->value, jsonArrayMember->valueType))
             goto jsonArrayCopyErrorExit;
@@ -158,16 +158,16 @@ JsonArray jsonArrayCopy(const JsonArray* jsonArray) {
     return newArray;
 
 jsonArrayCopyErrorExit:
-    for (JsonArrayMember* member = bl_container_dynamic_front(&newArray); member < jsonArrayMember; member++) {
+    for (BL_JsonArrayMember* member = bl_container_dynamic_front(&newArray); member < jsonArrayMember; member++) {
         switch (member->valueType) {
         case JsonTypeString:
             bl_container_destroy(&member->value);
             break;
         case JsonTypeArray:
-            jsonArrayDestroy(&member->value);
+            bl_json_array_destroy(&member->value);
             break;
         case JsonTypeObject:
-            jsonObjectDestroy(&member->value);
+            bl_json_object_destroy(&member->value);
             break;
         default:
             break;
@@ -177,16 +177,16 @@ jsonArrayCopyErrorExit:
     return newArray;
 }
 
-JsonObject jsonObjectCopy(const JsonObject* jsonObject) {
-    JsonObject newObject = bl_dynamic_container_cast_container(
+BL_JsonObject bl_json_object_copy(const BL_JsonObject* jsonObject) {
+    BL_JsonObject newObject = bl_dynamic_container_cast_container(
         bl_container_get_subarray((const BL_Container*) jsonObject,
                              0,
                              bl_container_size((const BL_Container*) jsonObject) - 1,
                              false));
     if (!bl_container_dynamic_is_valid(&newObject))
         return newObject;
-    JsonObjectMember* jsonObjectMember = NULL;
-    for (jsonObjectMember = bl_container_dynamic_front(&newObject); jsonObjectMember < (JsonObjectMember*)bl_container_dynamic_end(&newObject); jsonObjectMember++) {
+    BL_JsonObjectMember* jsonObjectMember = NULL;
+    for (jsonObjectMember = bl_container_dynamic_front(&newObject); jsonObjectMember < (BL_JsonObjectMember*)bl_container_dynamic_end(&newObject); jsonObjectMember++) {
         jsonObjectMember->identifier = bl_string_create(bl_container_dynamic_front(&jsonObjectMember->identifier),
             bl_string_length(bl_stringview_ptr_cast(&jsonObjectMember->identifier)));
         if (!bl_container_dynamic_is_valid(&jsonObjectMember->identifier))
@@ -203,17 +203,17 @@ JsonObject jsonObjectCopy(const JsonObject* jsonObject) {
     return newObject;
 
 jsonObjectCopyErrorExit:
-    for (JsonObjectMember* member = bl_container_dynamic_front(&newObject); member < jsonObjectMember; member++) {
+    for (BL_JsonObjectMember* member = bl_container_dynamic_front(&newObject); member < jsonObjectMember; member++) {
         bl_container_destroy(&member->identifier);
         switch (member->valueType) {
         case JsonTypeString:
             bl_container_destroy(&member->value);
             break;
         case JsonTypeArray:
-            jsonArrayDestroy(&member->value);
+            bl_json_array_destroy(&member->value);
             break;
         case JsonTypeObject:
-            jsonObjectDestroy(&member->value);
+            bl_json_object_destroy(&member->value);
             break;
         default:
             break;
@@ -223,31 +223,31 @@ jsonObjectCopyErrorExit:
     return newObject;
 }
 
-void jsonArrayDestroy(void* jsonArray) {
+void bl_json_array_destroy(void* jsonArray) {
     if (!bl_container_dynamic_is_valid(jsonArray))
         return;
-    for (JsonArrayMember* currentMember = bl_container_dynamic_front(jsonArray); currentMember < (JsonArrayMember*) bl_container_dynamic_end(jsonArray); currentMember++) {
+    for (BL_JsonArrayMember* currentMember = bl_container_dynamic_front(jsonArray); currentMember < (BL_JsonArrayMember*) bl_container_dynamic_end(jsonArray); currentMember++) {
         if (currentMember->valueType == JsonTypeString)
             bl_container_destroy(&currentMember->value.string);
         else if (currentMember->valueType == JsonTypeArray)
-            jsonArrayDestroy(&currentMember->value.array);
+            bl_json_array_destroy(&currentMember->value.array);
         else if (currentMember->valueType == JsonTypeObject)
-            jsonObjectDestroy(&currentMember->value.object);
+            bl_json_object_destroy(&currentMember->value.object);
     }
     bl_container_destroy(jsonArray);
 }
 
-void jsonObjectDestroy(void* jsonObject) {
+void bl_json_object_destroy(void* jsonObject) {
     if (!bl_container_dynamic_is_valid(jsonObject))
         return;
-    for (JsonObjectMember* currentMember = bl_container_dynamic_front(jsonObject); currentMember < (JsonObjectMember*) bl_container_dynamic_end(jsonObject); currentMember++) {
+    for (BL_JsonObjectMember* currentMember = bl_container_dynamic_front(jsonObject); currentMember < (BL_JsonObjectMember*) bl_container_dynamic_end(jsonObject); currentMember++) {
         bl_container_destroy(&currentMember->identifier);
         if (currentMember->valueType == JsonTypeString)
             bl_container_destroy(&currentMember->value.string);
         else if (currentMember->valueType == JsonTypeArray)
-            jsonArrayDestroy(&currentMember->value.array);
+            bl_json_array_destroy(&currentMember->value.array);
         else if (currentMember->valueType == JsonTypeObject)
-            jsonObjectDestroy(&currentMember->value.object);
+            bl_json_object_destroy(&currentMember->value.object);
     }
     bl_container_destroy(jsonObject);
 }

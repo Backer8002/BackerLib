@@ -92,7 +92,7 @@ void bl_assert(bool condition, const char* format, ...) {
 }
 
 void bl_internal_write_log(const char* buffer, size_t amountToWrite) {
-    if (mutexLock(&LoggingInfo.logMutex) != ConcurrencySuccess)
+    if (bl_mutex_lock(&LoggingInfo.logMutex) != BL_ConcurrencySuccess)
         return;
     const char* beginOfString = buffer;
     uint8_t     flags         = 0;
@@ -118,7 +118,7 @@ void bl_internal_write_log(const char* buffer, size_t amountToWrite) {
             beginOfString = buffer + i + 1;
         }
     }
-    mutexUnlock(&LoggingInfo.logMutex);
+    bl_mutex_unlock(&LoggingInfo.logMutex);
 }
 
 void bl_log_flush(void) {
@@ -135,9 +135,9 @@ BL_ContainerError bl_log_init(void) {
         return BL_ContainerOPSuccessful;
     bl_beginTime         = time(NULL);
 
-    LoggingInfo.logMutex = mutexCreate(MutexPlain);
+    LoggingInfo.logMutex = bl_mutex_create(BL_MutexPlain);
 
-    if (!mutexIsValid(&LoggingInfo.logMutex))
+    if (!bl_mutex_is_valid(&LoggingInfo.logMutex))
         return BL_ContainerAllocFailure;
 
     LoggingInfo.files = bl_container_dynamic_create_stack(0, sizeof(struct LogFile));
@@ -149,9 +149,9 @@ BL_ContainerError bl_log_init(void) {
 BL_ContainerError bl_log_register(FILE* file, uint8_t flags) {
     if (!LoggingInfo.isInited)
         return BL_ContainerOPUnsuccessful;
-    if (mutexLock(&LoggingInfo.logMutex) != ConcurrencySuccess)
+    if (bl_mutex_lock(&LoggingInfo.logMutex) != BL_ConcurrencySuccess)
         return BL_ContainerAllocFailure;
     BL_ContainerError statusCode = bl_container_dynamic_append(&LoggingInfo.files, sizeof(struct LogFile), &(struct LogFile) {.flags = flags, .file = file});
-    mutexUnlock(&LoggingInfo.logMutex);
+    bl_mutex_unlock(&LoggingInfo.logMutex);
     return statusCode;
 }

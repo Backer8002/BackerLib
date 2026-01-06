@@ -54,9 +54,9 @@ static void internal_printTreePrepareNext(FILE* file, const size_t depth) {
     fprintf(file,"|- ");
 }
 
-static void jsonWriteObject(FILE* file, const JsonObject* object, const JsonFormat* format, size_t indentation, bool isFirstInArrayScope);
+static void jsonWriteObject(FILE* file, const BL_JsonObject* object, const BL_JsonFormat* format, size_t indentation, bool isFirstInArrayScope);
 
-static void jsonWriteArray(FILE* file, const JsonArray* array, const JsonFormat* format, size_t indentation, bool isFirstInArrayScope) {
+static void jsonWriteArray(FILE* file, const BL_JsonArray* array, const BL_JsonFormat* format, size_t indentation, bool isFirstInArrayScope) {
     if (format->breakBeforeAngleBracket && !isFirstInArrayScope) {
         fputc('\n', file);
         internal_printIndentation(file, indentation);
@@ -69,7 +69,7 @@ static void jsonWriteArray(FILE* file, const JsonArray* array, const JsonFormat*
         internal_printIndentation(file, indentation + format->amountOfSpacesForIndentation);
     }
 
-    for (JsonArrayMember* currentMember = bl_container_dynamic_front(array); currentMember < (JsonArrayMember*) bl_container_dynamic_end(array); currentMember++) {
+    for (BL_JsonArrayMember* currentMember = bl_container_dynamic_front(array); currentMember < (BL_JsonArrayMember*) bl_container_dynamic_end(array); currentMember++) {
         switch (currentMember->valueType) {
         case JsonTypeArray:
             jsonWriteArray(file, &currentMember->value.array, format, indentation + format->amountOfSpacesForIndentation, currentMember == bl_container_dynamic_front(array));
@@ -114,7 +114,7 @@ static void jsonWriteArray(FILE* file, const JsonArray* array, const JsonFormat*
     fputc(']', file);
 }
 
-static void jsonWriteObject(FILE* file, const JsonObject* object, const JsonFormat* format, size_t indentation, bool isFirstInArrayScope) {
+static void jsonWriteObject(FILE* file, const BL_JsonObject* object, const BL_JsonFormat* format, size_t indentation, bool isFirstInArrayScope) {
     if (format->breakBeforeCurlyBracket && !isFirstInArrayScope) {
         fputc('\n', file);
         internal_printIndentation(file, indentation);
@@ -125,7 +125,7 @@ static void jsonWriteObject(FILE* file, const JsonObject* object, const JsonForm
         internal_printIndentation(file, indentation + format->amountOfSpacesForIndentation);
     }
 
-    for (JsonObjectMember* currentMember = bl_container_dynamic_front(object); currentMember < (JsonObjectMember*) bl_container_dynamic_end(object); currentMember++) {
+    for (BL_JsonObjectMember* currentMember = bl_container_dynamic_front(object); currentMember < (BL_JsonObjectMember*) bl_container_dynamic_end(object); currentMember++) {
         internal_printJsonString(file, &currentMember->identifier);
         if (format->spaceBeforeColon)
             fputc(' ', file);
@@ -175,7 +175,7 @@ static void jsonWriteObject(FILE* file, const JsonObject* object, const JsonForm
     fputc('}', file);
 }
 
-void jsonWriteFile(FILE* file, const JsonObject* object, const JsonFormat* format) {
+void bl_json_write_file(FILE* file, const BL_JsonObject* object, const BL_JsonFormat* format) {
     jsonWriteObject(file, object, format, 0, true); // it is first in the global scope, no need for newline in the begining
     fputc('\n', file);
 }
@@ -183,22 +183,22 @@ void jsonWriteFile(FILE* file, const JsonObject* object, const JsonFormat* forma
 
 
 static void jsonWriteFileThread(void* sharedState) {
-    JsonWriteFilePack* information = sharedState;
-    jsonWriteFile(information->args.file,&information->args.object, &information->args.format);
+    BL_JsonWriteFilePack* information = sharedState;
+    bl_json_write_file(information->args.file,&information->args.object, &information->args.format);
     information->future = true;
 }
 
-FutureVoid* jsonWriteFileAsync(BL_ThreadPool* threadPool, size_t priority, FILE* file, const JsonObject* object, const JsonFormat* format) {
+BL_FutureVoid* bl_json_write_file_threaded(BL_ThreadPool* threadPool, size_t priority, FILE* file, const BL_JsonObject* object, const BL_JsonFormat* format) {
     return bl_threadpool_job_assign(threadPool,
         priority,
         jsonWriteFileThread,
-        asyncArgsFutureOffset(JsonWriteFilePack),
-        &(JsonWriteFileArgs){.file = file, .object = *object, .format = *format},sizeof(JsonWriteFileArgs),
-        asyncArgsOffset(JsonWriteFilePack));
+        bl_async_args_future_offset(BL_JsonWriteFilePack),
+        &(BL_JsonWriteFileArgs){.file = file, .object = *object, .format = *format},sizeof(BL_JsonWriteFileArgs),
+        bl_async_args_offset(BL_JsonWriteFilePack));
 }
 
 
-static void jsonWriteTree(FILE* file,JsonMemberType valueType,const JsonMemberValue* value,size_t depth) {
+static void jsonWriteTree(FILE* file,BL_JsonMemberType valueType,const BL_JsonMemberValue* value,size_t depth) {
     switch (valueType) {
     case JsonTypeBoolean:
         fprintf(file, "[[Boolean]] %s\n",value->boolean ? "true" : "false");
@@ -219,14 +219,14 @@ static void jsonWriteTree(FILE* file,JsonMemberType valueType,const JsonMemberVa
         break;
     case JsonTypeArray:
         fprintf(file, "[[Array]]\n");
-        for (JsonArrayMember* currentMember = bl_container_dynamic_front(&value->array); currentMember < (JsonArrayMember*)bl_container_dynamic_end(&value->array); currentMember++) {
+        for (BL_JsonArrayMember* currentMember = bl_container_dynamic_front(&value->array); currentMember < (BL_JsonArrayMember*)bl_container_dynamic_end(&value->array); currentMember++) {
             internal_printTreePrepareNext(file, depth);
             jsonWriteTree(file, currentMember->valueType, &currentMember->value,depth + 1);
         }
         break;
     case JsonTypeObject:
         fprintf(file, "[[Object]]\n");
-        for (JsonObjectMember* currentMember = bl_container_dynamic_front(&value->array); currentMember < (JsonObjectMember*)bl_container_dynamic_end(&value->array); currentMember++) {
+        for (BL_JsonObjectMember* currentMember = bl_container_dynamic_front(&value->array); currentMember < (BL_JsonObjectMember*)bl_container_dynamic_end(&value->array); currentMember++) {
             internal_printTreePrepareNext(file, depth);
             internal_printJsonString(file,&currentMember->identifier);
             fprintf(file, " -> ");
@@ -238,6 +238,6 @@ static void jsonWriteTree(FILE* file,JsonMemberType valueType,const JsonMemberVa
     }
 }
 
-void jsonWriteTreeStyle(FILE* file,JsonMemberType valueType,const JsonMemberValue* value) {
+void bl_json_write_tree_style(FILE* file,BL_JsonMemberType valueType,const BL_JsonMemberValue* value) {
     jsonWriteTree(file,valueType,value,0);
 }
