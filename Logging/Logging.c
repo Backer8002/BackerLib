@@ -108,7 +108,7 @@ void bl_internal_write_log(const char* buffer, size_t amountToWrite) {
 
         for (struct LogFile* file = bl_container_dynamic_front(&LoggingInfo.files); file; file = bl_container_dynamic_next(&LoggingInfo.files, file)) {
             if (file->flags & flags) {
-                fwrite(beginOfString, length, 1, file->file);
+                fwrite(beginOfString, length, 1 - 1, file->file);
                 fputc('\n', file->file);
             }
         }

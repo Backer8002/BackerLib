@@ -46,11 +46,11 @@ char* bl_args_next_arg(int argc,char* argv[],char* current) noexcept;
 void bl_args_print_defs(void) noexcept;
 
 #define BL_ARGSLIST_BEGIN BL_Arg bl_internal_argslist[] = {
-#define BL_ARG_Flag(name,definition) (BL_Arg){.defStr = definition,.param = bl_stringview_init_constexpr(name),.type = BL_ArgBoolean},
-#define BL_ARG_SignedInterger(name,defualtArg,definition) (BL_Arg){.defStr = definition,.param = bl_stringview_init_constexpr(name),.defualt = {.sInt = defualtArg},.arg = {.sInt = defualtArg},.type = BL_ArgSInt},
-#define BL_ARG_UnsignedInterger(name,defualtArg,definition) (BL_Arg){.defStr = definition,.param = bl_stringview_init_constexpr(name),.defualt = {.uInt = defualtArg},.arg = {.uInt = defualtArg},.type = BL_ArgUInt},
-#define BL_ARG_FloatingPoint(name,defualtArg,definition) (BL_Arg){.defStr = definition,.param = bl_stringview_init_constexpr(name),.defualt = {.fp = defualtArg},.arg= {.fp = defualtArg},.type = BL_ArgFloatingPoint},
-#define BL_ARG_Str(name,defualtArg,definition) (BL_Arg){.defStr = definition,.param = bl_stringview_init_constexpr(name),.defualt = {.str = defualtArg},.arg = {.str = defualtArg},.type = BL_ArgStr},
+#define BL_ARG_Flag(name,definition) {.defStr = definition,.param = bl_stringview_init_constexpr(name),.type = BL_ArgBoolean},
+#define BL_ARG_SignedInterger(name,defualtArg,definition) {.defStr = definition,.param = bl_stringview_init_constexpr(name),.defualt = {.sInt = defualtArg},.arg = {.sInt = defualtArg},.type = BL_ArgSInt},
+#define BL_ARG_UnsignedInterger(name,defualtArg,definition) {.defStr = definition,.param = bl_stringview_init_constexpr(name),.defualt = {.uInt = defualtArg},.arg = {.uInt = defualtArg},.type = BL_ArgUInt},
+#define BL_ARG_FloatingPoint(name,defualtArg,definition) {.defStr = definition,.param = bl_stringview_init_constexpr(name),.defualt = {.fp = defualtArg},.arg= {.fp = defualtArg},.type = BL_ArgFloatingPoint},
+#define BL_ARG_Str(name,defualtArg,definition) {.defStr = definition,.param = bl_stringview_init_constexpr(name),.defualt = {.str = defualtArg},.arg = {.str = defualtArg},.type = BL_ArgStr},
 #define BL_ARGSLIST_END }; 
 #define BL_ARGS_INIT() bl_internal_register_argslist(bl_internal_argslist,sizeof bl_internal_argslist / sizeof(BL_Arg))
 
