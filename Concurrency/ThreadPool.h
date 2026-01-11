@@ -5,8 +5,7 @@
 #include "ConcurrencyDefines.h"
 
 #ifdef __cplusplus
-namespace BackerLib {
-    extern "C" {
+extern "C" {
 #else
 #define noexcept
 #endif
@@ -158,7 +157,6 @@ extern bool bl_future_await_until(const void* future, const struct timespec* tim
 extern bool bl_future_await_for(const void* future, const struct timespec* duration) noexcept;
 #ifdef __cplusplus
 }
-};
 #else
 #undef noexcept
 #endif

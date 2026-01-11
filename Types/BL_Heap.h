@@ -4,8 +4,7 @@
 #include "BL_DynamicContainer.h"
 
 #ifdef __cplusplus
-namespace BackerLib {
-    extern "C" {
+extern "C" {
 #else
 #define noexcept
 #endif
@@ -76,8 +75,7 @@ namespace BackerLib {
     extern void              bl_heap_destroy(void* heap) noexcept;
 
 #ifdef __cplusplus
-    }
-};
+}
 #else
 #undef noexcept
 #endif

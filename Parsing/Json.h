@@ -8,8 +8,7 @@
 #include <stdio.h>
 
 #ifdef __cplusplus
-namespace BackerLib {
-    extern "C" {
+extern "C" {
 #else
 #define noexcept
 #endif
@@ -234,7 +233,6 @@ namespace BackerLib {
     extern void              bl_json_object_destroy(void* jsonObject) noexcept;
 
 #ifdef __cplusplus
-    }
-};
+}
 #endif
 #endif // JSONPARSER_H

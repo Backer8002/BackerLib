@@ -4,8 +4,7 @@
 #include "BL_Container.h"
 #include "TypesMain.h"
 #ifdef __cplusplus
-namespace BackerLib {
-    extern "C" {
+extern "C" {
 #else
 #define noexcept
 #endif
@@ -225,7 +224,6 @@ namespace BackerLib {
 
 #ifdef __cplusplus
     }
-};
 #else
 #undef noexcept
 #endif

@@ -8,8 +8,7 @@
 #include <stdint.h>
 
 #ifdef __cplusplus
-namespace BackerLib {
-    extern "C" {
+extern "C" {
 #else
 #define noexcept
 #endif // __cplusplus
@@ -215,8 +214,9 @@ namespace BackerLib {
 
     extern bool              bl_hashmap_is_valid(const BL_Hashmap* hashMap);
 #ifdef __cplusplus
-    }
-};
+}
+#else
+#undef noexcept
 #endif // __cplusplus
 
 #endif

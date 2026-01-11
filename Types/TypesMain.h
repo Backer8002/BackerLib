@@ -4,8 +4,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #ifdef __cplusplus
-namespace BackerLib {
-    extern "C" {
+extern "C" {
 #endif
 
     typedef unsigned char BL_Byte;
@@ -32,7 +31,6 @@ namespace BackerLib {
 #define ObjectFlagElementsArePointers           0x00400000
 #define ObjectFlagArrayNoSort                   0x00800000
 #ifdef __cplusplus
-    }
-};
+}
 #endif
 #endif

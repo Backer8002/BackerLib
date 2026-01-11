@@ -4,10 +4,6 @@
 #include "Logging_Internal.h"
 #include <time.h>
 
-#ifdef __cplusplus
-using BackerLib::bl_log,BackerLib::bl_assert,BackerLib::bl_beginTime;
-#endif
-
 #ifdef BL_LOGGING_TRACE
 #define bl_log_trace(fmtMsg,...) bl_log("%c%lds %s" fmtMsg,TRACE_CHAR,time(NULL)-bl_beginTime," [TRACE] | ",##__VA_ARGS__) 
 #define bl_log_trace_location(fmtMsg,...) bl_log("%c%lds %s:%d %s()%s| " fmtMsg,TRACE_CHAR,time(NULL)-bl_beginTime,__FILE__,__LINE__,__func__," [TRACE] ",##__VA_ARGS__)

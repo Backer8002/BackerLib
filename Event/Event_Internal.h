@@ -4,8 +4,7 @@
 #include <BackerLibTypes.h>
 
 #ifdef __cplusplus
-namespace BackerLib {
-    extern "C" {
+extern "C" {
 #else
 #define noexcept
 #endif
@@ -14,7 +13,9 @@ namespace BackerLib {
         BL_DynamicContainer functions;
     } BL_Event;
 
+#ifndef BL_EVENT_MAX_JOBS_PER_THREAD
 #define BL_EVENT_MAX_JOBS_PER_THREAD 20
+#endif
 
     BL_ContainerError bl_event_global_init(void) noexcept;
 
@@ -39,8 +40,7 @@ namespace BackerLib {
     BL_ContainerError bl_event_global_invoke(const BL_StringView* eventName) noexcept;
 
 #ifdef __cplusplus
-    }
-};
+}
 #else
 #undef noexcept
 #endif

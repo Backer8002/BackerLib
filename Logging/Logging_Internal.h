@@ -9,8 +9,7 @@
 #include <stdint.h>
 
 #ifdef __cplusplus
-namespace BackerLib {
-    extern "C" {
+extern "C" {
 #else
 #define noexcept
 #endif
@@ -73,8 +72,7 @@ BL_ContainerError bl_log_init(void) noexcept;
 BL_ContainerError bl_log_register(FILE* file,uint8_t flags) noexcept;
 
 #ifdef __cplusplus
-    }
-};
+}
 #else
 #undef noexcept
 #endif

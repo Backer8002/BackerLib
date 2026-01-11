@@ -4,7 +4,6 @@
 #include <stdint.h>
 
 #ifdef __cplusplus
-namespace BackerLib {
 extern "C" {
 
 #else
@@ -17,7 +16,8 @@ extern uint64_t bl_math_permutation(uint32_t n, uint32_t k) noexcept;
 
 #ifdef __cplusplus
 }
-};
+#else
+#undef noexcept
 #endif // __cplusplus
 
 #endif

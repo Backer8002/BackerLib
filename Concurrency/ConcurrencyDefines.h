@@ -24,8 +24,7 @@
 #endif
 
 #ifdef __cplusplus
-namespace BackerLib {
-    extern "C" {
+extern "C" {
 #define _Noreturn [[noreturn]]
 #else
 
@@ -210,7 +209,8 @@ extern void bl_mutex_destroy(void* mutex) noexcept;
 #ifdef __cplusplus
 #undef _Noreturn
 }
-};
+#else
+#undef noexcept
 #endif
 
 #endif // CONCURRENCYDEFINES_H

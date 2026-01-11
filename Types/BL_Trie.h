@@ -5,8 +5,7 @@
 #include "BL_UnorderedContainer.h"
 
 #ifdef __cplusplus
-namespace BackerLib {
-    extern "C" {
+extern "C" {
 #else
 #define noexcept
 #endif
@@ -73,8 +72,7 @@ namespace BackerLib {
     extern bool bl_trie_is_valid(const BL_Trie* trie) noexcept;
 
 #ifdef __cplusplus
-    }
-};
+}
 #else
 #undef noexcept
 #endif

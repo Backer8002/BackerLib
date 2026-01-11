@@ -6,8 +6,7 @@
 #include <BackerLibTypes.h>
 
 #ifdef __cplusplus
-namespace BackerLib {
-    extern "C" {
+extern "C" {
 #else
 #define noexcept
 #endif
@@ -55,8 +54,7 @@ void bl_args_print_defs(void) noexcept;
 #define BL_ARGS_INIT() bl_internal_register_argslist(bl_internal_argslist,sizeof bl_internal_argslist / sizeof(BL_Arg))
 
 #ifdef __cplusplus
-    }
-};
+}
 #else
 #undef noexcept
 #endif

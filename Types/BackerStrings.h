@@ -11,7 +11,6 @@
 #include <wchar.h>
 
 #ifdef __cplusplus
-namespace BackerLib {
     extern "C" {
 #else
 #define noexcept
@@ -195,7 +194,6 @@ namespace BackerLib {
 
 #ifdef __cplusplus
     }
-};
 #else
 #undef noexcept
 #endif // __cplusplus
