@@ -11,5 +11,6 @@
 #include "../Types/BackerStrings.h"
 #include "../Types/HashMap.h"
 #include "../Types/TypesMain.h"
+#include "../Types/BL_Map.h"
 
 #endif
