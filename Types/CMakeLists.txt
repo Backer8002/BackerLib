@@ -30,6 +30,8 @@ add_library(BackerLibTypes STATIC
         BL_Heap.h
         BL_Trie.c
         BL_Trie.h
+        BL_Map.c
+        BL_Map.h
         HashMap.h
         HashMapPublicShared.c
         )

@@ -143,7 +143,7 @@ BL_ContainerError bl_unordered_container_reserve(BL_UnorderedContainer* containe
     if(!newBitset)
         return BL_ContainerAllocFailure;
 
-    memset(newBitset + currentBitsetLen,0,newBitsetLen - currentBitsetLen);
+    memset((BL_Byte*)newBitset + currentBitsetLen,0,newBitsetLen - currentBitsetLen);
     container->bitset = newBitset;
 
     for (size_t allocationIterator = 0; allocationIterator < additonalNeededPages; ++allocationIterator) {

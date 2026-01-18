@@ -12,6 +12,7 @@ extern "C" {
 typedef struct BL_Map {
     BL_UnorderedContainer container;
     size_t keySize,elementOffset;
+    void* root;
     bool (*compEqual)(const void*,const void*);
     bool (*compLess)(const void*,const void*);
 } BL_Map;
