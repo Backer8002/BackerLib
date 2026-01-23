@@ -9,12 +9,12 @@
 <embed type="text/html" src="/DefaultHeader.html" width="100%">
 
     <div class="definition">
-        <p class="code">void containerDestroy(void* container)</p>
+        <p class="code">void bl_container_destroy(void* container)</p>
         <p>
-            containerDestroy accepts any NULL pointer or a pointer to a qualified type.
+            bl_container_destroy accepts any NULL pointer or a pointer to a qualified type.
             If parameter container is not a valid object nothing will be done. If it is a valid object the internal array
             will be destroyed and object invalidated. If parameter was created by a function which has postfix heap it will also free the passed pointer.
-            Qualified types might have a specialized destroy function. It is then undefined behavior to use containerDestroy with that type.
+            Qualified types will have a specialized destroy function. It is then undefined behavior to use bl_container_destroy with that type.
         </p>
     </div>
 

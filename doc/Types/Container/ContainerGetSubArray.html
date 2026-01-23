@@ -1,10 +1,31 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <title>Container</title>
+    <link rel="stylesheet" href="/main.css">
 </head>
-<body>
 
+<body>
+    <embed type="text/html" src="/DefaultHeader.html" width="100%">
+
+    <div class="definition" id="subarray">
+        <p class="code">BL_Container bl_container_get_subarray(const BL_Container* container,size_t firstIndex,size_t lastIndex,bool copyInReverse)</p>
+        <p>
+            Returns a copy of a subarray of the given container. First index and last index specify the subarray range. 
+            <br>The range is [firstIndex,lastIndex]
+            <br>Copying in reverse is possible with boolean option. 
+            <br>lastIndex may not be smaller than firstIndex. container may not be null and result may be invalid. Check with <a href="ContainerUtil.html#is_valid">is_valid</a>.
+        </p>
+    </div>
+
+    <div class="definition" id="copy">
+        <p class="code">BL_Container bl_container_copy(const BL_Container* container)</p>
+        <p>
+            Wrapper around <a href="#subarray">get_subarray</a>. Will return container in range [0,len(container)) and in current order.
+        </p>
+    </div>
 </body>
+
 </html>
