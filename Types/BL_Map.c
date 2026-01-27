@@ -1,5 +1,6 @@
 #include "BL_Map.h"
 #include "BL_UnorderedContainer.h"
+#include "TypesMain.h"
 #include <stddef.h>
 #include <stdbool.h>
 #include <stdlib.h>
@@ -261,16 +262,53 @@ BL_ContainerError bl_map_insert(BL_Map* map,const void* key,size_t keySize,const
     return BL_ContainerOPSuccessful;
 }
 
-
-void* bl_map_get(const BL_Map* map,const void* key,size_t keySize) {
+static struct Node* internal_get_node(const BL_Map* map,const void* key) {
     struct Node* current = map->root;
     while(current) {
-        if(map->compEqual(current->data,key))
-            return (BL_Byte*)current + map->elementOffset;
+        if (map->compEqual(current->data,key))
+            return current;
         if (map->compLess(key,current->data))
             current = current->left;
         else
             current = current->right;
     }
     return NULL;
+}
+
+void* bl_map_get(const BL_Map* map,const void* key,size_t keySize) {
+    if (keySize != map->keySize)
+        return NULL;
+
+    struct Node* node = internal_get_node(map, key);
+    if (node)
+        return (BL_Byte*)node + map->elementOffset;
+    return NULL;
+}
+
+BL_ContainerError bl_map_remove(BL_Map* map,const void* key,size_t keySize,void(*keyDestructor)(void*),void(*elementDestructor)(void*)) {
+    if (keySize != map->keySize)
+        return BL_ContainerInvalidSize;
+
+    struct Node* nodeToRemove = internal_get_node(map, key);
+
+    if (keyDestructor)
+        keyDestructor(nodeToRemove->data);
+    if (elementDestructor)
+        elementDestructor((BL_Byte*) nodeToRemove + map->elementOffset);
+
+    
+}
+
+void bl_map_destroy(BL_Map* map,void(*keyDestructor)(void*),void(*elementDestructor)(void*)) {
+    if (!bl_map_is_valid(map))
+        return;
+
+    for (struct Node* node = bl_unordered_container_front(&map->container); node; node = bl_unordered_container_next(&map->container, node)) {
+        if (keyDestructor)
+            keyDestructor(node->data);
+        if (elementDestructor)
+            elementDestructor((BL_Byte*)node + map->elementOffset);
+    }
+
+    bl_unordered_container_destroy(&map->container);
 }

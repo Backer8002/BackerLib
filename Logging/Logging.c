@@ -92,12 +92,16 @@ void bl_assert(bool condition, const char* format, ...) {
 }
 
 void bl_internal_write_log(const char* buffer, size_t amountToWrite) {
+    if (amountToWrite == 0)
+        return;
+
     if (bl_mutex_lock(&LoggingInfo.logMutex) != BL_ConcurrencySuccess)
         return;
-    const char* beginOfString = buffer;
-    uint8_t     flags         = 0;
 
-    for (size_t i = 0; i < amountToWrite; i++) {
+    const char* beginOfString = buffer + 1;
+    uint8_t     flags         = 1 << ((unsigned char)*buffer - 0xf8);
+
+    for (size_t i = 1; i < amountToWrite; i++) {
         if ((unsigned char) buffer[i] < 0xf8) {
             if (i != amountToWrite - 1)
                 continue;
@@ -108,7 +112,7 @@ void bl_internal_write_log(const char* buffer, size_t amountToWrite) {
 
         for (struct LogFile* file = bl_container_dynamic_front(&LoggingInfo.files); file; file = bl_container_dynamic_next(&LoggingInfo.files, file)) {
             if (file->flags & flags) {
-                fwrite(beginOfString, length, 1 - 1, file->file);
+                fwrite(beginOfString, length, 1, file->file);
                 fputc('\n', file->file);
             }
         }
