@@ -22,7 +22,7 @@ static void internal_map_init(BL_Map* map,size_t keySize,size_t elementSize,bool
     map->elementOffset = elementOffset;
     map->keySize = keySize;
     map->root = NULL;
-};
+}
 
 BL_Map bl_map_create_stack(size_t keySize,size_t elementSize,bool(*compEqual)(const void*,const void*),bool(*compLess)(const void*,const void*)) {
     BL_Map map;
@@ -285,18 +285,46 @@ void* bl_map_get(const BL_Map* map,const void* key,size_t keySize) {
     return NULL;
 }
 
+static struct Node* internal_get_inorder_successor(struct Node* nodeToStartAt) {
+    struct Node *currentNode = nodeToStartAt;
+    while (true) {
+        if (!(currentNode->left && currentNode->right))
+            return currentNode;
+        currentNode = currentNode->left;
+    }
+}
+
 BL_ContainerError bl_map_remove(BL_Map* map,const void* key,size_t keySize,void(*keyDestructor)(void*),void(*elementDestructor)(void*)) {
     if (keySize != map->keySize)
         return BL_ContainerInvalidSize;
 
     struct Node* nodeToRemove = internal_get_node(map, key);
 
+    if (!nodeToRemove)
+        return BL_ContainerOPUnsuccessful;
+
     if (keyDestructor)
         keyDestructor(nodeToRemove->data);
     if (elementDestructor)
         elementDestructor((BL_Byte*) nodeToRemove + map->elementOffset);
 
-    
+    struct Node* currentNode = nodeToRemove;
+
+    if (nodeToRemove->left) {
+        if (nodeToRemove->right) {
+            struct Node* inorderSuccessor = internal_get_inorder_successor(nodeToRemove->right);
+            if (!(inorderSuccessor->left || inorderSuccessor->right)) {
+                
+            }
+        }
+    } else if (nodeToRemove->right) {
+
+    }
+
+    for (struct Node* nextNode = currentNode->prev; nextNode; currentNode = nextNode,nextNode = nextNode->prev) {
+
+    }    
+    return BL_ContainerOPSuccessful;
 }
 
 void bl_map_destroy(BL_Map* map,void(*keyDestructor)(void*),void(*elementDestructor)(void*)) {

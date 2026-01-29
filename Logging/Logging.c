@@ -49,35 +49,36 @@ void bl_vlog(const char* format, va_list args) {
     if (!LoggingInfo.isInited)
         return;
 
-    size_t availableSpace = BL_LOGGING_BUFFERSIZE - logBuffer.bytesWriten;
+    int availableSpace = BL_LOGGING_BUFFERSIZE - (int)logBuffer.bytesWriten;
     if (availableSpace == 0) {
         bl_log_flush();
         availableSpace = BL_LOGGING_BUFFERSIZE;
     }
     va_list argsCopy;
     va_copy(argsCopy, args);
-    size_t bytesNeeded = vsnprintf((char*) logBuffer.buffer + logBuffer.bytesWriten, availableSpace, format, argsCopy) + 1;
-
+    int bytesNeeded = vsnprintf((char*) logBuffer.buffer + logBuffer.bytesWriten, (size_t)availableSpace, format, argsCopy) + 1;
+    if (bytesNeeded < 0)
+        return;
     if (availableSpace >= bytesNeeded) {
-        logBuffer.bytesWriten += bytesNeeded;
+        logBuffer.bytesWriten += (size_t)bytesNeeded;
         return;
     }
 
     bl_log_flush();
 
     if (bytesNeeded <= BL_LOGGING_BUFFERSIZE) {
-        logBuffer.bytesWriten = bytesNeeded;
+        logBuffer.bytesWriten = (size_t)bytesNeeded;
         vsnprintf((char*) logBuffer.buffer, BL_LOGGING_BUFFERSIZE, format, args);
         return;
     }
 
-    char* buffer = malloc(bytesNeeded);
+    char* buffer = malloc((size_t)bytesNeeded);
     if (!buffer)
         return;
 
-    vsnprintf(buffer, bytesNeeded, format, args);
+    vsnprintf(buffer, (size_t)bytesNeeded, format, args);
 
-    bl_internal_write_log(buffer, bytesNeeded);
+    bl_internal_write_log(buffer, (size_t)bytesNeeded);
 
     free(buffer);
 }
@@ -99,7 +100,7 @@ void bl_internal_write_log(const char* buffer, size_t amountToWrite) {
         return;
 
     const char* beginOfString = buffer + 1;
-    uint8_t     flags         = 1 << ((unsigned char)*buffer - 0xf8);
+    uint8_t     flags         = (uint8_t)(1 << ((unsigned char)*buffer - 0xf8));
 
     for (size_t i = 1; i < amountToWrite; i++) {
         if ((unsigned char) buffer[i] < 0xf8) {
@@ -118,7 +119,7 @@ void bl_internal_write_log(const char* buffer, size_t amountToWrite) {
         }
 
         if (i < amountToWrite) {
-            flags         = 0x1 << ((unsigned char) buffer[i] - 0xf8);
+            flags         = (uint8_t)(0x1 << ((unsigned char) buffer[i] - 0xf8));
             beginOfString = buffer + i + 1;
         }
     }

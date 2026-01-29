@@ -2,6 +2,7 @@
 
 #include <BackerLibTypes.h>
 #include <assert.h>
+#include <stdbool.h>
 #include <stdlib.h>
 #include <BackerLibLogging.h>
 
@@ -201,10 +202,15 @@ static void internal_async_file_read(void* sharedState) {
 
     fseek(args->args,0,SEEK_SET);
     fseek(args->args, 0,SEEK_END);
-    size_t fileSize = ftell(args->args);
+    long fileSize = ftell(args->args);
+    if (fileSize < 0) {
+        args->future.future = (BL_DynamicContainer){0};
+        args->future.isValid = true;
+        return;
+    }
     fseek(args->args,0,SEEK_SET);
 
-    args->future.future = bl_container_dynamic_create_stack(fileSize, sizeof(char));
+    args->future.future = bl_container_dynamic_create_stack((size_t)fileSize, sizeof(char));
     if (!bl_container_dynamic_is_valid((BL_DynamicContainer*)&args->future.future)) {
         args->future.isValid = true;
         return;
@@ -212,7 +218,7 @@ static void internal_async_file_read(void* sharedState) {
 
     args->future.future.container.amountOfIndexes = fread(args->future.future.container.array,
                                                           sizeof(char),
-                                                          fileSize,
+                                                          (size_t)fileSize,
                                                           args->args);
     args->future.isValid = true;
 }
