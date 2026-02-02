@@ -12,7 +12,7 @@ add_compile_definitions(BL_LOGGING_INFO BL_LOGGING_TRACE BL_LOGGING_DEBUG BL_LOG
 if (MSVC)
     add_compile_options(/Wall /JMC /experimental:c11atomics)
 else ()
-    add_compile_options(-Wall -Wextra -Wpedantic)
+    add_compile_options(-Wall -Wextra -Wpedantic -Wconversion)
 endif ()
 
 include_directories(BEFORE PUBLIC ${CMAKE_BINARY_DIR} "${PROJECT_SOURCE_DIR}/include")

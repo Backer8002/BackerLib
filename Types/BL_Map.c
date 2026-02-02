@@ -313,17 +313,105 @@ BL_ContainerError bl_map_remove(BL_Map* map,const void* key,size_t keySize,void(
     if (nodeToRemove->left) {
         if (nodeToRemove->right) {
             struct Node* inorderSuccessor = internal_get_inorder_successor(nodeToRemove->right);
-            if (!(inorderSuccessor->left || inorderSuccessor->right)) {
+            if (inorderSuccessor == nodeToRemove->right) {
+                if (inorderSuccessor->left) {
+                    inorderSuccessor->right = inorderSuccessor->left;
+                }
+                inorderSuccessor->left = nodeToRemove->left;
+                nodeToRemove->left = inorderSuccessor;
+                currentNode = inorderSuccessor;
+                inorderSuccessor->prev = nodeToRemove->prev;
+
+                if (!inorderSuccessor->right && inorderSuccessor->weight == -1) {
+                    inorderSuccessor = internal_rotate_right(inorderSuccessor);
+                }
+                if (nodeToRemove->prev) {
+                    if (nodeToRemove->prev->left == nodeToRemove)
+                        nodeToRemove->prev->left = inorderSuccessor;
+                    else
+                        nodeToRemove->prev->right = inorderSuccessor;
+                } else {
+                    map->root = inorderSuccessor;
+                }
+            } else {
+                if (inorderSuccessor->left) {
+                    inorderSuccessor->left->prev = inorderSuccessor->prev;
+                    if (inorderSuccessor->prev->left == inorderSuccessor)
+                        inorderSuccessor->prev->left = inorderSuccessor->left;
+                    else
+                        inorderSuccessor->prev->right = inorderSuccessor->right;
+                    currentNode = inorderSuccessor->left;
+                } else {
+                    inorderSuccessor->right->prev = inorderSuccessor->prev;
+                    if (inorderSuccessor->prev->left == inorderSuccessor)
+                        inorderSuccessor->prev->left = inorderSuccessor->right;
+                    else
+                        inorderSuccessor->prev->right = inorderSuccessor->right;
+                    currentNode = inorderSuccessor->right;
+                }
+
+                inorderSuccessor->left = nodeToRemove->left;
+                if (nodeToRemove->left)
+                    nodeToRemove->left->prev = inorderSuccessor;
+                inorderSuccessor->right = nodeToRemove->right;
+                if (nodeToRemove->right)
+                    nodeToRemove->right->prev = inorderSuccessor;
                 
+                inorderSuccessor->prev = nodeToRemove->prev;
+                if (inorderSuccessor->prev) {
+                    if (inorderSuccessor->prev->left == nodeToRemove)
+                        inorderSuccessor->prev->left = inorderSuccessor;
+                    else
+                        inorderSuccessor->prev->right = inorderSuccessor;
+                } else {
+                    map->root = inorderSuccessor;
+                }
             }
+            *nodeToRemove = (struct Node){0};
+        } else {
+            nodeToRemove->left->prev = nodeToRemove->prev;
+            if (nodeToRemove->prev) {
+                if (nodeToRemove->prev->left == nodeToRemove)
+                    nodeToRemove->prev->left = nodeToRemove->left;
+                else
+                    nodeToRemove->prev->right = nodeToRemove->left;
+            }
+            else {
+                map->root = nodeToRemove->left;
+            }
+            currentNode = nodeToRemove->left;
         }
     } else if (nodeToRemove->right) {
-
+        nodeToRemove->right->prev = nodeToRemove->prev;
+        if (nodeToRemove->prev) {
+            if (nodeToRemove->prev->left == nodeToRemove)
+                nodeToRemove->prev->left = nodeToRemove->right;
+            else
+                nodeToRemove->prev->right = nodeToRemove->right;
+        }
+        else {
+            map->root = nodeToRemove->right;
+        }
+        currentNode = nodeToRemove->right;
+    } else {
+        if (nodeToRemove->prev) {
+            if(nodeToRemove->prev->left == nodeToRemove)
+                nodeToRemove->prev->left = NULL;
+            else
+                nodeToRemove->prev->right = NULL;
+        } else {
+            map->root = NULL;
+        }
+        currentNode = nodeToRemove->prev;
     }
+
+    bl_unordered_container_remove(&map->container, bl_unordered_container_index_from_ref(&map->container, nodeToRemove), NULL);
 
     for (struct Node* nextNode = currentNode->prev; nextNode; currentNode = nextNode,nextNode = nextNode->prev) {
 
     }    
+
+
     return BL_ContainerOPSuccessful;
 }
 
