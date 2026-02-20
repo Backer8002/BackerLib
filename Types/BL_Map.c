@@ -1,41 +1,41 @@
 #include "BL_Map.h"
 #include "BL_UnorderedContainer.h"
 #include "TypesMain.h"
-#include <stddef.h>
+#include <stdalign.h>
 #include <stdbool.h>
+#include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
-#include <stdalign.h>
 
 struct Node {
-    struct Node  *left,*right,*prev;
-    signed char weight;
-    alignas(max_align_t) unsigned char data[]; 
+    struct Node *left, *right, *prev;
+    signed char  weight;
+    alignas(max_align_t) unsigned char data[];
 };
 
-static void internal_map_init(BL_Map* map,size_t keySize,size_t elementSize,bool(*compEqual)(const void*,const void*),bool(*compLess)(const void*,const void*)) {
-    map->compEqual = compEqual;
-    map->compLess = compLess;
+static void internal_map_init(BL_Map* map, size_t keySize, size_t elementSize, bool (*compEqual)(const void*, const void*), bool (*compLess)(const void*, const void*)) {
+    map->compEqual       = compEqual;
+    map->compLess        = compLess;
     size_t elementOffset = sizeof(struct Node) + keySize + (alignof(max_align_t) - keySize % alignof(max_align_t));
-    size_t nodeSize = elementOffset + elementSize + (alignof(max_align_t) - elementSize % alignof(max_align_t));
-    map->container = bl_unordered_container_create_stack(0,nodeSize);
-    map->elementOffset = elementOffset;
-    map->keySize = keySize;
-    map->root = NULL;
+    size_t nodeSize      = elementOffset + elementSize + (alignof(max_align_t) - elementSize % alignof(max_align_t));
+    map->container       = bl_unordered_container_create_stack(0, nodeSize);
+    map->elementOffset   = elementOffset;
+    map->keySize         = keySize;
+    map->root            = NULL;
 }
 
-BL_Map bl_map_create_stack(size_t keySize,size_t elementSize,bool(*compEqual)(const void*,const void*),bool(*compLess)(const void*,const void*)) {
+BL_Map bl_map_create_stack(size_t keySize, size_t elementSize, bool (*compEqual)(const void*, const void*), bool (*compLess)(const void*, const void*)) {
     BL_Map map;
-    internal_map_init(&map,keySize,elementSize,compEqual,compLess);
+    internal_map_init(&map, keySize, elementSize, compEqual, compLess);
     return map;
 }
 
-BL_Map* bl_map_create_heap(size_t keySize,size_t elementSize,bool(*compEqual)(const void*,const void*),bool(*compLess)(const void*,const void*)) {
+BL_Map* bl_map_create_heap(size_t keySize, size_t elementSize, bool (*compEqual)(const void*, const void*), bool (*compLess)(const void*, const void*)) {
     BL_Map* map = malloc(sizeof *map);
     if (!map)
         return NULL;
-    
-    internal_map_init(map,keySize,elementSize,compEqual,compLess);
+
+    internal_map_init(map, keySize, elementSize, compEqual, compLess);
 
     if (!bl_map_is_valid(map)) {
         free(map);
@@ -43,7 +43,7 @@ BL_Map* bl_map_create_heap(size_t keySize,size_t elementSize,bool(*compEqual)(co
     }
 
     map->container.header |= ObjectFlagIsOnHeap;
-    return map; 
+    return map;
 }
 
 bool bl_map_is_valid(const BL_Map* map) {
@@ -54,13 +54,13 @@ bool bl_map_is_empty(const BL_Map* map) {
     return bl_unordered_container_is_empty(&map->container);
 }
 
-static struct Node* internal_find_best_place(const BL_Map* map,const void* key) {
+static struct Node* internal_find_best_place(const BL_Map* map, const void* key) {
     struct Node* nextNode = map->root;
     while (true) {
         struct Node* currentNode = nextNode;
-        if (map->compEqual(currentNode->data,key))
+        if (map->compEqual(currentNode->data, key))
             return NULL;
-        if (map->compLess(key,currentNode->data))
+        if (map->compLess(key, currentNode->data))
             nextNode = currentNode->left;
         else
             nextNode = currentNode->right;
@@ -71,76 +71,76 @@ static struct Node* internal_find_best_place(const BL_Map* map,const void* key) 
 }
 
 struct Node* internal_rotate_left(struct Node* node) {
-    struct Node* rightNode = node->right;
+    struct Node* rightNode     = node->right;
     struct Node* rightLeftNode = rightNode->left;
-    rightNode->prev = node->prev;
-    node->right = rightLeftNode;
-    rightNode->left = node;
-    node->prev = rightNode;
+    rightNode->prev            = node->prev;
+    node->right                = rightLeftNode;
+    rightNode->left            = node;
+    node->prev                 = rightNode;
     if (rightLeftNode)
         rightLeftNode->prev = rightNode;
 
     if (rightNode->weight == 0) {
-        node->weight = 1;
+        node->weight      = 1;
         rightNode->weight = -1;
     } else {
-        node->weight = 0;
+        node->weight      = 0;
         rightNode->weight = 0;
     }
     return rightNode;
 }
 
 struct Node* internal_rotate_right(struct Node* node) {
-    struct Node* leftNode = node->left;
+    struct Node* leftNode      = node->left;
     struct Node* leftRightNode = leftNode->right;
-    leftNode->prev = node->prev;
-    node->left = leftRightNode;
-    leftNode->right = node;
-    node->prev = leftNode;
+    leftNode->prev             = node->prev;
+    node->left                 = leftRightNode;
+    leftNode->right            = node;
+    node->prev                 = leftNode;
     if (leftRightNode)
         leftRightNode->prev = leftNode;
 
     if (leftNode->weight == 0) {
-        node->weight = -1;
+        node->weight     = -1;
         leftNode->weight = 1;
     } else {
-        node->weight = 0;
+        node->weight     = 0;
         leftNode->weight = 0;
     }
     return leftNode;
 }
 
 struct Node* internal_rotate_right_left(struct Node* node) {
-    struct Node* rightNode = node->right;
+    struct Node* rightNode     = node->right;
     struct Node* rigthLeftNode = rightNode->left;
 
     if (rigthLeftNode->right)
         rigthLeftNode->right->prev = rightNode;
-    rightNode->left = rigthLeftNode->right;
-    rightNode->prev = rigthLeftNode;
-    rigthLeftNode->prev = node;
-    node->right = rigthLeftNode;
-    rigthLeftNode->right = rightNode;
+    rightNode->left      = rigthLeftNode->right;
+    rightNode->prev      = rigthLeftNode;
+    rigthLeftNode->prev  = node;
+    node->right          = rigthLeftNode;
+    rigthLeftNode->right = rightNode; //BUG
 
 
-    rigthLeftNode = rigthLeftNode->left;
-    rightNode = node->right;
+    rigthLeftNode        = rigthLeftNode->left;
+    rightNode            = node->right;
 
-    node->right = rigthLeftNode;
+    node->right          = rigthLeftNode;
     if (rigthLeftNode)
         rigthLeftNode->prev = node;
     rightNode->prev = node->prev;
-    node->prev = rightNode;
+    node->prev      = rightNode;
     rightNode->left = node;
 
     if (rightNode->weight == 0) {
-        rightNode->left->weight = 0;
+        rightNode->left->weight  = 0;
         rightNode->right->weight = 0;
     } else if (rightNode->weight > 0) {
-        rightNode->left->weight = -1;
+        rightNode->left->weight  = -1;
         rightNode->right->weight = 0;
     } else {
-        rightNode->left->weight = 0;
+        rightNode->left->weight  = 0;
         rightNode->right->weight = 1;
     }
     rightNode->weight = 0;
@@ -148,69 +148,69 @@ struct Node* internal_rotate_right_left(struct Node* node) {
 }
 
 struct Node* internal_rotate_left_right(struct Node* node) {
-    struct Node* leftNode = node->left;
+    struct Node* leftNode      = node->left;
     struct Node* leftRightNode = leftNode->right;
 
-    leftNode->right = leftRightNode->left;
+    leftNode->right            = leftRightNode->left;
     if (leftRightNode->left)
         leftRightNode->left->prev = leftNode;
-    leftNode->prev = leftRightNode;
+    leftNode->prev      = leftRightNode;
     leftRightNode->left = leftNode;
-    node->left = leftRightNode;
-    leftRightNode->prev = node;
+    node->left          = leftRightNode;
+    leftRightNode->prev = node; //BUG likley propagated
 
-    leftRightNode = leftRightNode->right;
-    leftNode = node->left;
+    leftRightNode       = leftRightNode->right;
+    leftNode            = node->left;
 
-    if(leftRightNode)
+    if (leftRightNode)
         leftRightNode->prev = node;
-    node->left = leftRightNode;
-    leftNode->prev = node->prev;
-    node->prev = leftNode;
+    node->left      = leftRightNode;
+    leftNode->prev  = node->prev;
+    node->prev      = leftNode;
     leftNode->right = node;
-    
+
     if (leftNode->weight == 0) {
-        leftNode->left->weight = 0;
+        leftNode->left->weight  = 0;
         leftNode->right->weight = 0;
     } else if (leftNode->weight > 0) {
-        leftNode->left->weight = 0;
+        leftNode->left->weight  = 0;
         leftNode->right->weight = 1;
     } else {
-        leftNode->left->weight = -1;
+        leftNode->left->weight  = -1;
         leftNode->right->weight = 0;
     }
     leftNode->weight = 0;
     return leftNode;
 }
 
-BL_ContainerError bl_map_insert(BL_Map* map,const void* key,size_t keySize,const void* element,size_t elementSize) {
+BL_ContainerError bl_map_insert(BL_Map* map, const void* key, size_t keySize, const void* element, size_t elementSize) {
     if (keySize != map->keySize || elementSize > map->container.byteSizeOfElement - map->elementOffset)
         return BL_ContainerInvalidSize;
 
     if (bl_map_is_empty(map)) {
-        BL_ContainerError errorCode = bl_unordered_container_set(&map->container,0,sizeof(struct Node),&(struct Node){.left = NULL,.right = NULL,.prev = NULL});
-        if(errorCode != BL_ContainerOPSuccessful)
+        BL_ContainerError errorCode = bl_unordered_container_set(&map->container, 0, sizeof(struct Node), &(struct Node) {.left = NULL, .right = NULL, .prev = NULL});
+        if (errorCode != BL_ContainerOPSuccessful)
             return errorCode;
-        struct Node* elementInContainer = bl_unordered_container_get(&map->container,0);
-        memcpy(elementInContainer->data,key,keySize);
-        memcpy((BL_Byte*)elementInContainer + map->elementOffset,element,elementSize);
+        struct Node* elementInContainer = bl_unordered_container_get(&map->container, 0);
+        memcpy(elementInContainer->data, key, keySize);
+        memcpy((BL_Byte*) elementInContainer + map->elementOffset, element, elementSize);
         map->root = elementInContainer;
         return BL_ContainerOPSuccessful;
     }
 
-    struct Node* bestNode = internal_find_best_place(map,key);
+    struct Node* bestNode = internal_find_best_place(map, key);
     if (!bestNode)
         return BL_ContainerOPUnsuccessful;
-    
+
     bool shouldBeOnLeft = false;
 
-    if (map->compLess(key,bestNode->data))
+    if (map->compLess(key, bestNode->data))
         shouldBeOnLeft = true;
-    struct Node* newNode = bl_unordered_container_put(&map->container,sizeof(struct Node),&(struct Node) {.left = NULL,.right = NULL,.prev = bestNode});
+    struct Node* newNode = bl_unordered_container_put(&map->container, sizeof(struct Node), &(struct Node) {.left = NULL, .right = NULL, .prev = bestNode});
     if (!newNode)
         return BL_ContainerAllocFailure;
-    memcpy(newNode->data,key,keySize);
-    memcpy((BL_Byte*)newNode+map->elementOffset,element,elementSize);
+    memcpy(newNode->data, key, keySize);
+    memcpy((BL_Byte*) newNode + map->elementOffset, element, elementSize);
 
     if (shouldBeOnLeft)
         bestNode->left = newNode;
@@ -222,7 +222,7 @@ BL_ContainerError bl_map_insert(BL_Map* map,const void* key,size_t keySize,const
         struct Node* newNode = NULL;
         if (node->right == prevNode) {
             if (node->weight > 0) {
-                if(prevNode->weight >= 0)
+                if (prevNode->weight >= 0)
                     newNode = internal_rotate_left(node);
                 else
                     newNode = internal_rotate_right_left(node);
@@ -236,12 +236,12 @@ BL_ContainerError bl_map_insert(BL_Map* map,const void* key,size_t keySize,const
             }
         } else {
             if (node->weight < 0) {
-                if(prevNode->weight <= 0)
+                if (prevNode->weight <= 0)
                     newNode = internal_rotate_right(node);
                 else
                     newNode = internal_rotate_left_right(node);
             } else {
-                if(node->weight > 0) {
+                if (node->weight > 0) {
                     node->weight = 0;
                     break;
                 }
@@ -262,12 +262,12 @@ BL_ContainerError bl_map_insert(BL_Map* map,const void* key,size_t keySize,const
     return BL_ContainerOPSuccessful;
 }
 
-static struct Node* internal_get_node(const BL_Map* map,const void* key) {
+static struct Node* internal_get_node(const BL_Map* map, const void* key) {
     struct Node* current = map->root;
-    while(current) {
-        if (map->compEqual(current->data,key))
+    while (current) {
+        if (map->compEqual(current->data, key))
             return current;
-        if (map->compLess(key,current->data))
+        if (map->compLess(key, current->data))
             current = current->left;
         else
             current = current->right;
@@ -275,26 +275,26 @@ static struct Node* internal_get_node(const BL_Map* map,const void* key) {
     return NULL;
 }
 
-void* bl_map_get(const BL_Map* map,const void* key,size_t keySize) {
+void* bl_map_get(const BL_Map* map, const void* key, size_t keySize) {
     if (keySize != map->keySize)
         return NULL;
 
     struct Node* node = internal_get_node(map, key);
     if (node)
-        return (BL_Byte*)node + map->elementOffset;
+        return (BL_Byte*) node + map->elementOffset;
     return NULL;
 }
 
 static struct Node* internal_get_inorder_successor(struct Node* nodeToStartAt) {
-    struct Node *currentNode = nodeToStartAt;
+    struct Node* currentNode = nodeToStartAt;
     while (true) {
-        if (!(currentNode->left && currentNode->right))
+        if (!currentNode->left)
             return currentNode;
         currentNode = currentNode->left;
     }
 }
 
-BL_ContainerError bl_map_remove(BL_Map* map,const void* key,size_t keySize,void(*keyDestructor)(void*),void(*elementDestructor)(void*)) {
+BL_ContainerError bl_map_remove(BL_Map* map, const void* key, size_t keySize, void (*keyDestructor)(void*), void (*elementDestructor)(void*)) {
     if (keySize != map->keySize)
         return BL_ContainerInvalidSize;
 
@@ -314,14 +314,11 @@ BL_ContainerError bl_map_remove(BL_Map* map,const void* key,size_t keySize,void(
         if (nodeToRemove->right) {
             struct Node* inorderSuccessor = internal_get_inorder_successor(nodeToRemove->right);
             if (inorderSuccessor == nodeToRemove->right) {
-                if (inorderSuccessor->left) {
-                    inorderSuccessor->right = inorderSuccessor->left;
-                }
                 inorderSuccessor->left = nodeToRemove->left;
-                nodeToRemove->left = inorderSuccessor;
-                currentNode = inorderSuccessor;
+                if (inorderSuccessor->left)
+                    inorderSuccessor->left->prev = inorderSuccessor;
+                currentNode            = inorderSuccessor;
                 inorderSuccessor->prev = nodeToRemove->prev;
-
                 if (!inorderSuccessor->right && inorderSuccessor->weight == -1) {
                     inorderSuccessor = internal_rotate_right(inorderSuccessor);
                 }
@@ -334,29 +331,27 @@ BL_ContainerError bl_map_remove(BL_Map* map,const void* key,size_t keySize,void(
                     map->root = inorderSuccessor;
                 }
             } else {
-                if (inorderSuccessor->left) {
-                    inorderSuccessor->left->prev = inorderSuccessor->prev;
-                    if (inorderSuccessor->prev->left == inorderSuccessor)
-                        inorderSuccessor->prev->left = inorderSuccessor->left;
-                    else
-                        inorderSuccessor->prev->right = inorderSuccessor->right;
-                    currentNode = inorderSuccessor->left;
-                } else {
+                if (inorderSuccessor->right) {
                     inorderSuccessor->right->prev = inorderSuccessor->prev;
                     if (inorderSuccessor->prev->left == inorderSuccessor)
                         inorderSuccessor->prev->left = inorderSuccessor->right;
                     else
                         inorderSuccessor->prev->right = inorderSuccessor->right;
                     currentNode = inorderSuccessor->right;
+                } else {
+                    currentNode = inorderSuccessor->prev;
+                    if (currentNode && currentNode->weight > 0) {
+                        if (currentNode->prev->right->weight < 0)
+                            currentNode = internal_rotate_right_left(currentNode->prev);
+                        else
+                            currentNode = internal_rotate_left(currentNode->prev);
+                        if (inorderSuccessor->prev->prev->left == inorderSuccessor->prev)
+                            inorderSuccessor->prev->prev->left = currentNode;
+                        else
+                            inorderSuccessor->prev->prev->right = currentNode;
+                    }
                 }
 
-                inorderSuccessor->left = nodeToRemove->left;
-                if (nodeToRemove->left)
-                    nodeToRemove->left->prev = inorderSuccessor;
-                inorderSuccessor->right = nodeToRemove->right;
-                if (nodeToRemove->right)
-                    nodeToRemove->right->prev = inorderSuccessor;
-                
                 inorderSuccessor->prev = nodeToRemove->prev;
                 if (inorderSuccessor->prev) {
                     if (inorderSuccessor->prev->left == nodeToRemove)
@@ -366,8 +361,11 @@ BL_ContainerError bl_map_remove(BL_Map* map,const void* key,size_t keySize,void(
                 } else {
                     map->root = inorderSuccessor;
                 }
+                inorderSuccessor->left    = nodeToRemove->left;
+                nodeToRemove->left->prev  = inorderSuccessor;
+                inorderSuccessor->right   = nodeToRemove->right;
+                nodeToRemove->right->prev = inorderSuccessor;
             }
-            *nodeToRemove = (struct Node){0};
         } else {
             nodeToRemove->left->prev = nodeToRemove->prev;
             if (nodeToRemove->prev) {
@@ -375,8 +373,7 @@ BL_ContainerError bl_map_remove(BL_Map* map,const void* key,size_t keySize,void(
                     nodeToRemove->prev->left = nodeToRemove->left;
                 else
                     nodeToRemove->prev->right = nodeToRemove->left;
-            }
-            else {
+            } else {
                 map->root = nodeToRemove->left;
             }
             currentNode = nodeToRemove->left;
@@ -388,34 +385,99 @@ BL_ContainerError bl_map_remove(BL_Map* map,const void* key,size_t keySize,void(
                 nodeToRemove->prev->left = nodeToRemove->right;
             else
                 nodeToRemove->prev->right = nodeToRemove->right;
-        }
-        else {
+        } else {
             map->root = nodeToRemove->right;
         }
         currentNode = nodeToRemove->right;
     } else {
         if (nodeToRemove->prev) {
-            if(nodeToRemove->prev->left == nodeToRemove)
+            if (nodeToRemove->prev->left == nodeToRemove) {
                 nodeToRemove->prev->left = NULL;
-            else
+                if (nodeToRemove->prev->weight > 0) {
+                    if (nodeToRemove->prev->right->weight < 0)
+                        currentNode = internal_rotate_right_left(nodeToRemove->prev);
+                    else
+                        currentNode = internal_rotate_left(nodeToRemove->prev);
+                    if (currentNode->prev) {
+                        if (currentNode->prev->left == nodeToRemove->prev)
+                            currentNode->prev->left = currentNode;
+                        else
+                            currentNode->prev->right = currentNode;
+                    } else 
+                        map->root = currentNode;
+                }
+                else
+                    currentNode = nodeToRemove->prev;
+            } else {
                 nodeToRemove->prev->right = NULL;
+                if (nodeToRemove->prev->weight < 0) {
+                    if (nodeToRemove->prev->right->weight > 0)
+                        currentNode = internal_rotate_left_right(nodeToRemove->prev);
+                    else
+                        currentNode = internal_rotate_right(nodeToRemove->prev);
+                    if (currentNode->prev) {
+                        if (currentNode->prev->left == nodeToRemove->prev)
+                            currentNode->prev->left = currentNode;
+                        else
+                            currentNode->prev->right = currentNode;
+                    } else 
+                        map->root = currentNode;
+                } else
+                    currentNode = nodeToRemove->prev;
+            }
         } else {
             map->root = NULL;
         }
-        currentNode = nodeToRemove->prev;
     }
 
     bl_unordered_container_remove(&map->container, bl_unordered_container_index_from_ref(&map->container, nodeToRemove), NULL);
 
-    for (struct Node* nextNode = currentNode->prev; nextNode; currentNode = nextNode,nextNode = nextNode->prev) {
-
-    }    
+    for (struct Node* nextNode = currentNode->prev; nextNode; currentNode = nextNode, nextNode = nextNode->prev) {
+        struct Node* nodeToAnchor;
+        if (nextNode->left == currentNode) {
+            if (nextNode->weight > 0) {
+                struct Node* deepNode = nextNode->right;
+                if (deepNode->weight < 0)
+                    nodeToAnchor = internal_rotate_right_left(nextNode);
+                else
+                    nodeToAnchor = internal_rotate_left(nextNode);
+            } else if (nextNode->weight == 0) {
+                nextNode->weight = 1;
+                break;
+            } else {
+                nextNode->weight = 0;
+                continue;
+            }
+        } else {
+            if (nextNode->weight < 0) {
+                struct Node* deepNode = nextNode->left;
+                if (deepNode->weight > 0)
+                    nodeToAnchor = internal_rotate_left_right(nextNode);
+                else
+                    nodeToAnchor = internal_rotate_right(nextNode);
+            } else if (nextNode->weight == 0) {
+                nextNode->weight = -1;
+                break;
+            } else {
+                nextNode->weight = 0;
+                continue;
+            }
+        }
+        if (nodeToAnchor->prev) {
+            if (nodeToAnchor->prev->left == nextNode)
+                nodeToAnchor->prev->left = nextNode;
+            else
+                nodeToAnchor->prev->right = nextNode;
+        } else
+            map->root = nodeToAnchor;
+        nextNode = nodeToAnchor;
+    }
 
 
     return BL_ContainerOPSuccessful;
 }
 
-void bl_map_destroy(BL_Map* map,void(*keyDestructor)(void*),void(*elementDestructor)(void*)) {
+void bl_map_destroy(BL_Map* map, void (*keyDestructor)(void*), void (*elementDestructor)(void*)) {
     if (!bl_map_is_valid(map))
         return;
 
@@ -423,7 +485,7 @@ void bl_map_destroy(BL_Map* map,void(*keyDestructor)(void*),void(*elementDestruc
         if (keyDestructor)
             keyDestructor(node->data);
         if (elementDestructor)
-            elementDestructor((BL_Byte*)node + map->elementOffset);
+            elementDestructor((BL_Byte*) node + map->elementOffset);
     }
 
     bl_unordered_container_destroy(&map->container);
