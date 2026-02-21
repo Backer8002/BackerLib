@@ -118,12 +118,6 @@ extern void*                  bl_unordered_container_prev(const BL_UnorderedCont
  */
 extern void*                  bl_unordered_container_back(const BL_UnorderedContainer* container) noexcept;
 /**
- * @brief Gets the index after unorderedContainerBack. Will always be invalid.
- * @param container Pointer to valid UnorderedContainer
- * @return NULL if no valid index exists.
- */
-extern void*                  bl_unordered_container_end(const BL_UnorderedContainer* container) noexcept;
-/**
  *
  * @param container Pointer to UnorderedContainer or NULL
  * @return true if UnorderedContainer is valid, else NULL.

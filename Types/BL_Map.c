@@ -54,6 +54,10 @@ bool bl_map_is_empty(const BL_Map* map) {
     return bl_unordered_container_is_empty(&map->container);
 }
 
+size_t bl_map_size(const BL_Map* map) {
+    return bl_unordered_container_size(&map->container);
+}
+
 static struct Node* internal_find_best_place(const BL_Map* map, const void* key) {
     struct Node* nextNode = map->root;
     while (true) {

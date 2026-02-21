@@ -243,13 +243,6 @@ void* bl_unordered_container_back(const BL_UnorderedContainer* container) {
     return bl_unordered_container_prev(container, (BL_Bytes) container->pages[container->amountOfPages - 1] + (size_t) container->byteSizeOfElement * BL_UNORDERED_CONTAINER_PAGE_SIZE_IN_AMOUNT);
 }
 
-void* bl_unordered_container_end(const BL_UnorderedContainer* container) {
-    void* back = bl_unordered_container_back(container);
-    if (back == NULL)
-        return NULL;
-    return (BL_Bytes) back + container->byteSizeOfElement;
-}
-
 bool bl_unordered_container_is_valid(const BL_UnorderedContainer* container) {
     return container->header & ObjectFlagIsValid && container->header & ObjectFlagIsNotContinuous;
 }
