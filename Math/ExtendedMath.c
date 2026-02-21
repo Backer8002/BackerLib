@@ -12,7 +12,7 @@ uint64_t bl_math_factorial_partial(uint32_t startOfFactorial, uint32_t number) {
     uint64_t result = 1;
     if (startOfFactorial > number)
         return 0;
-    for (uint64_t iterator = startOfFactorial; iterator <= number; iterator++)
+    for (uint64_t iterator = startOfFactorial ? startOfFactorial : 1; iterator <= number; iterator++)
         result *= iterator;
     return result;
 }

@@ -78,7 +78,7 @@ struct Node* internal_rotate_left(struct Node* node) {
     rightNode->left            = node;
     node->prev                 = rightNode;
     if (rightLeftNode)
-        rightLeftNode->prev = rightNode;
+        rightLeftNode->prev = node;
 
     if (rightNode->weight == 0) {
         node->weight      = 1;
@@ -98,7 +98,7 @@ struct Node* internal_rotate_right(struct Node* node) {
     leftNode->right            = node;
     node->prev                 = leftNode;
     if (leftRightNode)
-        leftRightNode->prev = leftNode;
+        leftRightNode->prev = node;
 
     if (leftNode->weight == 0) {
         node->weight     = -1;
@@ -118,14 +118,13 @@ struct Node* internal_rotate_right_left(struct Node* node) {
         rigthLeftNode->right->prev = rightNode;
     rightNode->left      = rigthLeftNode->right;
     rightNode->prev      = rigthLeftNode;
+    rigthLeftNode->right = rightNode;
     rigthLeftNode->prev  = node;
     node->right          = rigthLeftNode;
-    rigthLeftNode->right = rightNode; //BUG
 
 
     rigthLeftNode        = rigthLeftNode->left;
     rightNode            = node->right;
-
     node->right          = rigthLeftNode;
     if (rigthLeftNode)
         rigthLeftNode->prev = node;
@@ -157,11 +156,11 @@ struct Node* internal_rotate_left_right(struct Node* node) {
     leftNode->prev      = leftRightNode;
     leftRightNode->left = leftNode;
     node->left          = leftRightNode;
-    leftRightNode->prev = node; //BUG likley propagated
+    leftRightNode->prev = node;
 
     leftRightNode       = leftRightNode->right;
     leftNode            = node->left;
-
+    
     if (leftRightNode)
         leftRightNode->prev = node;
     node->left      = leftRightNode;
