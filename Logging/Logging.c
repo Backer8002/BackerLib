@@ -36,6 +36,7 @@ static void internal_cleanup(void) {
         if (!(BL_LOG_IS_STD_STREAM & file->flags))
             fclose(file->file);
     }
+    bl_container_dynamic_destroy(&LoggingInfo.files);
 }
 
 void bl_log(const char* format, ...) {
@@ -49,35 +50,36 @@ void bl_vlog(const char* format, va_list args) {
     if (!LoggingInfo.isInited)
         return;
 
-    size_t availableSpace = BL_LOGGING_BUFFERSIZE - logBuffer.bytesWriten;
+    int availableSpace = BL_LOGGING_BUFFERSIZE - (int)logBuffer.bytesWriten;
     if (availableSpace == 0) {
         bl_log_flush();
         availableSpace = BL_LOGGING_BUFFERSIZE;
     }
     va_list argsCopy;
     va_copy(argsCopy, args);
-    size_t bytesNeeded = vsnprintf((char*) logBuffer.buffer + logBuffer.bytesWriten, availableSpace, format, argsCopy) + 1;
-
+    int bytesNeeded = vsnprintf((char*) logBuffer.buffer + logBuffer.bytesWriten, (size_t)availableSpace, format, argsCopy) + 1;
+    if (bytesNeeded < 0)
+        return;
     if (availableSpace >= bytesNeeded) {
-        logBuffer.bytesWriten += bytesNeeded;
+        logBuffer.bytesWriten += (size_t)bytesNeeded;
         return;
     }
 
     bl_log_flush();
 
     if (bytesNeeded <= BL_LOGGING_BUFFERSIZE) {
-        logBuffer.bytesWriten = bytesNeeded;
+        logBuffer.bytesWriten = (size_t)bytesNeeded;
         vsnprintf((char*) logBuffer.buffer, BL_LOGGING_BUFFERSIZE, format, args);
         return;
     }
 
-    char* buffer = malloc(bytesNeeded);
+    char* buffer = malloc((size_t)bytesNeeded);
     if (!buffer)
         return;
 
-    vsnprintf(buffer, bytesNeeded, format, args);
+    vsnprintf(buffer, (size_t)bytesNeeded, format, args);
 
-    bl_internal_write_log(buffer, bytesNeeded);
+    bl_internal_write_log(buffer, (size_t)bytesNeeded);
 
     free(buffer);
 }
@@ -92,12 +94,16 @@ void bl_assert(bool condition, const char* format, ...) {
 }
 
 void bl_internal_write_log(const char* buffer, size_t amountToWrite) {
+    if (amountToWrite == 0)
+        return;
+
     if (bl_mutex_lock(&LoggingInfo.logMutex) != BL_ConcurrencySuccess)
         return;
-    const char* beginOfString = buffer;
-    uint8_t     flags         = 0;
 
-    for (size_t i = 0; i < amountToWrite; i++) {
+    const char* beginOfString = buffer + 1;
+    uint8_t     flags         = (uint8_t)(1 << ((unsigned char)*buffer - 0xf8));
+
+    for (size_t i = 1; i < amountToWrite; i++) {
         if ((unsigned char) buffer[i] < 0xf8) {
             if (i != amountToWrite - 1)
                 continue;
@@ -108,13 +114,13 @@ void bl_internal_write_log(const char* buffer, size_t amountToWrite) {
 
         for (struct LogFile* file = bl_container_dynamic_front(&LoggingInfo.files); file; file = bl_container_dynamic_next(&LoggingInfo.files, file)) {
             if (file->flags & flags) {
-                fwrite(beginOfString, length, 1 - 1, file->file);
+                fwrite(beginOfString, length, 1, file->file);
                 fputc('\n', file->file);
             }
         }
 
         if (i < amountToWrite) {
-            flags         = 0x1 << ((unsigned char) buffer[i] - 0xf8);
+            flags         = (uint8_t)(0x1 << ((unsigned char) buffer[i] - 0xf8));
             beginOfString = buffer + i + 1;
         }
     }
