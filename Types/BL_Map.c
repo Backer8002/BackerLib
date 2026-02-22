@@ -511,7 +511,7 @@ void* bl_map_back(const BL_Map* map) {
 }
 
 void* bl_map_next(const BL_Map* map,const void* keyValuePair) {
-    struct Node* node = (BL_Bytes)keyValuePair - map->keyOffset;
+    struct Node* node = (void*)((BL_Bytes)keyValuePair - map->keyOffset);
     if (node->right) {
         node = node->right;
         while (node->left)
@@ -529,7 +529,7 @@ void* bl_map_next(const BL_Map* map,const void* keyValuePair) {
 }
 
 void* bl_map_prev(const BL_Map* map, const void* keyValuePair) {
-    struct Node* node = (BL_Bytes)keyValuePair - map->keyOffset;
+    struct Node* node = (void*)((BL_Bytes)keyValuePair - map->keyOffset);
     if (node->left) {
         node = node->left;
         while (node->right)
