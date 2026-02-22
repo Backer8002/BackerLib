@@ -36,6 +36,7 @@ static void internal_cleanup(void) {
         if (!(BL_LOG_IS_STD_STREAM & file->flags))
             fclose(file->file);
     }
+    bl_container_dynamic_destroy(&LoggingInfo.files);
 }
 
 void bl_log(const char* format, ...) {

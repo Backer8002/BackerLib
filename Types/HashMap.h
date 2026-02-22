@@ -221,13 +221,35 @@ extern "C" {
      * @returns true if hashmap is valid.
      */
     extern bool              bl_hashmap_is_valid(const BL_Hashmap* hashMap) noexcept;
-
+    /**
+     * @brief Returns first key-value pair in hashmap
+     * @param hashMap Pointer to valid HashMap
+     * @returns NULL if hashmap is empty.
+     * @note Mutating key in key-value pair is undefined behavour. Order is undefined after an insertion or removal operation.
+     */
     extern void* bl_hashmap_front(const BL_Hashmap* hashMap) noexcept;
-
+    /**
+     * @brief Returns last key-value pair in hashmap
+     * @param hashMap Pointer to valid HashMap
+     * @returns NULL if hashmap is empty.
+     * @note Mutating key in key-value pair is undefined behavour. Order is undefined after an insertion or removal operation.
+     */
     extern void* bl_hashmap_back(const BL_Hashmap* hashMap) noexcept;
-
+    /**
+     * @brief Returns the next key-value pair in hashmap
+     * @param hashMap Pointer to valid HashMap
+     * @param keyValuePair Pointer to valid key-value pair in hashmap
+     * @returns NULL if hashmap is empty.
+     * @note Mutating key in key-value pair is undefined behavour. Order is undefined after an insertion or removal operation.
+     */
     extern void* bl_hashmap_next(const BL_Hashmap* hashMap,const void* keyValuePair) noexcept;
-
+    /**
+     * @brief Returns the previous key-value pair in hashmap
+     * @param hashMap Pointer to valid HashMap
+     * @param keyValuePair Pointer to valid key-value pair in hashmap
+     * @returns NULL if hashmap is empty.
+     * @note Mutating key in key-value pair is undefined behavour. Order is undefined after an insertion or removal operation.
+     */
     extern void* bl_hashmap_prev(const BL_Hashmap* hashMap,const void* keyValuePair) noexcept;
 
 #ifdef __cplusplus
