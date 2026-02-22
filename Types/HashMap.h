@@ -113,8 +113,9 @@ extern "C" {
     /**
      * @brief Creates an HashMap on the stack. Use isValidObject to check validity.
      * @param initialSize Initial amount of elements to store
-     * @param keySize Size of Key
-     * @param elementSize Maximum size of element to store
+     * @param keyValueSize Size of a pair where key is the first member and value is the second
+     * @param alignment Alignment of key-value pair
+     * @param elementOffset Offset of second member of key-value pair
      * @param compare Callback to compare equality of keys
      * @param hashFunction Callback to hash a key
      * @return HashMap on the stack.
@@ -125,19 +126,22 @@ extern "C" {
     /**
      * @brief Creates an HashMap on the heap.
      * @param initialSize Initial amount of elements to store
-     * @param keySize Size of Key
-     * @param elementSize Maximum size of element to store
-     * @param compare Callbak to compare equality of keys
+     * @param keyValueSize Size of a pair where key is the first member and value is the second
+     * @param alignment Alignment of key-value pair
+     * @param elementOffset Offset of second member of key-value pair
+     * @param compare Callback to compare equality of keys
      * @param hashFunction Callback to hash a key
      * @return NULL if allocation failed.
      */
     BL_Hashmap*              bl_hashmap_create_heap(size_t initialSize, size_t keyValueSize, size_t alignment,size_t elementOffset, bool (*compare)(const void* first, const void* second),
                                                     uint64_t (*hashFunction)(const void* element)) noexcept;
 
+
+    typedef BL_MAKE_PAIR_TYPE(size_t,const void*) BL_HashingPair;
     /**
      * @brief Hash function. Defualt for the HashMap implementations.
      * @param amountOfVars Amount of vars to insert
-     * @param ... size of element followed by pointer to element
+     * @param ... amountOfVars BL_HashPairs
      * @return Hash.
      */
     extern uint64_t          bl_hashfunction_defualt(size_t amountOfVars, ...) noexcept;
@@ -211,16 +215,20 @@ extern "C" {
      * @param elementDestructor Optional element destructor
      */
     extern void              bl_hashmap_destroy(BL_Hashmap* hashMap, void (*keyDestructor)(void* object), void (*elementDestructor)(void* object)) noexcept;
-
+    /**
+     * @brief Checks if a hashmap is valid.
+     * @param hashMap Pointer to hashmap
+     * @returns true if hashmap is valid.
+     */
     extern bool              bl_hashmap_is_valid(const BL_Hashmap* hashMap) noexcept;
 
     extern void* bl_hashmap_front(const BL_Hashmap* hashMap) noexcept;
 
     extern void* bl_hashmap_back(const BL_Hashmap* hashMap) noexcept;
 
-    extern void* bl_hashmap_next(const BL_Hashmap* hashMap) noexcept;
+    extern void* bl_hashmap_next(const BL_Hashmap* hashMap,const void* keyValuePair) noexcept;
 
-    extern void* bl_hashmap_prev(const BL_Hashmap* hashMap) noexcept;
+    extern void* bl_hashmap_prev(const BL_Hashmap* hashMap,const void* keyValuePair) noexcept;
 
 #ifdef __cplusplus
 }

@@ -19,7 +19,24 @@ typedef struct BL_Map {
     bool (*compLess)(const void*,const void*);
 } BL_Map;
 
+/**
+ * @brief Creates a map on the stack. Check with is_valid.
+ * @param keyValueSize Size of pair where first is the key and second is value
+ * @param alignment Alignment of key-value pair
+ * @param elementOffset Offset of second in key-value pair
+ * @param compEqual Callback that shall return true if the two arguments are equal
+ * @param compLess Callback that shall return true if the first argument is less than the second
+ */
 extern BL_Map bl_map_create_stack(size_t keyValueSize,size_t alignment,size_t elementOffset,bool(*compEqual)(const void*,const void*),bool(*compLess)(const void*,const void*)) noexcept;
+/**
+ * @brief Creates a map on the heap.
+ * @param keyValueSize Size of pair where first is the key and second is value
+ * @param alignment Alignment of key-value pair
+ * @param elementOffset Offset of second in key-value pair
+ * @param compEqual Callback that shall return true if the two arguments are equal
+ * @param compLess Callback that shall return true if the first argument is less than the second
+ * @returns NULL if map failed to be created
+ */
 extern BL_Map* bl_map_create_heap(size_t keyValueSize,size_t alignment,size_t elementOffset,bool(*compEqual)(const void*,const void*),bool(*compLess)(const void*,const void*)) noexcept;
 /**
  * @brief Checks if map is valid
@@ -76,10 +93,36 @@ extern BL_ContainerError bl_map_remove(BL_Map* map,const void* key,size_t keySiz
  * @param elementDestructor Optional callback to destroy element
  */
 extern void bl_map_destroy(BL_Map* map,void(*keyDestructor)(void*),void(*elementDestructor)(void*)) noexcept;
+/**
+ * @brief Returns pointer to key-value pair that is the smallest.
+ * @param map Pointer to valid Map
+ * @returns NULL if is_empty is true.
+ * @note It is undefined behavour to mutate key. Pointer remains valid as long as keyValuePair is not removed from map.
+ */
 extern void* bl_map_front(const BL_Map* map) noexcept;
+/**
+ * @brief Returns pointer to key-value pair that is the largest.
+ * @param map Pointer to valid Map
+ * @returns NULL if is_empty is true.
+ * @note It is undefined behavour to mutate key. Pointer remains valid as long as keyValuePair is not removed from map.
+ */
 extern void* bl_map_back(const BL_Map* map) noexcept;
-extern void* bl_map_next(const BL_Map* map,const void* element) noexcept;
-extern void* bl_map_prev(const BL_Map* map, const void* element) noexcept;
+/**
+ * @brief Returns pointer to key-value pair the next larger than current pair.
+ * @param map Pointer to valid Map
+ * @param keyValuePair Pointer to valid key-value pair in map
+ * @returns NULL if keyValuePair was the value of back.
+ * @note It is undefined behavour to mutate key. Pointer remains valid as long as keyValuePair is not removed from map.
+ */
+extern void* bl_map_next(const BL_Map* map,const void* keyValuePair) noexcept;
+/**
+ * @brief Returns pointer to key-value pair the next smaller than current pair.
+ * @param map Pointer to valid Map
+ * @param keyValuePair Pointer to valid key-value pair in map
+ * @returns NULL if keyValuePair was the value of front.
+ * @note It is undefined behavour to mutate key. Pointer remains valid as long as keyValuePair is not removed from map.
+ */
+extern void* bl_map_prev(const BL_Map* map, const void* keyValuePair) noexcept;
 
 #ifdef __cplusplus
 }

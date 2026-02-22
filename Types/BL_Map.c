@@ -18,7 +18,7 @@ static void internal_map_init(BL_Map* map, const size_t keyValueSize, const size
     size_t keyOffset   = sizeof(struct Node) + (aligment - sizeof(struct Node) % aligment) % aligment;
     map->keyOffset     = keyOffset;
     map->elementOffset = keyOffset + elementOffset;
-    size_t nodeSize    = keyOffset + keyValueSize;
+    size_t nodeSize    = keyOffset + keyValueSize + (_Alignof(struct Node) - keyValueSize % _Alignof(struct Node)) % _Alignof(struct Node);
     map->container     = bl_unordered_container_create_stack(0, nodeSize);
     map->root          = NULL;
 }
@@ -493,4 +493,55 @@ void bl_map_destroy(BL_Map* map, void (*keyDestructor)(void*), void (*elementDes
 }
 
 void* bl_map_front(const BL_Map* map) {
+    if (bl_map_is_empty(map))
+        return NULL;
+    struct Node* node = map->root;
+    while (node->left) 
+        node = node->left;
+    return (BL_Bytes)node + map->keyOffset;
+}
+
+void* bl_map_back(const BL_Map* map) {
+    if (bl_map_is_empty(map))
+        return NULL;
+    struct Node* node = map->root;
+    while(node->right)
+        node = node->right;
+    return (BL_Bytes)node + map->keyOffset;
+}
+
+void* bl_map_next(const BL_Map* map,const void* keyValuePair) {
+    struct Node* node = (BL_Bytes)keyValuePair - map->keyOffset;
+    if (node->right) {
+        node = node->right;
+        while (node->left)
+            node = node->left;
+        return (BL_Bytes)node + map->keyOffset;
+    }
+    while(true) {
+        if (!node->prev)
+            return NULL;
+        if (node->prev->right == node)
+            node = node->prev;
+        else 
+            return (BL_Bytes)node->prev + map->keyOffset;
+    }
+}
+
+void* bl_map_prev(const BL_Map* map, const void* keyValuePair) {
+    struct Node* node = (BL_Bytes)keyValuePair - map->keyOffset;
+    if (node->left) {
+        node = node->left;
+        while (node->right)
+            node = node->right;
+        return (BL_Bytes)node + map->keyOffset;
+    }
+    while (true) {
+        if (!node->prev)
+            return NULL;
+        if (node->prev->left == node)
+            node = node->prev;
+        else
+            return (BL_Bytes)node->prev + map->keyOffset;
+    }
 }

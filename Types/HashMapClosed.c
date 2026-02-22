@@ -32,7 +32,8 @@ static inline void internal_hashMapInit(
     hashMap->compare                     = compare;
     hashMap->keyOffset = sizeof(HashArrayNode) + (alignment - sizeof(HashArrayNode) % alignment) % alignment;
     hashMap->elementOffset = hashMap->keyOffset + elementOffset;
-    hashMap->unorderedContainer          = bl_unordered_container_create_stack(initialSize + 1, hashMap->keyOffset + keyValueSize); // 0 will be invalid index
+    size_t padding = (_Alignof(HashArrayNode) - keyValueSize % _Alignof(HashArrayNode)) % _Alignof(HashArrayNode);
+    hashMap->unorderedContainer          = bl_unordered_container_create_stack(initialSize + 1, hashMap->keyOffset + keyValueSize + padding); // 0 will be invalid index
 
     if (!bl_unordered_container_is_valid(&hashMap->unorderedContainer))
         return;
@@ -214,4 +215,25 @@ void bl_hashmap_destroy(BL_Hashmap* hashMap, void (*keyDestructor)(void* key), v
 
 bool bl_hashmap_is_valid(const BL_Hashmap* hashmap) {
     return bl_unordered_container_is_valid(&hashmap->unorderedContainer);
+}
+
+void* bl_hashmap_front(const BL_Hashmap* hashMap) {
+    return (BL_Bytes)bl_unordered_container_next(&hashMap->unorderedContainer,bl_unordered_container_front(&hashMap->unorderedContainer)) + hashMap->keyOffset;
+}
+
+void* bl_hashmap_back(const BL_Hashmap* hashMap) {
+    if (bl_unordered_container_size(&hashMap->unorderedContainer) < 2)
+        return NULL;
+    return (BL_Bytes)bl_unordered_container_back(&hashMap->unorderedContainer) + hashMap->keyOffset;
+}
+
+void* bl_hashmap_next(const BL_Hashmap* hashMap, const void* keyValuePair) {
+    return (BL_Bytes)bl_unordered_container_next(&hashMap->unorderedContainer,keyValuePair) + hashMap->keyOffset;
+}
+
+void* bl_hashmap_prev(const BL_Hashmap* hashMap, const void* keyValuePair) {
+    HashArrayNode* node = bl_unordered_container_prev(&hashMap->unorderedContainer,keyValuePair);
+    if (!node || node == bl_unordered_container_front(&hashMap->unorderedContainer))
+        return NULL;
+    return (BL_Bytes) node + hashMap->keyOffset;
 }
