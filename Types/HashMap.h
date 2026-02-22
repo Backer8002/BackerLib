@@ -101,7 +101,7 @@ extern "C" {
         bool (*compare)(const void*, const void*);
         size_t* hashArray;
         size_t  lengthOfHashArray;
-        size_t  keySize;
+        size_t  keyOffset;
         size_t  elementOffset;
     } BL_Hashmap;
 
@@ -119,7 +119,7 @@ extern "C" {
      * @param hashFunction Callback to hash a key
      * @return HashMap on the stack.
      */
-    BL_Hashmap               bl_hashmap_create_stack(size_t initialSize, size_t keySize, size_t elementSize, bool (*compare)(const void* first, const void* second),
+    BL_Hashmap               bl_hashmap_create_stack(size_t initialSize, size_t keyValueSize,size_t alignment, size_t elementOffset, bool (*compare)(const void* first, const void* second),
                                                      uint64_t (*hashFunction)(const void* element)) noexcept;
 
     /**
@@ -131,7 +131,7 @@ extern "C" {
      * @param hashFunction Callback to hash a key
      * @return NULL if allocation failed.
      */
-    BL_Hashmap*              bl_hashmap_create_heap(size_t initialSize, size_t keySize, size_t elementSize, bool (*compare)(const void* first, const void* second),
+    BL_Hashmap*              bl_hashmap_create_heap(size_t initialSize, size_t keyValueSize, size_t alignment,size_t elementOffset, bool (*compare)(const void* first, const void* second),
                                                     uint64_t (*hashFunction)(const void* element)) noexcept;
 
     /**
@@ -212,7 +212,16 @@ extern "C" {
      */
     extern void              bl_hashmap_destroy(BL_Hashmap* hashMap, void (*keyDestructor)(void* object), void (*elementDestructor)(void* object)) noexcept;
 
-    extern bool              bl_hashmap_is_valid(const BL_Hashmap* hashMap);
+    extern bool              bl_hashmap_is_valid(const BL_Hashmap* hashMap) noexcept;
+
+    extern void* bl_hashmap_front(const BL_Hashmap* hashMap) noexcept;
+
+    extern void* bl_hashmap_back(const BL_Hashmap* hashMap) noexcept;
+
+    extern void* bl_hashmap_next(const BL_Hashmap* hashMap) noexcept;
+
+    extern void* bl_hashmap_prev(const BL_Hashmap* hashMap) noexcept;
+
 #ifdef __cplusplus
 }
 #else

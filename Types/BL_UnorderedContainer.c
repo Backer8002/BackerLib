@@ -273,7 +273,7 @@ void bl_unordered_container_destroy(void* container) {
     if (((BL_UnorderedContainer*) container)->header & ObjectFlagIsOnHeap)
         free(container);
     else
-        ((BL_UnorderedContainer*) container)->header &= ~ObjectFlagIsValid;
+        ((BL_UnorderedContainer*) container)->header &= ~(BL_DataTypeFlags)ObjectFlagIsValid;
 }
 
 void bl_unordered_container_destroy_with_elements(BL_UnorderedContainer* container, void (*destructor)(void* element)) {

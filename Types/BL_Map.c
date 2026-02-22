@@ -1,41 +1,40 @@
 #include "BL_Map.h"
 #include "BL_UnorderedContainer.h"
 #include "TypesMain.h"
-#include <stdalign.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
 
 struct Node {
-    struct Node *left, *right, *prev;
-    signed char  weight;
-    alignas(max_align_t) unsigned char data[];
+    signed char   weight;
+    struct Node * left, *right, *prev;
+    unsigned char data[];
 };
 
-static void internal_map_init(BL_Map* map, size_t keySize, size_t elementSize, bool (*compEqual)(const void*, const void*), bool (*compLess)(const void*, const void*)) {
-    map->compEqual       = compEqual;
-    map->compLess        = compLess;
-    size_t elementOffset = sizeof(struct Node) + keySize + (alignof(max_align_t) - keySize % alignof(max_align_t));
-    size_t nodeSize      = elementOffset + elementSize + (alignof(max_align_t) - elementSize % alignof(max_align_t));
-    map->container       = bl_unordered_container_create_stack(0, nodeSize);
-    map->elementOffset   = elementOffset;
-    map->keySize         = keySize;
-    map->root            = NULL;
+static void internal_map_init(BL_Map* map, const size_t keyValueSize, const size_t aligment, const size_t elementOffset, bool (*compEqual)(const void*, const void*), bool (*compLess)(const void*, const void*)) {
+    map->compEqual     = compEqual;
+    map->compLess      = compLess;
+    size_t keyOffset   = sizeof(struct Node) + (aligment - sizeof(struct Node) % aligment) % aligment;
+    map->keyOffset     = keyOffset;
+    map->elementOffset = keyOffset + elementOffset;
+    size_t nodeSize    = keyOffset + keyValueSize;
+    map->container     = bl_unordered_container_create_stack(0, nodeSize);
+    map->root          = NULL;
 }
 
-BL_Map bl_map_create_stack(size_t keySize, size_t elementSize, bool (*compEqual)(const void*, const void*), bool (*compLess)(const void*, const void*)) {
+BL_Map bl_map_create_stack(size_t keyValueSize, size_t alignment, size_t elementOffset, bool (*compEqual)(const void*, const void*), bool (*compLess)(const void*, const void*)) {
     BL_Map map;
-    internal_map_init(&map, keySize, elementSize, compEqual, compLess);
+    internal_map_init(&map, keyValueSize, alignment,elementOffset, compEqual, compLess);
     return map;
 }
 
-BL_Map* bl_map_create_heap(size_t keySize, size_t elementSize, bool (*compEqual)(const void*, const void*), bool (*compLess)(const void*, const void*)) {
+BL_Map* bl_map_create_heap(size_t keyValueSize, size_t alignment, size_t elementOffset, bool (*compEqual)(const void*, const void*), bool (*compLess)(const void*, const void*)) {
     BL_Map* map = malloc(sizeof *map);
     if (!map)
         return NULL;
 
-    internal_map_init(map, keySize, elementSize, compEqual, compLess);
+    internal_map_init(map, keyValueSize,alignment, elementOffset, compEqual, compLess);
 
     if (!bl_map_is_valid(map)) {
         free(map);
@@ -62,9 +61,9 @@ static struct Node* internal_find_best_place(const BL_Map* map, const void* key)
     struct Node* nextNode = map->root;
     while (true) {
         struct Node* currentNode = nextNode;
-        if (map->compEqual(currentNode->data, key))
+        if (map->compEqual((BL_Bytes)currentNode + map->keyOffset, key))
             return NULL;
-        if (map->compLess(key, currentNode->data))
+        if (map->compLess(key, (BL_Bytes)currentNode + map->keyOffset))
             nextNode = currentNode->left;
         else
             nextNode = currentNode->right;
@@ -164,7 +163,7 @@ struct Node* internal_rotate_left_right(struct Node* node) {
 
     leftRightNode       = leftRightNode->right;
     leftNode            = node->left;
-    
+
     if (leftRightNode)
         leftRightNode->prev = node;
     node->left      = leftRightNode;
@@ -187,7 +186,7 @@ struct Node* internal_rotate_left_right(struct Node* node) {
 }
 
 BL_ContainerError bl_map_insert(BL_Map* map, const void* key, size_t keySize, const void* element, size_t elementSize) {
-    if (keySize != map->keySize || elementSize > map->container.byteSizeOfElement - map->elementOffset)
+    if (keySize > map->elementOffset - map->keyOffset || elementSize > map->container.byteSizeOfElement - map->elementOffset)
         return BL_ContainerInvalidSize;
 
     if (bl_map_is_empty(map)) {
@@ -195,7 +194,7 @@ BL_ContainerError bl_map_insert(BL_Map* map, const void* key, size_t keySize, co
         if (errorCode != BL_ContainerOPSuccessful)
             return errorCode;
         struct Node* elementInContainer = bl_unordered_container_get(&map->container, 0);
-        memcpy(elementInContainer->data, key, keySize);
+        memcpy((BL_Byte*)elementInContainer + map->keyOffset, key, keySize);
         memcpy((BL_Byte*) elementInContainer + map->elementOffset, element, elementSize);
         map->root = elementInContainer;
         return BL_ContainerOPSuccessful;
@@ -212,7 +211,7 @@ BL_ContainerError bl_map_insert(BL_Map* map, const void* key, size_t keySize, co
     struct Node* newNode = bl_unordered_container_put(&map->container, sizeof(struct Node), &(struct Node) {.left = NULL, .right = NULL, .prev = bestNode});
     if (!newNode)
         return BL_ContainerAllocFailure;
-    memcpy(newNode->data, key, keySize);
+    memcpy((BL_Byte*)newNode + map->keyOffset, key, keySize);
     memcpy((BL_Byte*) newNode + map->elementOffset, element, elementSize);
 
     if (shouldBeOnLeft)
@@ -268,9 +267,9 @@ BL_ContainerError bl_map_insert(BL_Map* map, const void* key, size_t keySize, co
 static struct Node* internal_get_node(const BL_Map* map, const void* key) {
     struct Node* current = map->root;
     while (current) {
-        if (map->compEqual(current->data, key))
+        if (map->compEqual((BL_Bytes)current + map->keyOffset, key))
             return current;
-        if (map->compLess(key, current->data))
+        if (map->compLess(key, (BL_Bytes)current + map->keyOffset))
             current = current->left;
         else
             current = current->right;
@@ -279,7 +278,7 @@ static struct Node* internal_get_node(const BL_Map* map, const void* key) {
 }
 
 void* bl_map_get(const BL_Map* map, const void* key, size_t keySize) {
-    if (keySize != map->keySize)
+    if (keySize > map->elementOffset - map->keyOffset)
         return NULL;
 
     struct Node* node = internal_get_node(map, key);
@@ -298,7 +297,7 @@ static struct Node* internal_get_inorder_successor(struct Node* nodeToStartAt) {
 }
 
 BL_ContainerError bl_map_remove(BL_Map* map, const void* key, size_t keySize, void (*keyDestructor)(void*), void (*elementDestructor)(void*)) {
-    if (keySize != map->keySize)
+    if (keySize > map->elementOffset - map->keyOffset)
         return BL_ContainerInvalidSize;
 
     struct Node* nodeToRemove = internal_get_node(map, key);
@@ -307,7 +306,7 @@ BL_ContainerError bl_map_remove(BL_Map* map, const void* key, size_t keySize, vo
         return BL_ContainerOPUnsuccessful;
 
     if (keyDestructor)
-        keyDestructor(nodeToRemove->data);
+        keyDestructor((BL_Byte*)nodeToRemove + map->keyOffset);
     if (elementDestructor)
         elementDestructor((BL_Byte*) nodeToRemove + map->elementOffset);
 
@@ -406,10 +405,9 @@ BL_ContainerError bl_map_remove(BL_Map* map, const void* key, size_t keySize, vo
                             currentNode->prev->left = currentNode;
                         else
                             currentNode->prev->right = currentNode;
-                    } else 
+                    } else
                         map->root = currentNode;
-                }
-                else
+                } else
                     currentNode = nodeToRemove->prev;
             } else {
                 nodeToRemove->prev->right = NULL;
@@ -423,7 +421,7 @@ BL_ContainerError bl_map_remove(BL_Map* map, const void* key, size_t keySize, vo
                             currentNode->prev->left = currentNode;
                         else
                             currentNode->prev->right = currentNode;
-                    } else 
+                    } else
                         map->root = currentNode;
                 } else
                     currentNode = nodeToRemove->prev;
@@ -486,10 +484,13 @@ void bl_map_destroy(BL_Map* map, void (*keyDestructor)(void*), void (*elementDes
 
     for (struct Node* node = bl_unordered_container_front(&map->container); node; node = bl_unordered_container_next(&map->container, node)) {
         if (keyDestructor)
-            keyDestructor(node->data);
+            keyDestructor((BL_Byte*)node + map->keyOffset);
         if (elementDestructor)
             elementDestructor((BL_Byte*) node + map->elementOffset);
     }
 
     bl_unordered_container_destroy(&map->container);
+}
+
+void* bl_map_front(const BL_Map* map) {
 }

@@ -30,6 +30,10 @@ extern "C" {
 #define ObjectFlagIsNotContinuousCustomTracking 0x00080000
 #define ObjectFlagElementsArePointers           0x00400000
 #define ObjectFlagArrayNoSort                   0x00800000
+
+#define BL_MAKE_PAIR_TYPE(firstType,secondType) struct{firstType first; secondType second;}
+#define BL_MAKE_PAIR(pairType,firstItem,secondItem) (pairType){.first = firstItem, .second = secondItem}
+
 #ifdef __cplusplus
 }
 #endif

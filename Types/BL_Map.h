@@ -13,14 +13,14 @@ extern "C" {
 
 typedef struct BL_Map {
     BL_UnorderedContainer container;
-    size_t keySize,elementOffset;
+    size_t elementOffset,keyOffset;
     void* root;
     bool (*compEqual)(const void*,const void*);
     bool (*compLess)(const void*,const void*);
 } BL_Map;
 
-extern BL_Map bl_map_create_stack(size_t keySize,size_t elementSize,bool(*compEqual)(const void*,const void*),bool(*compLess)(const void*,const void*)) noexcept;
-extern BL_Map* bl_map_create_heap(size_t keySize,size_t elementSize,bool(*compEqual)(const void*,const void*),bool(*compLess)(const void*,const void*)) noexcept;
+extern BL_Map bl_map_create_stack(size_t keyValueSize,size_t alignment,size_t elementOffset,bool(*compEqual)(const void*,const void*),bool(*compLess)(const void*,const void*)) noexcept;
+extern BL_Map* bl_map_create_heap(size_t keyValueSize,size_t alignment,size_t elementOffset,bool(*compEqual)(const void*,const void*),bool(*compLess)(const void*,const void*)) noexcept;
 /**
  * @brief Checks if map is valid
  * @param map Pointer to Map

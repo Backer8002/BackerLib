@@ -14,6 +14,8 @@ static struct {
     BL_DynamicContainer threads;
 } EventInfo = {0};
 
+typedef BL_MAKE_PAIR_TYPE(const BL_StringView,BL_DynamicContainer) EventEntry;
+
 static int internal_thread_function(void* sharedState) {
     sharedState = sharedState;
     while (!EventInfo.shouldExit) {
@@ -65,7 +67,7 @@ BL_ContainerError bl_event_global_init(void) {
         return BL_ContainerAllocFailure;
     }
 
-    EventInfo.eventMap = bl_hashmap_create_stack(0, sizeof(BL_StringView), sizeof(BL_Event), bl_string_equal, bl_hashfunction_string_view);
+    EventInfo.eventMap = bl_hashmap_create_stack(0, sizeof(EventEntry),_Alignof(EventEntry),offsetof(EventEntry,second), bl_string_equal, bl_hashfunction_string_view);
 
     if (!bl_hashmap_is_valid(&EventInfo.eventMap)) {
         bl_mutex_destroy(&EventInfo.mutex);
