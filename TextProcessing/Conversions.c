@@ -1,66 +1,141 @@
 #include "Conversions.h"
 
-BL_UnicodeString bl_textprocessing_from_unicode(BL_Container data, BL_TextProcessing_Encoding encoding) {
+BL_UnicodeString bl_textprocessing_to_unicode(BL_Container data, BL_TextProcessing_Encoding encoding) {
     if (encoding != BL_TextProcessing_Encoding_UTF8 && bl_container_size(&data) % 2 != 0)
         return (BL_UnicodeString) {0};
-    if ((encoding == BL_TextProcessing_Encoding_UTF32LE || encoding == BL_TextProcessing_Encoding_UTF32BE) 
-        && bl_container_size(&data) % 4 != 0)
+    if ((encoding == BL_TextProcessing_Encoding_UTF32LE || encoding == BL_TextProcessing_Encoding_UTF32BE) && bl_container_size(&data) % 4 != 0)
         return (BL_UnicodeString) {0};
 
-    BL_UnicodeString result = bl_container_dynamic_create_stack(0,sizeof(BL_UnicodePoint));
+    BL_UnicodeString result = bl_container_dynamic_create_stack(0, sizeof(BL_Unicodepoint));
     switch (encoding) {
-        case BL_TextProcessing_Encoding_UTF8: {
-            size_t size = bl_container_size(&data);
-            for (size_t i = 0; i < size; i++) {
-                BL_Byte character = *(BL_Byte*)bl_container_get(&data,i);
+    case BL_TextProcessing_Encoding_UTF8: {
+        size_t size = bl_container_size(&data);
+        size_t i    = 0;
+        while (i < size) {
+            BL_Byte character    = *(BL_Byte*) bl_container_get(&data, i);
+            size_t  requiredSize = 0;
+            for (; requiredSize < 8 && ((character << requiredSize) & 0x80); requiredSize++) {}
+            if (requiredSize > 4)
+                requiredSize = 4; // Issue diagnostic?
+            if (i + requiredSize > size)
+                requiredSize = size - i;
+
+            BL_TextProcessing_UTFCodepoint uftCodepoint = {.bytesUsed = requiredSize};
+            for (size_t j = 0; j < requiredSize; j++)
+                uftCodepoint.bytes[j] = *(BL_Byte*) bl_container_get(&data, i + j);
+            BL_Unicodepoint codepoint = bl_textprocessing_to_unicodepoint(uftCodepoint, BL_TextProcessing_Encoding_UTF8);
+            if (bl_container_dynamic_append(&result, sizeof codepoint, &codepoint) != BL_ContainerOPSuccessful)
+                goto ErrorExit;
+            i += requiredSize;
+        }
+    } break;
+    case BL_TextProcessing_Encoding_UTF16BE:
+    case BL_TextProcessing_Encoding_UTF16LE: {
+        size_t maxIndex = bl_container_size(&data) / 2;
+        for (size_t i = 0; i < maxIndex; i++) {
+            BL_Byte firstByte  = *(BL_Byte*) bl_container_get(&data, i * 2);
+            BL_Byte secondByte = *(BL_Byte*) bl_container_get(&data, i * 2 + 1);
+            bool    grabMore   = false;
+            if (encoding == BL_TextProcessing_Encoding_UTF16BE && (firstByte & 0xfc) == 0xd8)
+                grabMore = true;
+            else if ((secondByte & 0xfc) == 0xd8)
+                grabMore = true;
+            BL_TextProcessing_UTFCodepoint utfCodepoint = {.bytesUsed = grabMore ? 4 : 2, .bytes = {firstByte, secondByte}};
+            if (grabMore && i + 1 >= maxIndex) {
+                utfCodepoint.bytes[3] = *(BL_Byte*) bl_container_get(&data, i * 2 + 2);
+                utfCodepoint.bytes[4] = *(BL_Byte*) bl_container_get(&data, i * 2 + 3);
+                i++;
             }
-        } break;
-        case BL_TextProcessing_Encoding_UTF16BE:
-        case BL_TextProcessing_Encoding_UTF16LE: {
-            size_t maxIndex = bl_container_size(&data)/2;
-            for (size_t i = 0; i < maxIndex; i++) {
-                BL_Byte firstByte = *(BL_Byte*)bl_container_get(&data,i*2);
-                BL_Byte secondByte = *(BL_Byte*)bl_container_get(&data,i*2 + 1);
-                bool grabMore = false;
-                if (encoding == BL_TextProcessing_Encoding_UTF16BE && (firstByte & 0xfc) == 0xd8)
-                    grabMore = true;
-                else if ((secondByte & 0xfc) == 0xd8)
-                    grabMore = true;
-                BL_TextProcessing_UTFCodepoint utfCodepoint = {.bytesUsed = grabMore ? 4 : 2, .bytes = {firstByte,secondByte}};
-                if (grabMore && i + 1 >= maxIndex) {
-                    utfCodepoint.bytes[3] = *(BL_Byte*)bl_container_get(&data,i*2+2);
-                    utfCodepoint.bytes[4] = *(BL_Byte*)bl_container_get(&data,i*2+3);
-                    i++;
-                }
-                BL_UnicodePoint codepoint = bl_textprocessing_to_unicodepoint(utfCodepoint,encoding);
-                if (bl_container_dynamic_append(&result,sizeof codepoint,&codepoint) != BL_ContainerOPSuccessful)
-                    goto ErrorExit;
-            }
-        } break;
-        case BL_TextProcessing_Encoding_UTF32BE:
-        case BL_TextProcessing_Encoding_UTF32LE: {
-            size_t maxIndex = bl_container_size(&data)/4;
-            for (size_t i = 0; i < maxIndex;i++) {
-                BL_TextProcessing_UTFCodepoint utfCodepoint = {
-                    .bytesUsed = 4,
-                    .bytes = {
-                        *(BL_Byte*)bl_container_get(&data,i*4),
-                        *(BL_Byte*)bl_container_get(&data,i*4+1),
-                        *(BL_Byte*)bl_container_get(&data,i*4+2),
-                        *(BL_Byte*)bl_container_get(&data,i*4+3)
-                    }
-                };
-                BL_UnicodePoint codepoint = bl_textprocessing_to_unicodepoint(utfCodepoint,encoding);
-                if (bl_container_dynamic_append(&result,sizeof codepoint,&codepoint) != BL_ContainerOPSuccessful)
-                    goto ErrorExit;
-            }
-        } break;
+            BL_Unicodepoint codepoint = bl_textprocessing_to_unicodepoint(utfCodepoint, encoding);
+            if (bl_container_dynamic_append(&result, sizeof codepoint, &codepoint) != BL_ContainerOPSuccessful)
+                goto ErrorExit;
+        }
+    } break;
+    case BL_TextProcessing_Encoding_UTF32BE:
+    case BL_TextProcessing_Encoding_UTF32LE: {
+        size_t maxIndex = bl_container_size(&data) / 4;
+        for (size_t i = 0; i < maxIndex; i++) {
+            BL_TextProcessing_UTFCodepoint utfCodepoint = {
+                .bytesUsed = 4,
+                .bytes     = {
+                    *(BL_Byte*) bl_container_get(&data, i * 4),
+                    *(BL_Byte*) bl_container_get(&data, i * 4 + 1),
+                    *(BL_Byte*) bl_container_get(&data, i * 4 + 2),
+                    *(BL_Byte*) bl_container_get(&data, i * 4 + 3)}};
+            BL_Unicodepoint codepoint = bl_textprocessing_to_unicodepoint(utfCodepoint, encoding);
+            if (bl_container_dynamic_append(&result, sizeof codepoint, &codepoint) != BL_ContainerOPSuccessful)
+                goto ErrorExit;
+        }
+    } break;
     }
-    if (bl_container_dynamic_append(&result,sizeof (BL_UnicodePoint),&(BL_UnicodePoint){0}) != BL_ContainerOPSuccessful)
+    if (bl_container_dynamic_append(&result, sizeof(BL_Unicodepoint), &(BL_Unicodepoint) {0}) != BL_ContainerOPSuccessful)
         goto ErrorExit;
     return result;
 
-    ErrorExit:
+ErrorExit:
     bl_container_dynamic_destroy(&result);
     return result;
+}
+
+BL_Unicodepoint bl_textprocessing_to_unicodepoint(BL_TextProcessing_UTFCodepoint utf, BL_TextProcessing_Encoding encoding) {
+    if (utf.bytesUsed > 4 || utf.bytesUsed <= 0) {
+        return 0xfffd;
+    }
+    switch (encoding) {
+    case BL_TextProcessing_Encoding_UTF8: {
+        for (size_t i = 0; i < utf.bytesUsed; i++) {
+            if (utf.bytes[i] == 0xff || utf.bytes[i] == 0xfe || (utf.bytes[i] == 0xc0 & 0xfe))
+                return 0xfffd; // Invalid utf-8
+        }
+        if (utf.bytesUsed == 1) {
+            if (utf.bytes[0] & 0x80)
+                return 0xfffd;
+            return utf.bytes[0];
+        }
+
+        if ((BL_Unicodepoint)utf.bytes[0] - 0xc2 > 0xf7-0xc2 || ((0xf1 << (4-utf.bytesUsed)) & utf.bytes[0]) != (0xf0 << (4-utf.bytesUsed)) )
+            return 0xfffd;
+        for (size_t i = 1; i < utf.bytesUsed;i++) {
+            if (((BL_Unicodepoint)utf.bytes[i] & 0xc0) != 0x80)
+                return 0xfffd;
+        }
+        BL_Unicodepoint result = utf.bytes[0] & (0xff >> utf.bytesUsed);
+        for (size_t i = 1; i < utf.bytesUsed;i++) {
+            result <<= 6;
+            result |= (BL_Unicodepoint)utf.bytes[i] & 0x3f;
+        }
+        return result;
+    } break;
+
+    case BL_TextProcessing_Encoding_UTF16BE:
+    case BL_TextProcessing_Encoding_UTF16LE: {
+        if (utf.bytesUsed % 2 != 0)
+            return 0xfffd;
+        BL_Unicodepoint firstChar,secondChar,thirdChar,fourthChar;
+        if (encoding == BL_TextProcessing_Encoding_UTF16BE)
+            firstChar = utf.bytes[0],secondChar = utf.bytes[1],thirdChar = utf.bytes[2], fourthChar = utf.bytes[3];
+        else
+            firstChar = utf.bytes[1],secondChar = utf.bytes[0],thirdChar = utf.bytes[3], fourthChar = utf.bytes[2];
+        if (utf.bytesUsed == 2) {
+            if ((firstChar & 0xf8) == 0xd8)
+                return 0xfffd;
+            return firstChar << 8 | secondChar;
+        }
+        if ((firstChar & 0xfc) != 0xd8 && (thirdChar & 0xfc) != 0xdc)
+            return 0xfffd;
+        return 0x10000 + ((firstChar & 0x03) << 18 | secondChar << 10 | (thirdChar & 0x03) << 8 | fourthChar);
+    }
+
+    case BL_TextProcessing_Encoding_UTF32BE: {
+        if (utf.bytesUsed != 4)
+            return 0xfffd;
+        return (BL_Unicodepoint) utf.bytes[0] << 24 | (BL_Unicodepoint) utf.bytes[1] << 16 | (BL_Unicodepoint) utf.bytes[2] << 8 | (BL_Unicodepoint) utf.bytes[3];
+    }
+    case BL_TextProcessing_Encoding_UTF32LE: {
+        if (utf.bytesUsed != 4)
+            return 0xfffd;
+        return (BL_Unicodepoint) utf.bytes[0] | (BL_Unicodepoint) utf.bytes[1] << 8 | (BL_Unicodepoint) utf.bytes[2] << 16 | (BL_Unicodepoint) utf.bytes[3] << 24;
+    }
+    }
+    return 0xfffd;
 }

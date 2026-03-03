@@ -13,7 +13,7 @@ extern "C" {
 
 typedef BL_DynamicContainer BL_UnicodeString;
 typedef BL_Container BL_UnicodeView;
-typedef char32_t BL_UnicodePoint;
+typedef char32_t BL_Unicodepoint;
 
 #ifdef __cplusplus
 }
