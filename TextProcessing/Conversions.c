@@ -1,5 +1,6 @@
 #include "Conversions.h"
 #include <stddef.h>
+#include <BackerLibTypes.h>
 
 BL_UnicodeString bl_textprocessing_to_unicode(BL_Container data, BL_TextProcessing_Encoding encoding) {
     if (encoding != BL_TextProcessing_Encoding_UTF8 && bl_container_size(&data) % 2 != 0)
@@ -39,7 +40,7 @@ BL_UnicodeString bl_textprocessing_to_unicode(BL_Container data, BL_TextProcessi
             bool    grabMore   = false;
             if (encoding == BL_TextProcessing_Encoding_UTF16BE && (firstByte & 0xfc) == 0xd8)
                 grabMore = true;
-            else if ((secondByte & 0xfc) == 0xd8)
+            else if (encoding == BL_TextProcessing_Encoding_UTF16LE &&(secondByte & 0xfc) == 0xd8)
                 grabMore = true;
             BL_TextProcessing_UTFCodepoint utfCodepoint = {.bytesUsed = grabMore ? 4 : 2, .bytes = {firstByte, secondByte}};
             if (grabMore && i + 1 >= maxIndex) {
@@ -85,7 +86,7 @@ BL_Unicodepoint bl_textprocessing_to_unicodepoint(BL_TextProcessing_UTFCodepoint
     switch (encoding) {
     case BL_TextProcessing_Encoding_UTF8: {
         for (size_t i = 0; i < utf.bytesUsed; i++) {
-            if (utf.bytes[i] == 0xff || utf.bytes[i] == 0xfe || (utf.bytes[i] == 0xc0 & 0xfe))
+            if (utf.bytes[i] == 0xff || utf.bytes[i] == 0xfe || (utf.bytes[i] & 0xfe ) == 0xc0 )
                 return BL_TextProcessing_Unicode_Unknown; // Invalid utf-8
         }
         if (utf.bytesUsed == 1) {
@@ -209,4 +210,25 @@ BL_TextProcessing_UTFCodepoint bl_textprocessing_from_unicodepoint(BL_Unicodepoi
 
     }
     return (BL_TextProcessing_UTFCodepoint) {.bytesUsed = 0};
+}
+
+BL_TextProcessing_UTFCodepoint bl_textprocessing_transcode_utfcodepoint(
+    BL_TextProcessing_UTFCodepoint utf,
+    BL_TextProcessing_Encoding sourceEncoding,BL_TextProcessing_Encoding targetEncodeing) 
+    {
+        return bl_textprocessing_from_unicodepoint(bl_textprocessing_to_unicodepoint(utf,sourceEncoding),targetEncodeing);
+    }
+
+BL_DynamicContainer bl_textprocessing_transcode_utf(BL_Container utf,BL_TextProcessing_Encoding sourceEncoding,BL_TextProcessing_Encoding targetEncodeing) {
+    size_t targetSize = 0;
+    switch(targetEncodeing) {
+        case BL_TextProcessing_Encoding_UTF8: targetSize = 1; break;
+        case BL_TextProcessing_Encoding_UTF16BE:
+        case BL_TextProcessing_Encoding_UTF16LE: targetSize = 2; break;
+        case BL_TextProcessing_Encoding_UTF32LE:
+        case BL_TextProcessing_Encoding_UTF32BE: targetSize = 4; break;
+    }
+    BL_DynamicContainer result = bl_container_dynamic_create_stack(0,targetSize);
+
+    for ()
 }
