@@ -19,9 +19,9 @@ add_library(BackerLibParsing STATIC
 
 target_include_directories(BackerLibParsing INTERFACE "${PROJECT_SOURCE_DIR}/../include")
 find_library(MATH_LIB m)
-add_dependencies(BackerLibParsing BackerLibLogging BackerLibTypes BackerLibConcurrency)
+add_dependencies(BackerLibParsing BackerLibLogging BackerLibTypes BackerLibConcurrency BackerLibTextProcessing)
 if(MATH_LIB)
-    target_link_libraries(BackerLibParsing LINK_PUBLIC ${MATH_LIB} BackerLibLogging BackerLibTypes BackerLibConcurrency)
+    target_link_libraries(BackerLibParsing LINK_PUBLIC ${MATH_LIB} BackerLibLogging BackerLibTypes BackerLibConcurrency BackerLibTextProcessing)
 else ()
-    target_link_libraries(BackerLibParsing LINK_PUBLIC BackerLibLogging BackerLibTypes BackerLibConcurrency)
+    target_link_libraries(BackerLibParsing LINK_PUBLIC BackerLibLogging BackerLibTypes BackerLibConcurrency BackerLibTextProcessing)
 endif ()

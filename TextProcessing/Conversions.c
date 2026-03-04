@@ -1,4 +1,5 @@
 #include "Conversions.h"
+#include <stddef.h>
 
 BL_UnicodeString bl_textprocessing_to_unicode(BL_Container data, BL_TextProcessing_Encoding encoding) {
     if (encoding != BL_TextProcessing_Encoding_UTF8 && bl_container_size(&data) % 2 != 0)
@@ -79,25 +80,25 @@ ErrorExit:
 
 BL_Unicodepoint bl_textprocessing_to_unicodepoint(BL_TextProcessing_UTFCodepoint utf, BL_TextProcessing_Encoding encoding) {
     if (utf.bytesUsed > 4 || utf.bytesUsed <= 0) {
-        return 0xfffd;
+        return BL_TextProcessing_Unicode_Unknown;
     }
     switch (encoding) {
     case BL_TextProcessing_Encoding_UTF8: {
         for (size_t i = 0; i < utf.bytesUsed; i++) {
             if (utf.bytes[i] == 0xff || utf.bytes[i] == 0xfe || (utf.bytes[i] == 0xc0 & 0xfe))
-                return 0xfffd; // Invalid utf-8
+                return BL_TextProcessing_Unicode_Unknown; // Invalid utf-8
         }
         if (utf.bytesUsed == 1) {
             if (utf.bytes[0] & 0x80)
-                return 0xfffd;
+                return BL_TextProcessing_Unicode_Unknown;
             return utf.bytes[0];
         }
 
         if ((BL_Unicodepoint) utf.bytes[0] - 0xc2 > 0xf7 - 0xc2 || ((0xf1 << (4 - utf.bytesUsed)) & utf.bytes[0]) != (0xf0 << (4 - utf.bytesUsed)))
-            return 0xfffd;
+            return BL_TextProcessing_Unicode_Unknown;
         for (size_t i = 1; i < utf.bytesUsed; i++) {
             if (((BL_Unicodepoint) utf.bytes[i] & 0xc0) != 0x80)
-                return 0xfffd;
+                return BL_TextProcessing_Unicode_Unknown;
         }
         BL_Unicodepoint result = utf.bytes[0] & (0xff >> utf.bytesUsed);
         for (size_t i = 1; i < utf.bytesUsed; i++) {
@@ -110,34 +111,34 @@ BL_Unicodepoint bl_textprocessing_to_unicodepoint(BL_TextProcessing_UTFCodepoint
     case BL_TextProcessing_Encoding_UTF16BE:
     case BL_TextProcessing_Encoding_UTF16LE: {
         if (utf.bytesUsed % 2 != 0)
-            return 0xfffd;
-        BL_Unicodepoint firstChar, secondChar, thirdChar, fourthChar;
+            return BL_TextProcessing_Unicode_Unknown;
+        BL_Byte firstChar, secondChar, thirdChar, fourthChar;
         if (encoding == BL_TextProcessing_Encoding_UTF16BE)
             firstChar = utf.bytes[0], secondChar = utf.bytes[1], thirdChar = utf.bytes[2], fourthChar = utf.bytes[3];
         else
             firstChar = utf.bytes[1], secondChar = utf.bytes[0], thirdChar = utf.bytes[3], fourthChar = utf.bytes[2];
         if (utf.bytesUsed == 2) {
             if ((firstChar & 0xf8) == 0xd8)
-                return 0xfffd;
+                return BL_TextProcessing_Unicode_Unknown;
             return firstChar << 8 | secondChar;
         }
         if ((firstChar & 0xfc) != 0xd8 && (thirdChar & 0xfc) != 0xdc)
-            return 0xfffd;
+            return BL_TextProcessing_Unicode_Unknown;
         return 0x10000 + ((firstChar & 0x03) << 18 | secondChar << 10 | (thirdChar & 0x03) << 8 | fourthChar);
     }
 
     case BL_TextProcessing_Encoding_UTF32BE: {
         if (utf.bytesUsed != 4)
-            return 0xfffd;
+            return BL_TextProcessing_Unicode_Unknown;
         return (BL_Unicodepoint) utf.bytes[0] << 24 | (BL_Unicodepoint) utf.bytes[1] << 16 | (BL_Unicodepoint) utf.bytes[2] << 8 | (BL_Unicodepoint) utf.bytes[3];
     }
     case BL_TextProcessing_Encoding_UTF32LE: {
         if (utf.bytesUsed != 4)
-            return 0xfffd;
+            return BL_TextProcessing_Unicode_Unknown;
         return (BL_Unicodepoint) utf.bytes[0] | (BL_Unicodepoint) utf.bytes[1] << 8 | (BL_Unicodepoint) utf.bytes[2] << 16 | (BL_Unicodepoint) utf.bytes[3] << 24;
     }
     }
-    return 0xfffd;
+    return BL_TextProcessing_Unicode_Unknown;
 }
 
 BL_DynamicContainer bl_textprocessing_from_unicode(BL_UnicodeView unicode, BL_TextProcessing_Encoding encoding) {
@@ -172,7 +173,7 @@ ErrorExit:
 }
 
 BL_TextProcessing_UTFCodepoint bl_textprocessing_from_unicodepoint(BL_Unicodepoint codepoint, BL_TextProcessing_Encoding encoding) {
-    
+
     switch (encoding) {
     case BL_TextProcessing_Encoding_UTF8: {
         if (codepoint < 0x80)
@@ -207,5 +208,5 @@ BL_TextProcessing_UTFCodepoint bl_textprocessing_from_unicodepoint(BL_Unicodepoi
     }
 
     }
-    unreachable();
+    return (BL_TextProcessing_UTFCodepoint) {.bytesUsed = 0};
 }
