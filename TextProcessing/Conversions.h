@@ -24,7 +24,7 @@ typedef struct BL_TextProcessing_UTFCodepoint{
 
 extern BL_UnicodeString bl_textprocessing_to_unicode(BL_Container data, BL_TextProcessing_Encoding encoding) noexcept;
 extern BL_Unicodepoint bl_textprocessing_to_unicodepoint(BL_TextProcessing_UTFCodepoint utf,BL_TextProcessing_Encoding encoding) noexcept;
-extern BL_DynamicContainer bl_textprocessing_from_unicode(BL_UnicodeView unicodeString, BL_TextProcessing_Encoding encoding) noexcept;
+extern BL_DynamicContainer bl_textprocessing_from_unicode(BL_UnicodeView unicode, BL_TextProcessing_Encoding encoding) noexcept;
 extern BL_TextProcessing_UTFCodepoint bl_textprocessing_from_unicodepoint(BL_Unicodepoint codepoint,BL_TextProcessing_Encoding encoding) noexcept;
 
 #ifdef __cplusplus
