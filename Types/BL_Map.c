@@ -1,3 +1,9 @@
+/*
+Note: Code is inspired by: https://en.wikipedia.org/w/index.php?title=AVL_tree&oldid=1333904329 
+Sections regarding algorthm may been partly or fully using outclips from this page. 
+It has a licence listed at https://en.wikipedia.org/wiki/Wikipedia:Text_of_the_Creative_Commons_Attribution-ShareAlike_4.0_International_License.
+*/
+
 #include "BL_Map.h"
 #include "BL_UnorderedContainer.h"
 #include "TypesMain.h"
