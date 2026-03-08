@@ -1,11 +1,11 @@
 #include "Json.h"
 #include <BackerLibLogging.h>
+#include <BackerLibTextprocessing.h>
 #include <ctype.h>
 #include <math.h>
-#include <stdlib.h>
 #include <stdbool.h>
 #include <stdio.h>
-#include <BackerLibTextprocessing.h>
+#include <stdlib.h>
 
 static void internal_tokenStorageDestructor(void* element) {
     BL_JsonToken* jsonElement = element;
@@ -81,15 +81,15 @@ static double internal_parseNumber(const double firstDigit, FILE* file) {
     }
 }
 
-static BL_TextProcessing_UTFCodepoint internal_handleUnicodeEscape(FILE* file) {
+static BL_Textprocessing_UTFCodepoint internal_handleUnicodeEscape(FILE* file) {
     int firstChar  = fgetc(file);
     int secondChar = fgetc(file);
     int thirdChar  = fgetc(file);
     int fourthChar = fgetc(file);
     if (feof(file))
-        return (BL_TextProcessing_UTFCodepoint){0};
+        return (BL_Textprocessing_UTFCodepoint) {0};
     if (!isxdigit(firstChar) || !isxdigit(secondChar) || !isxdigit(thirdChar) || !isxdigit(fourthChar))
-        return (BL_TextProcessing_UTFCodepoint){0};
+        return (BL_Textprocessing_UTFCodepoint) {0};
 
     BL_Byte codepoint[2];
 
@@ -98,28 +98,27 @@ static BL_TextProcessing_UTFCodepoint internal_handleUnicodeEscape(FILE* file) {
 
     if ((codepoint[0] & 0xfc) == 0xd8) {
         BL_Byte codepointSecondPart[2];
-        BL_Byte unicodePoint[3];
         if (fgetc(file) != '\\')
-            return (BL_TextProcessing_UTFCodepoint){0};
+            return (BL_Textprocessing_UTFCodepoint) {0};
         if (fgetc(file) != 'u')
-            return (BL_TextProcessing_UTFCodepoint){0};
+            return (BL_Textprocessing_UTFCodepoint) {0};
         int fifthChar   = fgetc(file);
         int sixthChar   = fgetc(file);
         int seventhChar = fgetc(file);
         int eighthChar  = fgetc(file);
         if (!isxdigit(fifthChar) || !isxdigit(sixthChar) || !isxdigit(seventhChar) || !isxdigit(eighthChar))
-            return (BL_TextProcessing_UTFCodepoint){0};
+            return (BL_Textprocessing_UTFCodepoint) {0};
         codepointSecondPart[0] = strtoul((char[3]) {(char) fifthChar, (char) sixthChar, '\0'}, NULL, 16);
         codepointSecondPart[1] = strtoul((char[3]) {(char) seventhChar, (char) eighthChar, '\0'}, NULL, 16);
 
-        return bl_textprocessing_from_unicodepoint(
-            bl_textprocessing_to_unicodepoint(
-                (BL_TextProcessing_UTFCodepoint){
-                    .bytesUsed = 4, 
-                    .bytes = {codepoint[0],codepoint[1],codepointSecondPart[0],codepointSecondPart[1]}},BL_TextProcessing_Encoding_UTF16BE)
-            ,BL_TextProcessing_Encoding_UTF8);
+        return bl_textprocessing_transcode_utfcodepoint(
+            (BL_Textprocessing_UTFCodepoint) {
+                .bytesUsed = 4,
+                .bytes     = {codepoint[0], codepoint[1], codepointSecondPart[0], codepointSecondPart[1]}},
+            BL_Textprocessing_Encoding_UTF16BE,
+            BL_Textprocessing_Encoding_UTF8);
     }
-    return bl_textprocessing_from_unicodepoint(bl_textprocessing_to_unicodepoint((BL_TextProcessing_UTFCodepoint){.bytesUsed = 2, .bytes = {codepoint[0],codepoint[1]}},BL_TextProcessing_Encoding_UTF16BE),BL_TextProcessing_Encoding_UTF8);
+    return bl_textprocessing_transcode_utfcodepoint((BL_Textprocessing_UTFCodepoint) {.bytesUsed = 2, .bytes = {codepoint[0], codepoint[1]}}, BL_Textprocessing_Encoding_UTF16BE, BL_Textprocessing_Encoding_UTF8);
 }
 
 static BL_String internal_parseUTF8String(FILE* file) {
@@ -164,7 +163,7 @@ static BL_String internal_parseUTF8String(FILE* file) {
             else if (escapedChar == '\\')
                 insertionError = bl_container_dynamic_append(&string, sizeof(BL_Byte), &(BL_Byte) {'\\'});
             else if (escapedChar == 'u') {
-                BL_TextProcessing_UTFCodepoint charToInsert = internal_handleUnicodeEscape(file);
+                BL_Textprocessing_UTFCodepoint charToInsert = internal_handleUnicodeEscape(file);
                 if (charToInsert.bytesUsed) {
                     insertionError = bl_container_dynamic_insert(&string,
                                                                  bl_container_size(&string.container),
@@ -249,9 +248,9 @@ BL_JsonTokenStore bl_json_tokenize_file(FILE* file) {
             if (!bl_container_dynamic_is_valid(&string))
                 goto ErrorExit;
             if (bl_container_dynamic_append(&tokenStorage.dynamicContainer,
-                                       sizeof(BL_JsonToken),
-                                       &(BL_JsonToken) {.tokenType      = BL_JsonTokenString,
-                                                     .additionalData = (BL_JsonMemberValue) {.string = string}}))
+                                            sizeof(BL_JsonToken),
+                                            &(BL_JsonToken) {.tokenType      = BL_JsonTokenString,
+                                                             .additionalData = (BL_JsonMemberValue) {.string = string}}))
                 goto ErrorExit;
             continue;
         }
@@ -261,9 +260,9 @@ BL_JsonTokenStore bl_json_tokenize_file(FILE* file) {
             if (number == NAN)
                 goto ErrorExit;
             if (bl_container_dynamic_append(&tokenStorage.dynamicContainer,
-                                       sizeof(BL_JsonToken),
-                                       &(BL_JsonToken) {.tokenType      = BL_JsonTokenNumber,
-                                                     .additionalData = (BL_JsonMemberValue) {.number = number}}))
+                                            sizeof(BL_JsonToken),
+                                            &(BL_JsonToken) {.tokenType      = BL_JsonTokenNumber,
+                                                             .additionalData = (BL_JsonMemberValue) {.number = number}}))
                 goto ErrorExit;
             continue;
         }
@@ -279,8 +278,8 @@ BL_JsonTokenStore bl_json_tokenize_file(FILE* file) {
             if ('e' != fgetc(file))
                 goto ErrorExit;
             if (bl_container_dynamic_append(&tokenStorage.dynamicContainer,
-                                       sizeof(BL_JsonToken),
-                                       &(BL_JsonToken) {.tokenType = BL_JsonTokenBool, .additionalData = (BL_JsonMemberValue) {.boolean = false}}) != BL_ContainerOPSuccessful)
+                                            sizeof(BL_JsonToken),
+                                            &(BL_JsonToken) {.tokenType = BL_JsonTokenBool, .additionalData = (BL_JsonMemberValue) {.boolean = false}}) != BL_ContainerOPSuccessful)
                 goto ErrorExit;
         } else if (currentChar == 't') {
             if ('r' != fgetc(file))
@@ -290,8 +289,8 @@ BL_JsonTokenStore bl_json_tokenize_file(FILE* file) {
             if ('e' != fgetc(file))
                 goto ErrorExit;
             if (bl_container_dynamic_append(&tokenStorage.dynamicContainer,
-                                       sizeof(BL_JsonToken),
-                                       &(BL_JsonToken) {.tokenType = BL_JsonTokenBool, .additionalData = (BL_JsonMemberValue) {.boolean = true}}) != BL_ContainerOPSuccessful)
+                                            sizeof(BL_JsonToken),
+                                            &(BL_JsonToken) {.tokenType = BL_JsonTokenBool, .additionalData = (BL_JsonMemberValue) {.boolean = true}}) != BL_ContainerOPSuccessful)
                 goto ErrorExit;
         } else if (currentChar == 'n') {
             if ('u' != fgetc(file))
@@ -314,7 +313,7 @@ ErrorExit:
 
 BL_JsonObject bl_json_read_file(FILE* file) {
     typedef struct {
-        bool              isArrayScope;
+        bool                 isArrayScope;
         BL_DynamicContainer* scope;
     } JsonStackEntry;
     BL_JsonTokenStore tokens = bl_json_tokenize_file(file);
@@ -327,20 +326,20 @@ BL_JsonObject bl_json_read_file(FILE* file) {
         return (BL_JsonObject) {0};
     }
 
-    size_t           stackPointer        = 0;
-    bool             expectingIdentifier = false, expectingValue = true, expectingColon = false;
+    size_t              stackPointer        = 0;
+    bool                expectingIdentifier = false, expectingValue = true, expectingColon = false;
     BL_JsonObject       returnObject         = {0};
 
     BL_JsonObjectMember currentWorkingMember = {0};
-    JsonStackEntry   currentScope         = {0};
+    JsonStackEntry      currentScope         = {0};
 
     for (BL_JsonToken* currentToken = bl_container_dynamic_front(&tokens.dynamicContainer); currentToken < (BL_JsonToken*) bl_container_dynamic_end(&tokens.dynamicContainer); currentToken++) {
         switch (currentToken->tokenType) {
         case BL_JsonTokenOpenCurlyBracket:
             if (!expectingValue || expectingColon || expectingIdentifier)
                 goto ErrorExit;
-            expectingValue           = false;
-            expectingIdentifier      = true;
+            expectingValue              = false;
+            expectingIdentifier         = true;
             BL_JsonObject currentObject = bl_container_dynamic_create_stack(0, sizeof(BL_JsonObjectMember));
             if (!bl_container_dynamic_is_valid(&currentObject))
                 goto ErrorExit;
@@ -349,9 +348,9 @@ BL_JsonObject bl_json_read_file(FILE* file) {
                 currentScope = (JsonStackEntry) {.isArrayScope = false, .scope = &returnObject};
             } else if (currentScope.isArrayScope) {
                 if (bl_container_dynamic_append(currentScope.scope,
-                                           sizeof(BL_JsonArrayMember),
-                                           &(BL_JsonArrayMember) {.valueType = JsonTypeObject,
-                                                               .value     = (BL_JsonMemberValue) {.object = currentObject}}) != BL_ContainerOPSuccessful)
+                                                sizeof(BL_JsonArrayMember),
+                                                &(BL_JsonArrayMember) {.valueType = JsonTypeObject,
+                                                                       .value     = (BL_JsonMemberValue) {.object = currentObject}}) != BL_ContainerOPSuccessful)
                     goto ErrorExit;
                 currentScope = (JsonStackEntry) {.isArrayScope = false, .scope = &((BL_JsonArrayMember*) bl_container_dynamic_back(currentScope.scope))->value.object};
             } else {
@@ -370,9 +369,9 @@ BL_JsonObject bl_json_read_file(FILE* file) {
             BL_JsonArray newArray = bl_container_dynamic_create_stack(0, sizeof(BL_JsonArrayMember));
             if (currentScope.isArrayScope) {
                 if (bl_container_dynamic_append(currentScope.scope,
-                                           sizeof(BL_JsonArrayMember),
-                                           &(BL_JsonArrayMember) {.valueType = JsonTypeArray,
-                                                               .value     = (BL_JsonMemberValue) {.array = newArray}}) != BL_ContainerOPSuccessful)
+                                                sizeof(BL_JsonArrayMember),
+                                                &(BL_JsonArrayMember) {.valueType = JsonTypeArray,
+                                                                       .value     = (BL_JsonMemberValue) {.array = newArray}}) != BL_ContainerOPSuccessful)
                     goto ErrorExit;
                 currentScope = (JsonStackEntry) {.isArrayScope = true, .scope = &((BL_JsonArrayMember*) bl_container_dynamic_back(currentScope.scope))->value.array};
             } else {
@@ -404,7 +403,7 @@ BL_JsonObject bl_json_read_file(FILE* file) {
             if (expectingValue || expectingIdentifier || expectingColon || !stackPointer || currentScope.isArrayScope)
                 goto ErrorExit;
             stackPointer--;
-            bl_sort_heap((BL_Container*)currentScope.scope,bl_string_compare_acending);
+            bl_sort_heap((BL_Container*) currentScope.scope, bl_string_compare_acending);
             if (stackPointer)
                 currentScope = *(JsonStackEntry*) bl_container_get(&jsonObjectStack, stackPointer - 1);
             break;
@@ -419,10 +418,10 @@ BL_JsonObject bl_json_read_file(FILE* file) {
             if (expectingColon || !stackPointer)
                 goto ErrorExit;
             if (expectingIdentifier) {
-                currentWorkingMember.identifier            = currentToken->additionalData.string;
+                currentWorkingMember.identifier                      = currentToken->additionalData.string;
                 currentToken->additionalData.string.container.header = 0; // Must invalidate, otherwise double free might happen at error.
-                expectingColon                             = true;
-                expectingIdentifier                        = false;
+                expectingColon                                       = true;
+                expectingIdentifier                                  = false;
                 continue;
             }
             if (!expectingValue)
@@ -438,7 +437,7 @@ BL_JsonObject bl_json_read_file(FILE* file) {
                     goto ErrorExit;
             }
             currentToken->additionalData.string.container.header = 0; // Same here, otherwise double free might occur.
-            expectingValue                             = false;
+            expectingValue                                       = false;
             break;
         case BL_JsonTokenBool:
             if (expectingColon || expectingIdentifier || !expectingValue || !stackPointer)
@@ -486,7 +485,7 @@ BL_JsonObject bl_json_read_file(FILE* file) {
             expectingValue = false;
             break;
         default:
-            bl_log_debug("How did we get this token? %i",currentToken->tokenType);
+            bl_log_debug("How did we get this token? %i", currentToken->tokenType);
             goto ErrorExit;
         }
     }
@@ -506,10 +505,10 @@ ErrorExit:
 
 void jsonReadFileThread(void* sharedState) {
     BL_JsonReadFilePack* information = sharedState;
-    information->future.future = bl_json_read_file(information->args);
-    information->future.isValid = true;
+    information->future.future       = bl_json_read_file(information->args);
+    information->future.isValid      = true;
 }
 
-BL_FutureJsonObject*  bl_json_read_file_threaded(BL_ThreadPool* threadPool, size_t priority, FILE* file) {
-    return bl_threadpool_job_assign(threadPool,priority,jsonReadFileThread,bl_async_args_future_offset(BL_JsonReadFilePack),(void*)&file,sizeof(FILE*),bl_async_args_offset(BL_JsonReadFilePack));
+BL_FutureJsonObject* bl_json_read_file_threaded(BL_ThreadPool* threadPool, size_t priority, FILE* file) {
+    return bl_threadpool_job_assign(threadPool, priority, jsonReadFileThread, bl_async_args_future_offset(BL_JsonReadFilePack), (void*) &file, sizeof(FILE*), bl_async_args_offset(BL_JsonReadFilePack));
 }

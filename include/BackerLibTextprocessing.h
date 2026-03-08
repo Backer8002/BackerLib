@@ -1,3 +1,3 @@
 
-#include "../TextProcessing/Conversions.h"
-#include "../TextProcessing/UnicodeString.h"
+#include "../Textprocessing/Conversions.h"
+#include "../Textprocessing/UnicodeString.h"

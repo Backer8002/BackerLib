@@ -30,7 +30,7 @@ BL_UnicodeString bl_unicodestr_create(void) {
     str.data             = malloc(sizeof *str.data);
     if (str.data) {
         str.capacity |= 0x1;
-        *str.data = 0;
+        str.data[0] = 0;
     }
     return str;
 }
