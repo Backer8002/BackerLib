@@ -24,6 +24,7 @@ typedef struct BL_TextProcessing_UTFCodepoint{
 
 static const BL_Unicodepoint BL_TextProcessing_Unicode_Unknown = 0xfffd;
 
+extern BL_TextProcessing_UTFCodepoint bl_textprocessing_get_next_utfcodepoint(const BL_Container* container, const BL_Byte** currentElement, BL_TextProcessing_Encoding encoding) noexcept;
 extern BL_UnicodeString bl_textprocessing_to_unicode(BL_Container data, BL_TextProcessing_Encoding encoding) noexcept;
 extern BL_Unicodepoint bl_textprocessing_to_unicodepoint(BL_TextProcessing_UTFCodepoint utf,BL_TextProcessing_Encoding encoding) noexcept;
 extern BL_DynamicContainer bl_textprocessing_from_unicode(BL_UnicodeView unicode, BL_TextProcessing_Encoding encoding) noexcept;
