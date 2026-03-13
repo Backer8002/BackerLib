@@ -5,7 +5,6 @@
 #include <inttypes.h>
 #include <stdbool.h>
 #include <stddef.h>
-
 #ifdef __cplusplus
 #define BL_NOEXCEPT noexcept(true)
 extern "C" {

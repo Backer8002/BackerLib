@@ -1,7 +1,7 @@
 #ifndef BL_TEXTPROCESSING_REGEX_H
 #define BL_TEXTPROCESSING_REGEX_H
 
-#include "UnicodeString.h"
+#include <BackerLibTextprocessing.h>
 #include <BackerLibTypes.h>
 
 #ifdef __cplusplus

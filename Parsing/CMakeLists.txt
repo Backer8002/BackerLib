@@ -15,7 +15,9 @@ add_library(BackerLibParsing STATIC
         ExprParsing.c
         ExprParsing.h
         Args.c
-        Args.h)
+        Args.h
+        "Regex.c"
+        "Regex.h")
 
 target_include_directories(BackerLibParsing INTERFACE "${PROJECT_SOURCE_DIR}/../include")
 find_library(MATH_LIB m)
