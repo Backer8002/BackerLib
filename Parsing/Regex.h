@@ -12,14 +12,18 @@ extern "C" {
 #endif
 
 typedef struct BL_Regex {
-    BL_DynamicContainer dfaNodes;
+    BL_Container ast;
+    BL_Container stack;
+    size_t stackPoint;
 } BL_Regex;
 
-BL_Regex bl_regex_create(BL_UnicodeView expr);
-BL_Regex bl_regex_create_cstr(const char* expr);
-BL_UnicodeView bl_regex_match(const BL_Regex* regex, BL_UnicodeView str);
-BL_DynamicContainer bl_regex_matches(const BL_Regex* regex, BL_UnicodeView str,bool lineMatching,bool matchOverlapping);
-void bl_regex_destory(void* regex);
+/**
+    @note The function itself is thread-safe. However, the regex is not.
+*/
+BL_Regex bl_regex_create(BL_UnicodeView expr) BL_NOEXCEPT;
+BL_UnicodeView bl_regex_match(const BL_Regex* regex, BL_UnicodeView str) BL_NOEXCEPT;
+BL_DynamicContainer bl_regex_matches(const BL_Regex* regex, BL_UnicodeView str,bool lineMatching,bool matchOverlapping) BL_NOEXCEPT;
+void bl_regex_destory(void* regex) BL_NOEXCEPT;
 
 BL_UnicodeString bl_unicodestr_strip(BL_UnicodeView str, const BL_Regex* regex,bool lineMatching);
 BL_DynamicContainer bl_unicodestr_split(BL_UnicodeView str, const BL_Regex* regex, bool lineMatching);

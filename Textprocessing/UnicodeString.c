@@ -157,16 +157,16 @@ BL_Unicodepoint* bl_unicodestr_back(BL_UnicodeView str) {
     return str.data + str.length - 1;
 }
 
-BL_Unicodepoint* bl_unicodestr_next(BL_UnicodeView str, BL_Unicodepoint *element) {
+BL_Unicodepoint* bl_unicodestr_next(BL_UnicodeView str, const BL_Unicodepoint *element) {
     if (element == bl_unicodestr_back(str))
         return NULL;
-    return ++element;
+    return bl_unicodestr_get(str,  ((uintptr_t)element - (uintptr_t)str.data) / sizeof *str.data + 1);
 }
 
-BL_Unicodepoint* bl_unicodestr_prev(BL_UnicodeView str, BL_Unicodepoint* element) {
+BL_Unicodepoint* bl_unicodestr_prev(BL_UnicodeView str, const BL_Unicodepoint* element) {
     if (element == bl_unicodestr_front(str))
         return NULL;
-    return --element;
+    return bl_unicodestr_get(str,  ((uintptr_t)element - (uintptr_t)str.data) / sizeof *str.data - 1);
 }
 
 bool bl_unicodestr_equal(BL_UnicodeView first, BL_UnicodeView second) {
