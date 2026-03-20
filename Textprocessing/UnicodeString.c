@@ -5,6 +5,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/types.h>
 
 /**
  * @returns true if operation was successful.
@@ -64,6 +65,71 @@ BL_UnicodeView bl_unicodestr_substr(BL_UnicodeView str, size_t begin, size_t end
     if (end > str.length)
         return (BL_UnicodeView){0};
     return (BL_UnicodeView) {.data = str.data + begin, .length = end-begin};
+}
+
+BL_UnicodeView bl_unicodestr_split_front(BL_UnicodeView *str, size_t secondBegin) {
+    BL_UnicodeView returnStr;
+    if (secondBegin >= str->length) {
+        returnStr = *str;
+        *str = (BL_UnicodeView){.data = NULL,.length = 0};
+    } else {
+        returnStr = (BL_UnicodeView){.data = str->data,.length = secondBegin};
+        *str = (BL_UnicodeView){.data = str->data + secondBegin, str->length - secondBegin + 1};
+    }
+    return returnStr;
+}
+
+BL_UnicodeView bl_unicodestr_split_back(BL_UnicodeView *str, size_t secondBegin) {
+    if (secondBegin >= str->length)
+        return (BL_UnicodeView){.data = NULL, .length = 0};
+    BL_UnicodeView returnStr = {.data = str->data + secondBegin, str->length - secondBegin + 1};
+    str->length = secondBegin;
+    return returnStr;
+}
+
+BL_UnicodeView bl_unicodestr_splice_front(BL_UnicodeView *str, BL_Unicodepoint character) {
+    size_t i = 0;
+    for (; i < str->length; i++) {
+        if (*bl_unicodestr_get(*str, i) == character)
+            break;
+    }
+    if (i == str->length) {
+        BL_UnicodeView returnStr = *str;
+        *str = (BL_UnicodeView){.data = NULL,.length = 0};
+        return returnStr;
+    }
+    BL_UnicodeView returnStr = {.data = str->data,.length = i+1};
+    *str = (BL_UnicodeView){.data = str->data + returnStr.length, str->length - returnStr.length};
+    return returnStr;
+}
+
+BL_UnicodeView bl_unicodestr_splice_front_excluding(BL_UnicodeView *str, BL_Unicodepoint character) {
+    BL_UnicodeView returnValue = bl_unicodestr_splice_front(str, character);
+    if (returnValue.length == 0)
+        return returnValue;
+    if (*bl_unicodestr_back(*str) == character)
+        returnValue.length -= 1;
+    return returnValue;
+}
+
+BL_UnicodeView bl_unicodestr_splice_back(BL_UnicodeView *str, BL_Unicodepoint character) {
+    size_t i = 0;
+    for (; i < str->length; i++) {
+        if (*bl_unicodestr_get(*str, i) == character)
+            break;
+    }
+    if (i == str->length)
+        return (BL_UnicodeView){.data = NULL,.length = 0};
+    BL_UnicodeView returnStr = {.data = str->data + i + 1, .length = str->length - i - 1};
+    *str = (BL_UnicodeView){.data = str->data, .length = i + 1};
+    return returnStr;
+}
+
+BL_UnicodeView bl_unicodestr_splice_back_excluding(BL_UnicodeView *str, BL_Unicodepoint character) {
+    BL_UnicodeView returnStr = bl_unicodestr_splice_back(str,character);
+    if (str->length > 0 && *bl_unicodestr_back(*str) == character)
+        str->length -= 1;
+    return returnStr;
 }
 
 BL_UnicodeString bl_unicodestr_copy(BL_UnicodeView str) {

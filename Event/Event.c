@@ -17,7 +17,7 @@ static struct {
 typedef BL_MAKE_PAIR_TYPE(const BL_StringView,BL_DynamicContainer) EventEntry;
 
 static int internal_thread_function(void* sharedState) {
-    sharedState = sharedState;
+    (void)sharedState;
     while (!EventInfo.shouldExit) {
         if (bl_mutex_lock(&EventInfo.mutex) != BL_ConcurrencySuccess) {
             bl_thread_yield();

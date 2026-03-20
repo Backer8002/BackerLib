@@ -29,6 +29,12 @@ BL_Unicodepoint*  bl_unicodestr_get(BL_UnicodeView str, size_t index) BL_NOEXCEP
 BL_ContainerError bl_unicodestr_extend(BL_UnicodeString* str, BL_UnicodeView other) BL_NOEXCEPT;
 BL_ContainerError bl_unicodestr_append(BL_UnicodeString* str, BL_Unicodepoint codepoint) BL_NOEXCEPT;
 BL_UnicodeView    bl_unicodestr_substr(BL_UnicodeView str, size_t begin, size_t end) BL_NOEXCEPT;
+BL_UnicodeView    bl_unicodestr_split_front(BL_UnicodeView* str, size_t secondBegin) BL_NOEXCEPT;
+BL_UnicodeView    bl_unicodestr_split_back(BL_UnicodeView* str, size_t secondBegin) BL_NOEXCEPT;
+BL_UnicodeView    bl_unicodestr_splice_front(BL_UnicodeView* str, BL_Unicodepoint character) BL_NOEXCEPT;
+BL_UnicodeView    bl_unicodestr_splice_front_excluding(BL_UnicodeView* str, BL_Unicodepoint character) BL_NOEXCEPT;
+BL_UnicodeView    bl_unicodestr_splice_back(BL_UnicodeView* str, BL_Unicodepoint character) BL_NOEXCEPT;
+BL_UnicodeView    bl_unicodestr_splice_back_excluding(BL_UnicodeView* str, BL_Unicodepoint character) BL_NOEXCEPT;
 BL_UnicodeString  bl_unicodestr_copy(BL_UnicodeView str) BL_NOEXCEPT;
 BL_UnicodeView    bl_unicodestr_view(BL_UnicodeString str) BL_NOEXCEPT;
 BL_Unicodepoint*  bl_unicodestr_front(BL_UnicodeView str) BL_NOEXCEPT;
