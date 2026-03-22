@@ -146,22 +146,22 @@ BL_Unicodepoint bl_textprocessing_to_unicodepoint(BL_Textprocessing_UTFCodepoint
         if (utf.bytesUsed == 2) {
             if ((firstChar & 0xf8) == 0xd8)
                 return BL_Textprocessing_Unicode_Unknown;
-            return firstChar << 8 | secondChar;
+            return (firstChar & 0xffu) << 8 | (secondChar & 0xffu);
         }
         if ((firstChar & 0xfc) != 0xd8 && (thirdChar & 0xfc) != 0xdc)
             return BL_Textprocessing_Unicode_Unknown;
-        return 0x10000 + ((firstChar & 0x03) << 18 | secondChar << 10 | (thirdChar & 0x03) << 8 | fourthChar);
+        return BL_UNICODEPOINT_C(0x10000) + ((firstChar & 0x03u) << 18 | (secondChar & 0xffu) << 10 | (thirdChar & 0x03u) << 8 | (fourthChar & 0xffu));
     }
 
     case BL_Textprocessing_Encoding_UTF32BE: {
         if (utf.bytesUsed != 4)
             return BL_Textprocessing_Unicode_Unknown;
-        return (BL_Unicodepoint) utf.bytes[0] << 24 | (BL_Unicodepoint) utf.bytes[1] << 16 | (BL_Unicodepoint) utf.bytes[2] << 8 | (BL_Unicodepoint) utf.bytes[3];
+        return (BL_Unicodepoint) {utf.bytes[0]} << 24 | (BL_Unicodepoint) {utf.bytes[1]} << 16 | (BL_Unicodepoint) {utf.bytes[2]} << 8 | (BL_Unicodepoint) {utf.bytes[3]};
     }
     case BL_Textprocessing_Encoding_UTF32LE: {
         if (utf.bytesUsed != 4)
             return BL_Textprocessing_Unicode_Unknown;
-        return (BL_Unicodepoint) utf.bytes[0] | (BL_Unicodepoint) utf.bytes[1] << 8 | (BL_Unicodepoint) utf.bytes[2] << 16 | (BL_Unicodepoint) utf.bytes[3] << 24;
+        return (BL_Unicodepoint) {utf.bytes[0]} | (BL_Unicodepoint) {utf.bytes[1]} << 8 | (BL_Unicodepoint) {utf.bytes[2]} << 16 | (BL_Unicodepoint) {utf.bytes[3]} << 24;
     }
     }
     return BL_Textprocessing_Unicode_Unknown;
@@ -190,22 +190,22 @@ BL_Textprocessing_UTFCodepoint bl_textprocessing_from_unicodepoint(BL_Unicodepoi
         if (codepoint < 0x80)
             return (BL_Textprocessing_UTFCodepoint) {.bytesUsed = 1, .bytes = {codepoint & 0xff}};
         else if (codepoint < 0x800)
-            return (BL_Textprocessing_UTFCodepoint) {.bytesUsed = 2, .bytes = {codepoint >> 6 | 0xc0, (codepoint & 0x3f) | 0x80}};
+            return (BL_Textprocessing_UTFCodepoint) {.bytesUsed = 2, .bytes = {(codepoint >> 6 & 0xff) | 0xc0, (codepoint & 0x3f) | 0x80}};
         else if (codepoint < 0x10000)
-            return (BL_Textprocessing_UTFCodepoint) {.bytesUsed = 3, .bytes = {codepoint >> 12 | 0xe0, ((codepoint >> 6) & 0x3f) | 0x80, (codepoint & 0x3f) | 0x80}};
-        return (BL_Textprocessing_UTFCodepoint) {.bytesUsed = 4, .bytes = {codepoint >> 18 | 0xf0, ((codepoint >> 12) & 0x3f) | 0x80, ((codepoint >> 6) & 0x3f) | 0x80, (codepoint & 0x3f) | 0x80}};
+            return (BL_Textprocessing_UTFCodepoint) {.bytesUsed = 3, .bytes = {(codepoint >> 12 & 0xff) | 0xe0, ((codepoint >> 6) & 0x3f) | 0x80, (codepoint & 0x3f) | 0x80}};
+        return (BL_Textprocessing_UTFCodepoint) {.bytesUsed = 4, .bytes = {(codepoint >> 18 & 0xff) | 0xf0, ((codepoint >> 12) & 0x3f) | 0x80, ((codepoint >> 6) & 0x3f) | 0x80, (codepoint & 0x3f) | 0x80}};
     } break;
 
     case BL_Textprocessing_Encoding_UTF16BE: {
         if (codepoint < 0x10000)
-            return (BL_Textprocessing_UTFCodepoint) {.bytesUsed = 2, .bytes = {codepoint >> 8, codepoint & 0xff}};
+            return (BL_Textprocessing_UTFCodepoint) {.bytesUsed = 2, .bytes = {codepoint >> 8 & 0xff, codepoint & 0xff}};
         codepoint -= 0x10000;
         return (BL_Textprocessing_UTFCodepoint) {.bytesUsed = 4, .bytes = {(codepoint >> 18 & 0x03) | 0xd8, (codepoint >> 10) & 0xff, ((codepoint >> 8) & 0x03) | 0xdc, codepoint & 0xff}};
     }
 
     case BL_Textprocessing_Encoding_UTF16LE: {
         if (codepoint < 0x10000)
-            return (BL_Textprocessing_UTFCodepoint) {.bytesUsed = 2, .bytes = {codepoint & 0xff, codepoint >> 8}};
+            return (BL_Textprocessing_UTFCodepoint) {.bytesUsed = 2, .bytes = {codepoint & 0xff, codepoint >> 8 & 0xff}};
         codepoint -= 0x10000;
         return (BL_Textprocessing_UTFCodepoint) {.bytesUsed = 4, .bytes = {(codepoint >> 10) & 0xff, ((codepoint >> 18) & 0x03) | 0xd8, codepoint & 0xff, ((codepoint >> 8) & 0x03) | 0xdc}};
     }

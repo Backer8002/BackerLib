@@ -13,6 +13,10 @@ extern "C" {
 #endif
 
 typedef uint32_t BL_Unicodepoint;
+#define BL_UNICODEPOINT_C(expr) UINT32_C(expr)
+#define BL_UNICODEPOINT_MAX UINT32_MAX
+#define BL_UNICODEPOINT_WIDTH UINT32_WIDTH
+
 typedef struct BL_UnicodeString {
     BL_Unicodepoint* data;
     size_t           length;

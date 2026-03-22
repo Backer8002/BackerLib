@@ -5,21 +5,22 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/types.h>
+#include <math.h>
 
 /**
  * @returns true if operation was successful.
  */
 static bool internal_unicodestr_check_and_resize_up(BL_UnicodeString* str, size_t expectedCapacity) {
     if (expectedCapacity > str->capacity >> 1) {
-        size_t newCapacity = expectedCapacity * 2;
-        if (newCapacity > SIZE_MAX >> 2)
+        if (expectedCapacity * 2 > SIZE_MAX >> (size_t)(ceil(log2(sizeof *str->data)))) // Technecly information lost if sizeof a Unicodepoint is 1 and requested size is larger than 2^63-1  
             return false;
+        size_t newCapacity = expectedCapacity * 2;
 
         BL_Unicodepoint* newPtr = realloc(str->data, (newCapacity+1) * sizeof *str->data);
         if (!newPtr)
             return false;
-
+        
+        str->data = newPtr;
         str->capacity = newCapacity << 1;
         str->capacity |= 0x1;
     }

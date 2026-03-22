@@ -214,6 +214,7 @@ BL_ContainerError bl_map_insert(BL_Map* map, const void* key, size_t keySize, co
 
     if (map->compLess(key, bestNode->data))
         shouldBeOnLeft = true;
+    
     struct Node* newNode = bl_unordered_container_put(&map->container, sizeof(struct Node), &(struct Node) {.left = NULL, .right = NULL, .prev = bestNode});
     if (!newNode)
         return BL_ContainerAllocFailure;
@@ -224,16 +225,16 @@ BL_ContainerError bl_map_insert(BL_Map* map, const void* key, size_t keySize, co
         bestNode->left = newNode;
     else
         bestNode->right = newNode;
-
+    
     struct Node* prevNode = newNode;
     for (struct Node* node = bestNode; node; prevNode = node, node = node->prev) {
-        struct Node* newNode = NULL;
+        struct Node* rotatedNode = NULL;
         if (node->right == prevNode) {
             if (node->weight > 0) {
                 if (prevNode->weight >= 0)
-                    newNode = internal_rotate_left(node);
+                    rotatedNode = internal_rotate_left(node);
                 else
-                    newNode = internal_rotate_right_left(node);
+                    rotatedNode = internal_rotate_right_left(node);
             } else {
                 if (node->weight < 0) {
                     node->weight = 0;
@@ -245,9 +246,9 @@ BL_ContainerError bl_map_insert(BL_Map* map, const void* key, size_t keySize, co
         } else {
             if (node->weight < 0) {
                 if (prevNode->weight <= 0)
-                    newNode = internal_rotate_right(node);
+                    rotatedNode = internal_rotate_right(node);
                 else
-                    newNode = internal_rotate_left_right(node);
+                    rotatedNode = internal_rotate_left_right(node);
             } else {
                 if (node->weight > 0) {
                     node->weight = 0;
@@ -258,14 +259,14 @@ BL_ContainerError bl_map_insert(BL_Map* map, const void* key, size_t keySize, co
             }
         }
 
-        if (newNode->prev) {
-            if (newNode->prev->left == node)
-                newNode->prev->left = newNode;
+        if (rotatedNode->prev) {
+            if (rotatedNode->prev->left == node)
+                rotatedNode->prev->left = rotatedNode;
             else
-                newNode->prev->right = newNode;
+                rotatedNode->prev->right = rotatedNode;
         } else
-            map->root = newNode;
-        node = newNode;
+            map->root = rotatedNode;
+        node = rotatedNode;
     }
     return BL_ContainerOPSuccessful;
 }
