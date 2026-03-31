@@ -3,6 +3,7 @@
 
 #include <BackerLibTextprocessing.h>
 #include <BackerLibTypes.h>
+#include <stdint.h>
 
 #ifdef __cplusplus
 #define BL_NOEXCEPT noexcept
@@ -13,8 +14,8 @@ extern "C" {
 
 typedef struct BL_Regex {
     BL_DynamicContainer ast;
-    BL_DynamicContainer stack;
-    size_t stackPoint;
+    uint64_t* bitset;
+    size_t* positions;
 } BL_Regex;
 
 /**
